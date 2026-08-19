@@ -237,9 +237,44 @@ every other module is priced.
 
 ## 3. Super Admin portal (`(admin)`)
 
-Keep the five nav items already scaffolded (`All Clients`, `Plans & Pricing`, `Payments`,
-`Audit Log`, `Settings` — matches the prototype's sidebar); the work is fleshing each out
-with the detail views the Q&A implies, not adding new top-level nav.
+**Revised nav**: `Dashboard`, `All Clients`, `Plans & Pricing`, `Payments`, `Audit Log`,
+`Settings` — six items. This adds `Dashboard` as the first item, ahead of the five
+already scaffolded (which matched the prototype's sidebar as-is); the rest of the work
+is fleshing each out with the detail views the Q&A implies, not adding further top-level
+nav beyond this.
+
+### 3.0 Dashboard (`/admin`)
+
+A sidebar nav item (first in the list, above `All Clients`) — `/admin` is also the route
+group's index/landing page. Existing stub (`admin/page.tsx`) has 4 metric cards including "Open
+support tickets," which has no backing data model (no ticket system anywhere in
+`Client-proposal.md` or the SRS) — drop it in favor of numbers every other card here is
+already grounded in: `TenantSummary`, `Plan`, `AuditLogEntry`, `PaymentTransaction`.
+
+- **KPI row** (`Card` grid, same pattern as the stub): Active tenants (vs. total),
+  MRR, Trials ending in 7 days (`Plan.trialDays` vs. tenant created date), At-risk
+  tenants (`Read-Only` + `Pending Deletion` count, links to All Clients pre-filtered by
+  status).
+- **Plan distribution** — small breakdown of tenant count per plan tier (list or bar,
+  not a full chart library dependency) — reads the same `TenantSummary[]` the All
+  Clients list uses.
+- **At-risk tenants** — compact table: tenants in `Read-Only`/`Pending Deletion`,
+  showing status (`StatusBadge`), retention countdown where applicable, and seats
+  (`SeatMeter`) for tenants near their seat limit. Rows link to `/admin/tenants/[id]`.
+  This is the actionable "needs attention" surface — the KPI row is read-only summary.
+- **Recent activity** — last ~8 platform-wide audit log entries, reusing the Audit Log
+  page's row component (same one the tenant detail Activity tab reuses per §3.1) with
+  a "View all" link to `/admin/audit`.
+- **Recent payments** — last ~5 transactions (tenant, amount, status), flagging failed
+  ones, reusing whatever row/cell pattern the Payments page settles on. Link to
+  `/admin/payments`.
+- Revenue-over-time chart is explicitly **out of scope for this pass** — no charting
+  library is installed yet and nothing in the Q&A calls for it; the KPI row's MRR
+  number covers the "how are we doing" question without one. Revisit only if the client
+  asks for a trend view.
+- Data dependency: this page can't go first — it's the *aggregate* of Tenants, Plans,
+  Payments, and Audit data, so build it last in the Super Admin sequence (after §3.1–
+  3.4 have real services to read from), not first despite being the landing page.
 
 ### 3.1 All Clients (`/admin/tenants`)
 
@@ -284,9 +319,41 @@ with the detail views the Q&A implies, not adding new top-level nav.
 
 ### 3.5 Settings (`/admin/settings`)
 
-- Existing: branding, notification templates, payment gateways (from the prototype).
-- **New**: retention-window config (the 30–90 day post-suspension deletion window from
-  Q2 — make it configurable, not hardcoded), seat-limit-reached message copy.
+Platform-wide defaults only — never a per-tenant setting (those live under the tenant
+portal's own Settings, out of scope here). Tabbed layout (shadcn `Tabs`, same primitive
+as the tenant detail page §3.1) rather than one long scrolling form:
+
+- **Branding** (existing, from prototype) — platform logo upload, primary color,
+  platform/company display name used in emails and the public site footer.
+- **Notifications** — list of transactional email templates (welcome, trial-ending,
+  suspension notice, payment-failed, seat-limit-reached) with a subject + body editor
+  per template. Placeholder tokens (`{{tenantName}}`, `{{trialEndDate}}`, etc.) documented
+  inline, not a full WYSIWYG — these are plain-text/simple-HTML transactional emails.
+- **Payment gateways** (existing, from prototype) — Stripe/PayPal/Telr **enable/disable
+  toggles only**. No API key fields on this page — key/secret management stays wherever
+  the actual gateway credentials are configured (env vars / a secrets store, not a
+  Settings text input), so this tab only decides which gateways are offered at
+  checkout. Transactions themselves stay on the Payments page (§3.3).
+- **Platform defaults** (existing plan, kept as its own tab):
+  - Retention window — numeric input, 30–90 days, the post-suspension deletion window
+    from Q2 (currently would be hardcoded wherever suspension logic lives) — this is
+    the single source of truth the tenant detail page's Subscription tab (§3.1) reads
+    the countdown from.
+  - Seat-limit-reached message copy — textarea, the text shown to a Client Admin when
+    they hit their plan's seat cap (Q1: hard block, not silent-allow) — configurable
+    here instead of hardcoded in the tenant portal.
+- **Site & legal** (new tab):
+  - Privacy policy — rich-text/markdown body, rendered at the public `/privacy` page
+    (currently, if that page exists, its copy is likely hardcoded — this makes it
+    editable without a code change).
+  - Social links — URL fields (LinkedIn, X/Twitter, Instagram, etc.) rendered in the
+    public site footer.
+  - Maintenance mode — toggle + optional message; when on, the public site (and/or
+    both portals — needs confirming when built) shows a maintenance page instead of
+    normal content. Scope note: this is platform-wide, not per-tenant.
+- **No platform staff/role management tab** — per §3.6's decision (one flat Super Admin
+  role for Phase 1), don't add a "Platform admins" or role list here; revisit only if
+  that decision changes.
 
 ### 3.6 Platform staff roles — decided
 
@@ -304,7 +371,7 @@ usage shows separate platform staff permission levels are actually needed.
   Audit Log. **New dependency** to add: `@tanstack/react-table`.
 - `ModuleToggleGrid` — checkbox grid over `ModuleKey`, used in Plans & Pricing.
 - `ConfirmDialog` (shadcn `alert-dialog`) — for suspend/reactivate/delete-plan actions.
-- `Tabs` (shadcn) — tenant detail page's tab set.
+- `Tabs` (shadcn) — tenant detail page's tab set, and Settings' tab set (§3.5).
 - `AuditDiffViewer` — shared between Audit Log and tenant detail's Activity tab.
 
 ### 3.8 Type & service additions
@@ -329,7 +396,9 @@ usage shows separate platform staff permission levels are actually needed.
    everything else (tenant detail's Modules tab, public pricing/signup) reads from.
 3. Super Admin: All Clients list + tenant detail.
 4. Super Admin: Payments, Audit Log, Settings additions.
-5. Public: rework `/pricing` to read real plans, then build `/signup`.
+5. Super Admin: Dashboard (§3.0) — last within the admin portal since it aggregates
+   Tenants/Plans/Payments/Audit data that must already exist to read from.
+6. Public: rework `/pricing` to read real plans, then build `/signup`.
 
 ---
 

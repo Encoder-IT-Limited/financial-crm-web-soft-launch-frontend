@@ -1,9 +1,10 @@
-import { Building2, Trophy, CreditCard, ScrollText, Settings } from "lucide-react";
+import { LayoutDashboard, Building2, Trophy, CreditCard, ScrollText, Settings } from "lucide-react";
 import type { SidebarNavSection } from "@/types/nav";
 
 export const adminNavSections: SidebarNavSection[] = [
   {
     items: [
+      { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
       { label: "All Clients", href: "/admin/tenants", icon: Building2 },
       { label: "Plans & Pricing", href: "/admin/plans", icon: Trophy },
       { label: "Payments", href: "/admin/payments", icon: CreditCard },

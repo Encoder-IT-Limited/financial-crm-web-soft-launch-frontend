@@ -188,7 +188,7 @@ prototype, not a real product page — drop it from the build.)
 
 Single section under `(admin)/admin/`:
 
-All Clients (tenants) · Plans & Pricing · Payments · Audit Log
+Dashboard · All Clients (tenants) · Plans & Pricing · Payments · Audit Log
 
 Plus platform-wide settings (branding/white-label, notification templates, payment
 gateway toggles) — seen in the mock's settings page and shared conceptually with the
