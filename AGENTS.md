@@ -82,3 +82,11 @@ HR/Payroll, Calendar/Booking, Social Media, and the mobile app are later phases 
     every `md:` in that file (and in `hooks/use-mobile.ts`'s `MOBILE_BREAKPOINT`) was
     deliberately changed to `lg:`/`1024`. If `npx shadcn add sidebar --overwrite` is
     ever run again, redo that swap — the registry version still ships `md:`.
+13. **`page.tsx` and `layout.tsx` files are never `"use client"`.** Marking an entire
+    page/layout client-side pulls its whole subtree — including static headings and
+    layout markup that never needed to hydrate — into the client bundle, and was the
+    actual cause of a route-change flicker on the public site (fixed 2026-08-19). When a
+    page needs interactivity (a form, local state, `useSearchParams`), extract just that
+    part into its own small named component (e.g. `login-form.tsx`, `signup-flow.tsx`)
+    and mark only that file `"use client"`; the page composes it alongside static
+    content. This applies everywhere, not just `(public)`.

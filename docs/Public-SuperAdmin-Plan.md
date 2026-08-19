@@ -41,14 +41,19 @@ structure. Four answers do, directly:
 |---|---|---|
 | `/` | exists | Landing |
 | `/pricing` | exists, needs rework | Plan cards — currently hardcoded; should render real `Plan` records (name, price, base seats, price/additional seat, module checklist) from the same data Super Admin's Plans & Pricing manages |
-| `/login` | exists | Role-tabbed login (unchanged) |
-| `/signup` | **new** | Instant self-serve tenant creation (decided over sales-assisted): plan selection → company details → owner account → confirm, creating the tenant immediately. Matches the SRS's onboarding flow (§22.2) up through "Create Tenant Owner"; everything after that (branches, warehouses, tax config, invite users) happens inside the tenant portal post-signup, not here |
-| `/features` | optional, not building yet | Not in the mock's nav, not required by any answer — flag as a later add if the client asks for it |
-| `/contact` | optional, not building yet | Same — no signal it's needed for Phase 1 |
+| `/login` | **rework** (§2.5) | Single-form login — the Client/Super Admin role tabs are being removed; realm resolves from the account server-side, not a pre-login choice |
+| `/signup` | **new** (§2.5) | Instant self-serve tenant creation (decided over sales-assisted): plan selection → company details → owner account → confirm, creating the tenant immediately. Matches the SRS's onboarding flow (§22.2) up through "Create Tenant Owner"; everything after that (branches, warehouses, tax config, invite users) happens inside the tenant portal post-signup, not here |
+| `/forgot-password` | exists (§2.5) | Email entry, triggers an OTP send |
+| `/verify-otp` | exists (§2.5) | OTP code only, then hands off to `/reset-password` |
+| `/reset-password` | exists (§2.5) | New password + confirm, completes the reset |
+| `/privacy` | exists | Minimal Privacy Policy — real structure, generic/placeholder copy, clearly marked as a draft |
+| `/terms` | exists | Same treatment as `/privacy`, Terms of Service |
+| `/features` | exists | Full module lineup grouped into categories, richer than the home page's teaser grid |
+| `/contact` | exists | Working (backend-less) contact form |
 
-`/signup` as **one page with internal step state** (mirrors the existing `/login` role-tab
-pattern), not four separate routes — simpler, no shareable-URL requirement for a linear
-wizard, and keeps back/forward within the page instead of the browser history stack.
+`/signup` as **one page with internal step state**, not four separate routes — simpler,
+no shareable-URL requirement for a linear wizard, and keeps back/forward within the page
+instead of the browser history stack.
 
 ### 2.2 New reusable components (`(public)/components/`)
 
@@ -59,6 +64,10 @@ wizard, and keeps back/forward within the page instead of the browser history st
 - `AuthCard` — extract the `w-[420px] rounded-[20px] ...` shell currently inline in
   `login/page.tsx` so `/signup` reuses the identical visual frame instead of a second copy.
 - `SignupStepper` — small step indicator (Plan → Company → Owner → Done).
+- `ModuleShowcaseCard` — icon + name + one-line description + optional "Coming soon"
+  badge, used by the home page's module grid (§2.4).
+- `LegalPage` — shared shell (title + "last updated" line + prose container) for
+  `/privacy` and `/terms` so the two pages don't duplicate layout markup.
 
 ### 2.3 Data layer
 
@@ -68,6 +77,161 @@ wizard, and keeps back/forward within the page instead of the browser history st
   cookie, same shape as `authService.login`, then the page redirects to `/dashboard`.
 - Both `/pricing` and `/signup` read plans from the same `plansService.list()` — never a
   second hardcoded plan array — so Super Admin editing a plan is instantly reflected.
+
+### 2.4 Navbar, footer & home page content (decided 2026-08-19)
+
+**Navbar** — stays thin, no new routes added to it:
+- Logo/wordmark (existing, links home)
+- In-page anchor links: `Features` (scrolls to the home page's module grid), `Pricing`
+  (routes to `/pricing`)
+- `Log in` (secondary), `Get started` (primary CTA — points at `/signup` once it exists,
+  `/login` until then)
+- Below `lg:`, the same links collapse into a hamburger menu — no new mechanism needed
+  beyond what a handful of links requires
+
+**Footer** — three columns instead of the current single copyright line:
+- Brand: logo mark + one-line tagline
+- Product: same anchor links as the navbar (Features, Pricing, Log in)
+- Legal: `Privacy Policy` (`/privacy`), `Terms of Service` (`/terms`) — both real routes
+  now (§2.1), not dead links
+- Copyright line (existing, unchanged)
+
+No "Company" column (About/Contact/Careers) and no social icons — nothing in the
+proposal or prototype calls for them.
+
+**Home page** (`/`) — sections, in order:
+1. **Hero** (existing) — headline, subheadline, primary + secondary CTA. Strengthen the
+   subheadline to name the unified-platform pitch (SRS §11.2 item 1: "centralize business
+   operations into one platform").
+2. **Problem framing** (new) — short section naming the pain of disconnected tools
+   (spreadsheets, manual reconciliation, no real-time stock visibility) before the module
+   grid below pivots to the solution.
+3. **Module showcase grid** (new) — one `ModuleShowcaseCard` per module, covering the
+   **full lineup from the proposal**, not just what's built today: Accounting, Invoicing,
+   Expenses, Inventory & Procurement, Banking, CRM, Reports & Compliance, AI Assistant,
+   plus the Phase 2/3 set — POS, HR & Payroll, Calendar & Booking, Social Media — each of
+   those four carrying a "Coming soon" badge. Decided over Phase-1-only: the product will
+   eventually ship all of it, so the marketing story should be complete now rather than
+   re-plumbed later.
+4. **AI Assistant spotlight** (new) — dedicated section for OCR receipt scanning /
+   auto-categorization; the proposal calls this out as a specific differentiator, not
+   just another grid card.
+5. **Compliance section** (new) — UAE VAT + Corporate Tax reporting built in, backed by
+   real tenant-portal pages (`/dashboard/reports/vat`, `/dashboard/reports/corp-tax`).
+6. **Pricing teaser** (new) — condensed line/strip ("Plans start at AED X/month") linking
+   to `/pricing`, not a duplicate of the full `PlanCard` grid.
+7. **Final CTA banner** (new) — "Ready to get started?" + Get Started button, with a
+   trial-length line sourced from `Plan.trialDays` where set.
+8. **Footer**.
+
+> Since this section was written, `/features` and `/contact` shipped as real routes
+> (navbar/footer now link to them directly instead of `/#features`), and the navbar/footer
+> visual design was reworked (centered nav links, dark footer) — see the actual components
+> for current markup; this section's content plan still holds.
+
+### 2.5 Auth pages: login, signup, password reset (built 2026-08-19)
+
+**Decided**: `/login` drops its Client/Super Admin role tabs — a single email+password
+form, with realm resolved from the account server-side rather than asked up front. Every
+auth page reuses `AuthShell`, a split-screen layout (branded panel left, form right) —
+replacing the old plain centered `AuthCard` — and all gain `PublicNavbar` (previously
+full-bleed, navbar-less). `/login` and `/signup` stay separate routes rather than merging
+into one toggled page, since signup doesn't fit a 2-field login form; a "Don't have an
+account? Sign up" / "Already have an account? Log in" cross-link ties them together.
+
+**Routes** (all reuse `AuthShell`; `PublicNavbar`/`PublicFooter` come from `(public)/layout.tsx`, shown on every public route including these):
+
+| Route | Purpose |
+|---|---|
+| `/login` | Email + password, show/hide toggle, "Forgot password?" link, "Sign up" cross-link. Routes to `/admin` or `/dashboard` off the returned `Me.realm` |
+| `/signup` | See below — plan (conditional) → info → payment |
+| `/forgot-password` | Email field only, triggers an OTP send, moves to `/verify-otp` |
+| `/verify-otp` | 6-digit OTP code only (`OtpInput`), then hands off to `/reset-password?email=&otp=` |
+| `/reset-password` | New password + confirm, completes the reset, redirects to `/login` with a success toast |
+
+**`/signup` flow** (reworked from the original 4-step plan→company→owner→confirm wizard):
+
+- **Plan step is conditional** — skipped entirely when arriving via `/signup?plan=<id>`
+  (which `/pricing`'s CTAs now use), shown only when landing on `/signup` directly without
+  a preselected plan. Plans render as a vertical stack of `PlanCard`s (not a 3-column
+  grid) so they fit the split-screen form column.
+- **One combined "info" form** — company name, country, full name, email, password,
+  confirm — replacing the separate company/owner steps. Matches "one single form with all
+  info, not steps" for account details.
+- **Payment step** — mock card fields (cardholder name, number, expiry, CVC) + an order
+  summary, "Pay & create account" simulates processing then calls `signupService.create`.
+  No real payment gateway wired up yet — flagged inline in the code.
+- **Step progress moves into the left panel** — `AuthStepsList` (new, vertical: numbered
+  circles + connecting line + label/description) replaces a horizontal stepper that would
+  have lived in the form column; sits at the bottom of `AuthShell`'s branded panel instead.
+
+**`AuthShell` left panel** was made more deliberately designed rather than a placeholder:
+dual radial glow (blue + purple), a fading dot-grid, an eyebrow badge ("Multi-tenant SaaS
+platform"), gradient-accented tagline, and a `leftFooter` slot — defaults to three
+floating "glass" module chips (login/forgot/OTP/reset pages), or `AuthStepsList` on
+signup.
+
+**API contract change**: `authService.login` drops `realm` — the backend infers it from
+the account. New: `authService.requestPasswordReset({ email })`,
+`authService.resetPassword({ email, otp, newPassword })`, `signupService.create({ planId,
+company, owner })`.
+
+**Not changing**: `/privacy` and `/terms` — already built, already use `PublicNavbar` +
+`PublicFooter`, and nothing about this pass affects them.
+
+### 2.6 `/pricing` redesign (planned 2026-08-19)
+
+Design reference: `https://comprehensive-hr-and-operations-pla.vercel.app/pricing` (the
+HR reference project's deployed pricing page) — used for **structural** ideas only; its
+colors, USD currency, per-user-only pricing model, and vertical-specific content
+(nursing homes/care types) don't carry over. Cross-checked against
+`docs/Client-proposal.md`, the SRS, and the client Q&A so the real product rules aren't
+lost under a redesign.
+
+**What's staying**: `PLANS` data shape (`plans-data.ts`), AED currency, the flat-base +
+included-seats + per-additional-seat pricing model (confirmed by
+`Client-proposal.md`'s "Seat Management... base seat allotment per plan and can purchase
+more"), `/signup?plan=<id>` CTAs for Starter/Growth, `/contact` for Enterprise.
+
+**New sections, in order**:
+
+1. **Hero** — "Simple, transparent pricing" + trial/no-hidden-fees trust line, sourced
+   from real `Plan.trialDays` (14, not a copied "30 days") — matches the CTA copy
+   already used elsewhere ("14-day free trial, no credit card required").
+2. **Interactive seat slider** (new) — a single slider driving all three cards' live
+   price at once (`basePrice + max(0, seats - baseSeats) × additionalSeatPrice` per
+   plan), honestly reflecting our actual base+increment model rather than the
+   reference's pure per-seat one. Paired with a Monthly/Annually toggle. **Decided**:
+   `priceYearly` in `plans-data.ts` is adjusted to a clean `monthly × 12 × 0.8` so the
+   toggle can show a confident "Save 20%" badge (Starter 199×12×0.8 = 1910.4 → 1910,
+   Growth 499×12×0.8 = 4790.4 → 4790) instead of the previous arbitrary ~16.6% figures.
+3. **Three tier cards** — reuses the existing wide plan-card style (not
+   `PlanSelectCard`, which is signup-only per your earlier instruction), enhanced to
+   phrase inclusions incrementally ("Everything in Starter, plus…") computed as a set
+   diff between each tier's `modules` array, rather than repeating the full module list
+   on every card.
+4. **Comparison table** (new) — full feature matrix, grouped by category (Accounting &
+   Finance / Sales & CRM / Inventory & Procurement / Reports & AI), each module a row
+   with check/dash per tier, plus non-module rows for base seats, additional-seat
+   price, and trial length.
+5. **FAQ** (new) — grounded directly in the decided business rules from the client
+   Q&A, not invented copy:
+   - *What happens if I go over my included seats?* → every active-login user counts
+     (owner/admin/staff/POS cashier); service/API and read-only auditor accounts don't;
+     creation is blocked with an upgrade prompt at the limit, never silent overage
+     billing.
+   - *What happens if my subscription lapses?* → no grace period — immediate read-only
+     (view/export, no new transactions); data is retained 30–90 days before deletion.
+   - *Can I change plans later?* → upgrade/downgrade anytime.
+   - *Is my data secure?* → tenant isolation, audit logs, encrypted credentials (SRS
+     §11.22).
+   - *Do you offer a free trial?* → yes, per-plan `trialDays`, no credit card required.
+6. **Bottom CTA** — "Get started" / "Contact sales", reusing `FinalCtaBanner`.
+
+**Decided**: AI Assistant stays a flat included/excluded item per plan tier (current
+`PLANS` data, Enterprise-only) — not broken out as a separate usage-based/metered line,
+despite `Client-proposal.md`'s "(Usage-Only)" wording. Simpler, and consistent with how
+every other module is priced.
 
 ---
 

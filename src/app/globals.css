@@ -132,6 +132,10 @@ body.dark {
 }
 
 @theme inline {
+  /* Tailwind ships sm/md/lg/xl/2xl only — 3xl covers very large/ultrawide
+     monitors where fixed small px text starts reading too small. */
+  --breakpoint-3xl: 1920px;
+
   --color-navy: var(--color-navy);
   --color-navy-2: var(--color-navy-2);
 
