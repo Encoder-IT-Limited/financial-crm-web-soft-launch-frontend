@@ -56,3 +56,6 @@ HR/Payroll, Calendar/Booking, Social Media, and the mobile app are later phases 
 6. Open questions in `Project-Structure.md` §7 (sub-roles/RBAC, QR codes on invoices,
    two vs. three realms, Windows POS) are unresolved — don't silently assume an answer
    in a way that's hard to unwind; ask or flag instead.
+7. Verify UI changes with `tsc`/lint only — do not start the dev server or visually
+   check pages in a browser as part of routine work. Compare against the prototype
+   markup/CSS by reading it, not by rendering it.
