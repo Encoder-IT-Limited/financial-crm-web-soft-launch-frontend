@@ -35,7 +35,7 @@ export function Navbar({ portal, me }: NavbarProps) {
   const initials = me?.name?.slice(0, 2).toUpperCase() ?? "??";
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4 print:hidden">
       <SidebarTrigger />
 
       <div className="min-w-0 flex-1">
