@@ -4,6 +4,7 @@ import { PublicNavbar } from "./components/public-navbar";
 import { PublicFooter } from "./components/public-footer";
 import { ModuleShowcaseCard } from "./components/module-showcase-card";
 import { MODULES } from "./components/modules-data";
+import { FinalCtaBanner } from "./components/final-cta-banner";
 
 const PAIN_POINTS = [
   "Spreadsheets for expenses, a separate app for invoicing",
@@ -23,7 +24,7 @@ export default function LandingPage() {
       <PublicNavbar />
 
       {/* Hero */}
-      <main className="relative overflow-hidden px-5 pt-16 pb-24 sm:px-8 sm:pt-24">
+      <main className="relative flex min-h-[90vh] flex-col justify-center overflow-hidden px-5 pt-16 pb-24 sm:px-8 sm:pt-24">
         {/* Ambient gradient glow */}
         <div
           aria-hidden
@@ -184,6 +185,15 @@ export default function LandingPage() {
             <ModuleShowcaseCard key={item.key} item={item} />
           ))}
         </div>
+        <div className="mt-10 text-center">
+          <Link
+            href="/features"
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-blue hover:underline"
+          >
+            View all features
+            <ArrowRight className="size-3.5" />
+          </Link>
+        </div>
       </section>
 
       {/* AI Assistant spotlight */}
@@ -230,30 +240,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Final CTA */}
-      <section className="px-5 pb-20 sm:px-8">
-        <div className="relative mx-auto max-w-4xl overflow-hidden rounded-3xl bg-linear-to-br from-navy via-navy to-blue px-8 py-16 text-center shadow-xl">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[radial-gradient(var(--color-border)_1px,transparent_1px)] opacity-[0.08] [background-size:22px_22px]"
-          />
-          <div className="relative">
-            <h2 className="text-2xl font-extrabold text-white sm:text-3xl">
-              Ready to get started?
-            </h2>
-            <p className="mt-2 text-[13.5px] text-white/70">
-              14-day free trial, no credit card required.
-            </p>
-            <Link
-              href="/login"
-              className="mt-7 inline-flex items-center gap-1.5 rounded-lg bg-white px-6 py-3 text-sm font-semibold text-navy shadow-lg transition-transform hover:scale-[1.02]"
-            >
-              Get started
-              <ArrowRight className="size-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
+      <FinalCtaBanner />
 
       <PublicFooter />
     </>

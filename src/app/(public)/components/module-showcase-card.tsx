@@ -8,6 +8,9 @@ export type ModuleShowcaseItem = {
   description: string;
   icon: LucideIcon;
   comingSoon?: boolean;
+  /** Short bullet points used on /features' detail cards; ignored by the
+   * compact home-page grid. */
+  highlights: string[];
 };
 
 export function ModuleShowcaseCard({

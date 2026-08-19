@@ -9,7 +9,7 @@ type LegalPageProps = {
  * text; keep this shell so swapping content later doesn't touch layout. */
 export function LegalPage({ title, lastUpdated, children }: LegalPageProps) {
   return (
-    <main className="flex-1 px-5 py-14 sm:px-8">
+    <main className="flex min-h-[90vh] flex-col justify-center px-5 py-14 sm:px-8">
       <div className="mx-auto max-w-2xl">
         <h1 className="text-2xl font-extrabold text-text sm:text-3xl">{title}</h1>
         <p className="mt-1 text-[12px] text-text-4">Last updated: {lastUpdated}</p>

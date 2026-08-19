@@ -55,7 +55,11 @@ export default function PricingPage() {
     <>
       <PublicNavbar />
 
-      <main className="flex-1 px-5 py-14 sm:px-8">
+      <main className="relative flex min-h-[90vh] flex-col justify-center overflow-hidden px-5 py-14 sm:px-8">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-[-140px] left-1/2 h-[380px] w-[680px] -translate-x-1/2 rounded-full bg-blue/10 blur-[120px]"
+        />
         <div className="mx-auto max-w-4xl text-center">
           <h1 className="text-2xl font-extrabold text-text sm:text-3xl">Plans & pricing</h1>
           <p className="mt-2 text-[13px] text-text-3">
