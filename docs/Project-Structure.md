@@ -94,8 +94,14 @@ literals scattered through components — centralize the pairs above in `globals
 
 ### 2.4 Core components (build as `src/components/ui/`)
 
-Derived from the mock's class list — build each as a Tailwind-variant primitive
-(`class-variance-authority`), not a one-off className per page:
+Sourced via the shadcn CLI (`npx shadcn add <component>`), Base UI flavor
+(`components.json` → `-b base`, matching `Basic-Setup.md` §9's "`@base-ui/react` —
+shadcn-style" baseline) — not hand-rolled per component. shadcn's generic token names
+(`--primary`, `--border`, `--muted`, `--sidebar`, ...) are aliased in `globals.css` to
+the brand tokens in §2.1, so every generated component matches the client's palette
+automatically instead of shadcn's default neutral theme; only add net-new
+one-off styling on top when a component needs to deviate from the mock. Derived from
+the mock's class list:
 
 - `Button` — variants: primary (`--blue` fill), secondary (light gray), destructive
   (`--red`), ghost/icon (`btn-icon`, 30×30 square). Sizes: default, `xs`.
