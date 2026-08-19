@@ -41,16 +41,18 @@ export const useInvoicesStore = create<InvoicesStore>()(
 
       createInvoice: (input, mode) => {
         const number = `INV-${nextSequence(get().invoiceSeq)}`;
-        const totals = computeTotals(input.lines);
+        const totals = computeTotals(input.lines, input.discountPercent ?? 0);
         const invoice: Invoice = {
           id: newId("inv"),
           number,
           customerId: input.customerId,
           issueDate: input.issueDate,
           dueDate: input.dueDate,
-          currency: "AED",
+          currency: input.currency ?? "AED",
           lines: input.lines.map((l) => ({ ...l, id: newId("ln"), total: round2(l.quantity * l.unitPrice) })),
           subtotal: totals.subtotal,
+          discountPercent: input.discountPercent || undefined,
+          discount: totals.discount,
           tax: totals.tax,
           total: totals.total,
           paidAmount: 0,
@@ -66,7 +68,7 @@ export const useInvoicesStore = create<InvoicesStore>()(
       },
 
       updateInvoice: (id, input) => {
-        const totals = computeTotals(input.lines);
+        const totals = computeTotals(input.lines, input.discountPercent ?? 0);
         set((state) => ({
           invoices: state.invoices.map((inv) =>
             inv.id === id
@@ -75,8 +77,11 @@ export const useInvoicesStore = create<InvoicesStore>()(
                   customerId: input.customerId,
                   issueDate: input.issueDate,
                   dueDate: input.dueDate,
+                  currency: input.currency ?? inv.currency,
                   lines: input.lines.map((l) => ({ ...l, id: newId("ln"), total: round2(l.quantity * l.unitPrice) })),
                   subtotal: totals.subtotal,
+                  discountPercent: input.discountPercent || undefined,
+                  discount: totals.discount,
                   tax: totals.tax,
                   total: totals.total,
                   notes: input.notes || undefined,
@@ -139,6 +144,20 @@ export const useInvoicesStore = create<InvoicesStore>()(
     {
       name: "mrm-billing-v1",
       version: 1,
+      // Backfill fields added after the store was first persisted
+      // (e.g. `discount`) without wiping a user's data.
+      merge: (_persisted, current) => {
+        const stored = _persisted as InvoicesStore;
+        return {
+          ...structuredClone(current),
+          ...stored,
+          invoices: stored.invoices.map((inv) => ({
+            ...inv,
+            discount: "discount" in inv ? (inv.discount ?? 0) : 0,
+            discountPercent: "discountPercent" in inv ? inv.discountPercent : undefined,
+          })),
+        };
+      },
     }
   )
 );

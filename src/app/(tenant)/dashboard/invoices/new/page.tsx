@@ -12,10 +12,10 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { fmtMoney, nextSequence } from "@/lib/format";
 import { invoiceFormSchema } from "../../../modules/billing/schemas";
-import type { Invoice } from "../../../modules/billing/types";
+import { computeTotals, type Currency, type Invoice } from "../../../modules/billing/types";
 import { useInvoicesStore } from "../../../modules/billing/store/invoices-store";
 import { invoiceApi } from "../../../modules/billing/api/invoices.service";
-import { LineItemsEditor, emptyLines, lineTotals, type LineDraft } from "../../../modules/billing/components/line-items-editor";
+import { LineItemsEditor, emptyLines, type LineDraft } from "../../../modules/billing/components/line-items-editor";
 import { FormField } from "../../../modules/billing/components/form-field";
 import { AddCustomerDialog } from "../../../modules/billing/components/add-customer-dialog";
 import { InvoicePreviewDialog } from "../../../modules/billing/components/invoice-preview-dialog";
@@ -39,6 +39,8 @@ function NewInvoiceForm() {
   const [editing, setEditing] = useState<Invoice | null>(null);
 
   const [customerId, setCustomerId] = useState("");
+  const [currency, setCurrency] = useState<Currency>("AED");
+  const [discountPercent, setDiscountPercent] = useState("0");
   const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10));
   const [dueDate, setDueDate] = useState(() => {
     const d = new Date();
@@ -63,6 +65,8 @@ function NewInvoiceForm() {
       }
       setEditing(invoice);
       setCustomerId(invoice.customerId);
+      setCurrency(invoice.currency ?? "AED");
+      setDiscountPercent(String(invoice.discountPercent ?? 0));
       setIssueDate(invoice.issueDate);
       setDueDate(invoice.dueDate);
       setLines(
@@ -80,7 +84,19 @@ function NewInvoiceForm() {
   }, [editId]);
 
   const nextNumber = `INV-${nextSequence(invoiceSeq)}`;
-  const totals = lineTotals(lines);
+  const discountPct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
+  const totals = useMemo(
+    () =>
+      computeTotals(
+        lines.map((l) => ({
+          quantity: Number(l.quantity) || 0,
+          unitPrice: Number(l.unitPrice) || 0,
+          taxRate: Number(l.taxRate) || 0,
+        })),
+        discountPct
+      ),
+    [lines, discountPct]
+  );
 
   const previewInvoice: Invoice = useMemo(
     () => ({
@@ -89,7 +105,7 @@ function NewInvoiceForm() {
       customerId: customerId || customers[0]?.id || "",
       issueDate,
       dueDate,
-      currency: "AED",
+      currency,
       lines: lines.map((l) => ({
         id: l.id,
         description: l.description || "—",
@@ -99,6 +115,8 @@ function NewInvoiceForm() {
         total: (Number(l.quantity) || 0) * (Number(l.unitPrice) || 0),
       })),
       subtotal: totals.subtotal,
+      discountPercent: discountPct || undefined,
+      discount: totals.discount,
       tax: totals.tax,
       total: totals.total,
       paidAmount: editing?.paidAmount ?? 0,
@@ -108,7 +126,7 @@ function NewInvoiceForm() {
       createdAt: new Date().toISOString(),
       payments: editing?.payments ?? [],
     }),
-    [customers, customerId, dueDate, editing, issueDate, lines, nextNumber, notes, totals]
+    [customers, customerId, currency, dueDate, editing, issueDate, lines, nextNumber, notes, discountPct, totals]
   );
 
   function validate(): boolean {
@@ -116,6 +134,8 @@ function NewInvoiceForm() {
       customerId,
       issueDate,
       dueDate,
+      currency,
+      discountPercent,
       lines: lines.map((l) => ({
         description: l.description,
         quantity: l.quantity,
@@ -155,6 +175,8 @@ function NewInvoiceForm() {
       customerId,
       issueDate,
       dueDate,
+      currency,
+      discountPercent: discountPct,
       lines: lines.map((l) => ({
         description: l.description.trim(),
         quantity: Number(l.quantity),
@@ -213,8 +235,8 @@ function NewInvoiceForm() {
           </div>
 
           <div className="flex flex-col gap-4 p-5">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <FormField label="Customer" error={errors.customerId} className="sm:col-span-1">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField label="Customer" error={errors.customerId}>
                 <div className="flex gap-1.5">
                   <Select value={customerId} onValueChange={(v) => { setCustomerId(v ?? ""); setErrors({ ...errors, customerId: "" }); }}>
                     <SelectTrigger className={cn("w-full flex-1", errors.customerId && "border-red")}>
@@ -232,6 +254,21 @@ function NewInvoiceForm() {
                     <UserPlus />
                   </Button>
                 </div>
+              </FormField>
+
+              <FormField label="Currency" error={errors.currency}>
+                <Select value={currency} onValueChange={(v) => { setCurrency((v ?? "AED") as Currency); setErrors({ ...errors, currency: "" }); }}>
+                  <SelectTrigger className={cn("w-full")}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(["AED", "USD", "EUR", "GBP", "SAR"] as Currency[]).map((code) => (
+                      <SelectItem key={code} value={code}>
+                        {code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </FormField>
 
               <FormField label="Issue date" error={errors.issueDate}>
@@ -287,11 +324,28 @@ function NewInvoiceForm() {
               <div className="text-sm font-bold text-text">Summary</div>
             </div>
             <div className="flex flex-col gap-2.5 px-5 py-4">
-              <SummaryRow label="Subtotal" value={fmtMoney(totals.subtotal)} />
-              <SummaryRow label="VAT" value={fmtMoney(totals.tax)} />
-              <SummaryRow label="Total" value={fmtMoney(totals.total)} bold />
-              <SummaryRow label="Paid" value={fmtMoney(editing?.paidAmount ?? 0)} />
-              <SummaryRow label="Balance due" value={fmtMoney((editing?.total ?? totals.total) - (editing?.paidAmount ?? 0))} bold tone="red" />
+              <SummaryRow label="Subtotal" value={fmtMoney(totals.subtotal, currency)} />
+              <label className="flex items-center justify-between gap-2 text-[13px] text-text-3">
+                <span>Discount (%)</span>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={discountPercent}
+                  onChange={(e) => {
+                    setDiscountPercent(e.target.value);
+                    setErrors({ ...errors, discountPercent: "" });
+                  }}
+                  aria-invalid={!!errors.discountPercent}
+                  className={cn("w-20 text-right", errors.discountPercent && "border-red")}
+                />
+              </label>
+              {errors.discountPercent && <p className="text-[10.5px] text-red">{errors.discountPercent}</p>}
+              {discountPct > 0 && <SummaryRow label={`Discount applied (${discountPct}%)`} value={`−${fmtMoney(totals.discount, currency)}`} tone="red" />}
+              <SummaryRow label="VAT" value={fmtMoney(totals.tax, currency)} />
+              <SummaryRow label="Total" value={fmtMoney(totals.total, currency)} bold />
+              <SummaryRow label="Paid" value={fmtMoney(editing?.paidAmount ?? 0, currency)} />
+              <SummaryRow label="Balance due" value={fmtMoney((editing?.total ?? totals.total) - (editing?.paidAmount ?? 0), currency)} bold tone="red" />
             </div>
           </Card>
 

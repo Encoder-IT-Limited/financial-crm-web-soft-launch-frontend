@@ -12,6 +12,8 @@ export const invoiceFormSchema = z
     customerId: z.string().min(1, "Select a customer"),
     issueDate: z.string().min(1, "Issue date is required"),
     dueDate: z.string().min(1, "Due date is required"),
+    currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR"]).default("AED"),
+    discountPercent: z.coerce.number().min(0, "Discount can't be negative").max(100, "Discount max 100%").default(0),
     lines: z.array(invoiceLineSchema).min(1, "Add at least one line item"),
     notes: z.string().max(500, "Notes too long (max 500 chars)").optional(),
   })
@@ -51,6 +53,27 @@ export const customerSchema = z.object({
 });
 
 export type CustomerValues = z.infer<typeof customerSchema>;
+
+export const recurringTemplateSchema = z
+  .object({
+    customerId: z.string().min(1, "Select a customer"),
+    description: z.string().trim().min(3, "Description is required"),
+    currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR"]).default("AED"),
+    amount: z.coerce.number().positive("Amount must be greater than 0"),
+    frequency: z.enum(["weekly", "monthly", "quarterly", "yearly"]),
+    nextInvoiceDate: z.string().min(1, "Next billing date is required"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.nextInvoiceDate < new Date().toISOString().slice(0, 10)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["nextInvoiceDate"],
+        message: "Next billing date can't be in the past",
+      });
+    }
+  });
+
+export type RecurringTemplateValues = z.infer<typeof recurringTemplateSchema>;
 
 /** Pull the first issue message for a field path, e.g. "lines.0.description". */
 export function firstError(result: { issues: { path: (string | number)[]; message: string }[] }, path: string): string | undefined {

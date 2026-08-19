@@ -1,10 +1,18 @@
 /** Shared formatting + id helpers. */
 
-export function fmtMoney(value: number): string {
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  AED: "AED",
+  USD: "$",
+  EUR: "€",
+  GBP: "£",
+  SAR: "SAR",
+};
+
+export function fmtMoney(value: number, currency = "AED"): string {
   const formatted = Number.isInteger(value)
     ? value.toLocaleString("en-AE")
     : value.toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return `AED ${formatted}`;
+  return `${CURRENCY_SYMBOLS[currency] ?? currency} ${formatted}`;
 }
 
 export function fmtQty(value: number): string {

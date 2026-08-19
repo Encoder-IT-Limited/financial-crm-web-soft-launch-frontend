@@ -27,6 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeading } from "@/components/shared/page-heading";
 import { toast } from "@/lib/toast";
 import { downloadCsv } from "@/lib/csv";
@@ -44,6 +45,7 @@ import { invoiceApi } from "../../modules/billing/api/invoices.service";
 import { InvoiceStatusBadge } from "../../modules/billing/components/invoice-status-badge";
 import { StatTiles } from "../../modules/billing/components/stat-tiles";
 import { InvoicePreviewDialog } from "../../modules/billing/components/invoice-preview-dialog";
+import { RecurringTemplatesPanel } from "../../modules/billing/components/recurring-templates-panel";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyColumnDef<TData> = ColumnDef<TData, any>;
@@ -134,7 +136,7 @@ export default function InvoicesPage() {
         accessorFn: (inv) => inv.total,
         header: ({ column }) => <SortableHeader column={column} label="Amount" align="right" />,
         cell: ({ row }) => (
-          <span className="text-right text-[13px] font-semibold text-text">{fmtMoney(row.original.total)}</span>
+          <span className="text-right text-[13px] font-semibold text-text">{fmtMoney(row.original.total, row.original.currency)}</span>
         ),
       },
       {
@@ -142,7 +144,7 @@ export default function InvoicesPage() {
         accessorFn: (inv) => inv.paidAmount,
         header: ({ column }) => <SortableHeader column={column} label="Paid" align="right" />,
         cell: ({ row }) => (
-          <span className="text-right text-[13px] font-semibold text-green">{fmtMoney(row.original.paidAmount)}</span>
+          <span className="text-right text-[13px] font-semibold text-green">{fmtMoney(row.original.paidAmount, row.original.currency)}</span>
         ),
       },
       {
@@ -292,16 +294,23 @@ export default function InvoicesPage() {
         }
       />
 
-      <StatTiles
-        tiles={[
-          { label: "Outstanding", value: fmtMoney(stats.outstanding), tone: "amber" },
-          { label: "Overdue", value: fmtMoney(stats.overdue), tone: "red", sub: "past due date" },
-          { label: "Collected", value: fmtMoney(stats.paidThisMonth), tone: "green", sub: "all-time paid" },
-          { label: "Drafts", value: String(stats.drafts), tone: "neutral", sub: "not yet sent" },
-        ]}
-      />
+      <Tabs defaultValue="invoices" className="mt-4">
+        <TabsList variant="line">
+          <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="recurring">Recurring</TabsTrigger>
+        </TabsList>
 
-      <Card className="mt-4 gap-0 p-0">
+        <TabsContent value="invoices" className="mt-4">
+          <StatTiles
+            tiles={[
+              { label: "Outstanding", value: fmtMoney(stats.outstanding), tone: "amber" },
+              { label: "Overdue", value: fmtMoney(stats.overdue), tone: "red", sub: "past due date" },
+              { label: "Collected", value: fmtMoney(stats.paidThisMonth), tone: "green", sub: "all-time paid" },
+              { label: "Drafts", value: String(stats.drafts), tone: "neutral", sub: "not yet sent" },
+            ]}
+          />
+
+          <Card className="mt-4 gap-0 p-0">
         <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-text-4" />
@@ -450,7 +459,7 @@ export default function InvoicesPage() {
                   Issued {fmtDate(inv.issueDate)} · Due {fmtDate(inv.dueDate)}
                 </span>
                 <div className="text-right">
-                  <div className="font-bold text-text">{fmtMoney(inv.total)}</div>
+                  <div className="font-bold text-text">{fmtMoney(inv.total, inv.currency)}</div>
                   <div className="text-[11px] text-text-3">
                     Balance{" "}
                     <span
@@ -471,6 +480,12 @@ export default function InvoicesPage() {
           )}
         </div>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="recurring" className="mt-4">
+          <RecurringTemplatesPanel />
+        </TabsContent>
+      </Tabs>
 
       <InvoicePreviewDialog
         invoice={previewInvoice}

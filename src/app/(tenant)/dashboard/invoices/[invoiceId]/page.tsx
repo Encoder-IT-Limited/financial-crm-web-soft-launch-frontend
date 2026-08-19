@@ -136,10 +136,10 @@ export default function InvoiceDetailPage() {
 
       <StatTiles
         tiles={[
-          { label: "Total", value: fmtMoney(invoice.total), tone: "blue" },
-          { label: "Paid", value: fmtMoney(invoice.paidAmount), tone: "green" },
-          { label: "Balance Due", value: fmtMoney(balance), tone: balance > 0 ? "amber" : "neutral" },
-          { label: "VAT", value: fmtMoney(invoice.tax), tone: "neutral" },
+          { label: "Total", value: fmtMoney(invoice.total, invoice.currency), tone: "blue" },
+          { label: "Paid", value: fmtMoney(invoice.paidAmount, invoice.currency), tone: "green" },
+          { label: "Balance Due", value: fmtMoney(balance, invoice.currency), tone: balance > 0 ? "amber" : "neutral" },
+          { label: "VAT", value: fmtMoney(invoice.tax, invoice.currency), tone: "neutral" },
         ]}
       />
 
@@ -160,7 +160,7 @@ export default function InvoiceDetailPage() {
                 {invoice.payments.map((payment) => (
                   <div key={payment.id} className="flex items-start justify-between gap-3 px-5 py-3.5">
                     <div>
-                      <div className="text-[13px] font-semibold text-text">{fmtMoney(payment.amount)}</div>
+                      <div className="text-[13px] font-semibold text-text">{fmtMoney(payment.amount, invoice.currency)}</div>
                       <div className="mt-0.5 text-[11px] text-text-3">
                         {PAYMENT_METHOD_LABELS[payment.method]}
                         {payment.reference ? ` · ${payment.reference}` : ""}
@@ -180,7 +180,7 @@ export default function InvoiceDetailPage() {
               {invoice.sentAt && <HistoryRow label={`Sent to ${customer?.email ?? "customer"}`} when={invoice.sentAt} />}
               {invoice.lastReminderAt && <HistoryRow label="Reminder sent" when={invoice.lastReminderAt} />}
               {invoice.payments.map((payment) => (
-                <HistoryRow key={payment.id} label={`Payment of ${fmtMoney(payment.amount)}`} when={payment.date} />
+                <HistoryRow key={payment.id} label={`Payment of ${fmtMoney(payment.amount, invoice.currency)}`} when={payment.date} />
               ))}
               {invoice.cancelledAt && <HistoryRow label="Invoice cancelled" when={invoice.cancelledAt} />}
             </div>
@@ -200,7 +200,7 @@ export default function InvoiceDetailPage() {
         title={`Cancel ${invoice.number}?`}
         description={
           balance > 0
-            ? `This invoice has an outstanding balance of ${fmtMoney(balance)}. Cancelling writes it off and the customer will not be charged.`
+            ? `This invoice has an outstanding balance of ${fmtMoney(balance, invoice.currency)}. Cancelling writes it off and the customer will not be charged.`
             : "This will permanently cancel the invoice."
         }
         confirmLabel="Cancel Invoice"

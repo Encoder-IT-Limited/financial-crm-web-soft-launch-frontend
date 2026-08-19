@@ -65,8 +65,8 @@ export function InvoicePdf({ invoice, customer }: { invoice: Invoice; customer?:
               <tr key={line.id} className="border-b border-border">
                 <td className="px-3 py-2.5 text-text">{line.description}</td>
                 <td className="px-3 py-2.5 text-center text-text-2">{fmtQty(line.quantity)}</td>
-                <td className="px-3 py-2.5 text-right text-text-2">{fmtMoney(line.unitPrice)}</td>
-                <td className="px-3 py-2.5 text-right font-semibold text-text">{fmtMoney(line.total)}</td>
+                <td className="px-3 py-2.5 text-right text-text-2">{fmtMoney(line.unitPrice, invoice.currency)}</td>
+                <td className="px-3 py-2.5 text-right font-semibold text-text">{fmtMoney(line.total, invoice.currency)}</td>
               </tr>
             ))}
           </tbody>
@@ -77,15 +77,21 @@ export function InvoicePdf({ invoice, customer }: { invoice: Invoice; customer?:
       <div className="flex flex-col items-end gap-1">
         <div className="flex w-full justify-between text-[12px] sm:w-56">
           <span className="text-text-3">Subtotal</span>
-          <span className="text-text">{fmtMoney(invoice.subtotal)}</span>
+          <span className="text-text">{fmtMoney(invoice.subtotal, invoice.currency)}</span>
         </div>
+        {invoice.discount > 0 && (
+          <div className="flex w-full justify-between text-[12px] sm:w-56">
+            <span className="text-text-3">Discount ({(invoice.discountPercent ?? 0).toFixed(0)}%)</span>
+            <span className="text-text">−{fmtMoney(invoice.discount, invoice.currency)}</span>
+          </div>
+        )}
         <div className="flex w-full justify-between text-[12px] sm:w-56">
           <span className="text-text-3">VAT ({taxRate}%)</span>
-          <span className="text-text">{fmtMoney(invoice.tax)}</span>
+          <span className="text-text">{fmtMoney(invoice.tax, invoice.currency)}</span>
         </div>
         <div className="mt-1 flex w-full justify-between border-t-2 border-text pt-2 text-sm font-bold sm:w-56">
           <span>Total Due</span>
-          <span className="text-blue">{fmtMoney(invoice.total)}</span>
+          <span className="text-blue">{fmtMoney(invoice.total, invoice.currency)}</span>
         </div>
       </div>
 
@@ -93,15 +99,15 @@ export function InvoicePdf({ invoice, customer }: { invoice: Invoice; customer?:
       <div className="mt-4 grid grid-cols-3 gap-3">
         <div className="rounded-lg bg-green-l p-2.5 text-center">
           <div className="text-[10px] font-bold uppercase text-green">Paid</div>
-          <div className="mt-0.5 text-sm font-bold text-green">{fmtMoney(paid)}</div>
+          <div className="mt-0.5 text-sm font-bold text-green">{fmtMoney(paid, invoice.currency)}</div>
         </div>
         <div className="rounded-lg bg-amber-l p-2.5 text-center">
           <div className="text-[10px] font-bold uppercase text-amber">Balance Due</div>
-          <div className="mt-0.5 text-sm font-bold text-amber">{fmtMoney(balance)}</div>
+          <div className="mt-0.5 text-sm font-bold text-amber">{fmtMoney(balance, invoice.currency)}</div>
         </div>
         <div className="rounded-lg bg-blue-l p-2.5 text-center">
           <div className="text-[10px] font-bold uppercase text-blue">Credit Note</div>
-          <div className="mt-0.5 text-sm font-bold text-blue">AED 0</div>
+          <div className="mt-0.5 text-sm font-bold text-blue">{fmtMoney(0, invoice.currency)}</div>
         </div>
       </div>
 

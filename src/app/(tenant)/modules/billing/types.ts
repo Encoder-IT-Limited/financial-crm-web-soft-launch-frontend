@@ -12,7 +12,9 @@ export type InvoiceStatus = "draft" | "sent" | "partially-paid" | "paid" | "canc
  * with a balance remaining. */
 export type InvoiceDisplayStatus = InvoiceStatus | "overdue";
 
-export type Currency = "AED";
+export type Currency = "AED" | "USD" | "EUR" | "GBP" | "SAR";
+
+export const CURRENCIES: Currency[] = ["AED", "USD", "EUR", "GBP", "SAR"];
 
 export type PaymentMethod = "bank-transfer" | "card" | "cash" | "cheque" | "mobile-payment";
 
@@ -50,6 +52,8 @@ export type Invoice = {
   currency: Currency;
   lines: InvoiceLine[];
   subtotal: number;
+  discountPercent?: number; // invoice-level discount applied to subtotal before VAT
+  discount: number;
   tax: number;
   total: number;
   paidAmount: number;
@@ -87,6 +91,8 @@ export type NewInvoiceInput = {
   customerId: string;
   issueDate: string;
   dueDate: string;
+  currency?: Currency;
+  discountPercent?: number;
   lines: { description: string; quantity: number; unitPrice: number; taxRate: number }[];
   notes?: string;
 };
@@ -100,19 +106,24 @@ export type RecordPaymentInput = {
 
 export type InvoiceTotals = {
   subtotal: number;
+  discount: number;
   tax: number;
   total: number;
 };
 
 export function computeTotals(
-  lines: { quantity: number; unitPrice: number; taxRate: number }[]
+  lines: { quantity: number; unitPrice: number; taxRate: number }[],
+  discountPercent = 0
 ): InvoiceTotals {
   const subtotal = lines.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0);
+  const discount = (subtotal * discountPercent) / 100;
+  const net = subtotal - discount;
   const tax = lines.reduce((sum, l) => sum + (l.quantity * l.unitPrice * l.taxRate) / 100, 0);
   return {
     subtotal: round2(subtotal),
+    discount: round2(discount),
     tax: round2(tax),
-    total: round2(subtotal + tax),
+    total: round2(net + tax),
   };
 }
 
