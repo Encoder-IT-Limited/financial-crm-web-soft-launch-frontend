@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useSidebarCollapse } from "./SidebarCollapseProvider";
+import { useSidebarCollapse } from "./sidebar-collapse-provider";
 import type { Me } from "@/types/identity";
 import type { SidebarNavSection } from "@/types/nav";
 import { can, hasModule } from "@/lib/permissions";

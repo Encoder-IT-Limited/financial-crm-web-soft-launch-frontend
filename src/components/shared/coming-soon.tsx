@@ -1,4 +1,4 @@
-import { PageHeading } from "./PageHeading";
+import { PageHeading } from "./page-heading";
 
 /** Placeholder for a module page scheduled for a later build step — keeps
  * navigation and routing fully wired while the real page is built. */

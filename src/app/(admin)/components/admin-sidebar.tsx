@@ -1,4 +1,4 @@
-import { Sidebar } from "@/components/shared/Sidebar";
+import { Sidebar } from "@/components/shared/sidebar";
 import { adminNavSections } from "./nav-items";
 import type { Me } from "@/types/identity";
 

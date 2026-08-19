@@ -1,12 +1,12 @@
 "use client";
 
-import { ReactQueryProvider } from "@/providers/ReactQueryProvider";
-import { SessionEvents } from "@/providers/SessionEvents";
-import { ThemeProvider } from "@/components/shared/ThemeProvider";
-import { SidebarCollapseProvider } from "@/components/shared/SidebarCollapseProvider";
-import { AuthGate } from "@/components/shared/AuthGate";
-import { Navbar } from "@/components/shared/Navbar";
-import { TenantSidebar } from "./components/TenantSidebar";
+import { ReactQueryProvider } from "@/providers/react-query-provider";
+import { SessionEvents } from "@/providers/session-events";
+import { ThemeProvider } from "@/components/shared/theme-provider";
+import { SidebarCollapseProvider } from "@/components/shared/sidebar-collapse-provider";
+import { AuthGate } from "@/components/shared/auth-gate";
+import { Navbar } from "@/components/shared/navbar";
+import { TenantSidebar } from "./components/tenant-sidebar";
 
 export default function TenantLayout({ children }: { children: React.ReactNode }) {
   return (

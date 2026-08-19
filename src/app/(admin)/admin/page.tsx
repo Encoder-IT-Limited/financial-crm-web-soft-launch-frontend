@@ -1,4 +1,4 @@
-import { PageHeading } from "@/components/shared/PageHeading";
+import { PageHeading } from "@/components/shared/page-heading";
 import { Card } from "@/components/ui/card";
 
 const metrics = [

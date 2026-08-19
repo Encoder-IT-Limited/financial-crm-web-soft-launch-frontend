@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { Menu, Bell, Moon, Sun, LogOut } from "lucide-react";
-import { useSidebarCollapse } from "./SidebarCollapseProvider";
-import { useTheme } from "./ThemeProvider";
+import { useSidebarCollapse } from "./sidebar-collapse-provider";
+import { useTheme } from "./theme-provider";
 import type { Me } from "@/types/identity";
 import { authService } from "@/lib/auth/auth.service";
 import { useQueryClient } from "@tanstack/react-query";

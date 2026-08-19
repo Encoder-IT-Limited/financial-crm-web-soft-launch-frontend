@@ -59,3 +59,9 @@ HR/Payroll, Calendar/Booking, Social Media, and the mobile app are later phases 
 7. Verify UI changes with `tsc`/lint only — do not start the dev server or visually
    check pages in a browser as part of routine work. Compare against the prototype
    markup/CSS by reading it, not by rendering it.
+8. **Component file names are kebab-case** (`public-navbar.tsx`, `admin-sidebar.tsx`),
+   matching shadcn's own generated files (`button.tsx`, `card.tsx`) — never PascalCase
+   filenames. The exported component/function name inside stays PascalCase as usual
+   (`export function PublicNavbar() { ... }`); only the file on disk is kebab-case.
+9. **Do not run `git commit` automatically.** Stage changes as needed, then hand the user
+   a proposed commit message to review — they run the commit themselves.
