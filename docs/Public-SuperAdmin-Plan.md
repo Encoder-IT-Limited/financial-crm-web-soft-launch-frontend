@@ -179,6 +179,60 @@ company, owner })`.
 **Not changing**: `/privacy` and `/terms` — already built, already use `PublicNavbar` +
 `PublicFooter`, and nothing about this pass affects them.
 
+### 2.6 `/pricing` redesign (planned 2026-08-19)
+
+Design reference: `https://comprehensive-hr-and-operations-pla.vercel.app/pricing` (the
+HR reference project's deployed pricing page) — used for **structural** ideas only; its
+colors, USD currency, per-user-only pricing model, and vertical-specific content
+(nursing homes/care types) don't carry over. Cross-checked against
+`docs/Client-proposal.md`, the SRS, and the client Q&A so the real product rules aren't
+lost under a redesign.
+
+**What's staying**: `PLANS` data shape (`plans-data.ts`), AED currency, the flat-base +
+included-seats + per-additional-seat pricing model (confirmed by
+`Client-proposal.md`'s "Seat Management... base seat allotment per plan and can purchase
+more"), `/signup?plan=<id>` CTAs for Starter/Growth, `/contact` for Enterprise.
+
+**New sections, in order**:
+
+1. **Hero** — "Simple, transparent pricing" + trial/no-hidden-fees trust line, sourced
+   from real `Plan.trialDays` (14, not a copied "30 days") — matches the CTA copy
+   already used elsewhere ("14-day free trial, no credit card required").
+2. **Interactive seat slider** (new) — a single slider driving all three cards' live
+   price at once (`basePrice + max(0, seats - baseSeats) × additionalSeatPrice` per
+   plan), honestly reflecting our actual base+increment model rather than the
+   reference's pure per-seat one. Paired with a Monthly/Annually toggle. **Decided**:
+   `priceYearly` in `plans-data.ts` is adjusted to a clean `monthly × 12 × 0.8` so the
+   toggle can show a confident "Save 20%" badge (Starter 199×12×0.8 = 1910.4 → 1910,
+   Growth 499×12×0.8 = 4790.4 → 4790) instead of the previous arbitrary ~16.6% figures.
+3. **Three tier cards** — reuses the existing wide plan-card style (not
+   `PlanSelectCard`, which is signup-only per your earlier instruction), enhanced to
+   phrase inclusions incrementally ("Everything in Starter, plus…") computed as a set
+   diff between each tier's `modules` array, rather than repeating the full module list
+   on every card.
+4. **Comparison table** (new) — full feature matrix, grouped by category (Accounting &
+   Finance / Sales & CRM / Inventory & Procurement / Reports & AI), each module a row
+   with check/dash per tier, plus non-module rows for base seats, additional-seat
+   price, and trial length.
+5. **FAQ** (new) — grounded directly in the decided business rules from the client
+   Q&A, not invented copy:
+   - *What happens if I go over my included seats?* → every active-login user counts
+     (owner/admin/staff/POS cashier); service/API and read-only auditor accounts don't;
+     creation is blocked with an upgrade prompt at the limit, never silent overage
+     billing.
+   - *What happens if my subscription lapses?* → no grace period — immediate read-only
+     (view/export, no new transactions); data is retained 30–90 days before deletion.
+   - *Can I change plans later?* → upgrade/downgrade anytime.
+   - *Is my data secure?* → tenant isolation, audit logs, encrypted credentials (SRS
+     §11.22).
+   - *Do you offer a free trial?* → yes, per-plan `trialDays`, no credit card required.
+6. **Bottom CTA** — "Get started" / "Contact sales", reusing `FinalCtaBanner`.
+
+**Decided**: AI Assistant stays a flat included/excluded item per plan tier (current
+`PLANS` data, Enterprise-only) — not broken out as a separate usage-based/metered line,
+despite `Client-proposal.md`'s "(Usage-Only)" wording. Simpler, and consistent with how
+every other module is priced.
+
 ---
 
 ## 3. Super Admin portal (`(admin)`)

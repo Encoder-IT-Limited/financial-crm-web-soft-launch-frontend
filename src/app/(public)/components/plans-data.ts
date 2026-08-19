@@ -8,7 +8,7 @@ export const PLANS: Plan[] = [
     id: "starter",
     name: "Starter",
     priceMonthly: 199,
-    priceYearly: 1990,
+    priceYearly: 1910, // 199 × 12 × 0.8, rounded — a clean "Save 20%" annually
     baseSeats: 3,
     additionalSeatPrice: 39,
     trialDays: 14,
@@ -18,7 +18,7 @@ export const PLANS: Plan[] = [
     id: "growth",
     name: "Growth",
     priceMonthly: 499,
-    priceYearly: 4990,
+    priceYearly: 4790, // 499 × 12 × 0.8, rounded — a clean "Save 20%" annually
     baseSeats: 10,
     additionalSeatPrice: 29,
     trialDays: 14,
@@ -28,11 +28,11 @@ export const PLANS: Plan[] = [
   {
     id: "enterprise",
     name: "Enterprise",
-    priceMonthly: 0,
-    priceYearly: 0,
-    baseSeats: 0,
-    additionalSeatPrice: 0,
-    trialDays: 0,
+    priceMonthly: 999,
+    priceYearly: 9590, // 999 × 12 × 0.8, rounded — same clean "Save 20%" annually
+    baseSeats: 25,
+    additionalSeatPrice: 19,
+    trialDays: 14,
     modules: [
       "accounting",
       "sales",
