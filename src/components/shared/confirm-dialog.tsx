@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "@/lib/toast";
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -24,6 +25,9 @@ type ConfirmDialogProps = {
   /** Red confirm button for destructive actions (suspend, delete) */
   destructive?: boolean;
   onConfirm: () => void | Promise<void>;
+  /** Shown via toast on success/failure. Omit either to skip that toast. */
+  successMessage?: string;
+  errorMessage?: string;
 };
 
 /** Confirmation modal for impactful admin actions — suspend/reactivate a
@@ -38,6 +42,8 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   destructive = false,
   onConfirm,
+  successMessage,
+  errorMessage,
 }: ConfirmDialogProps) {
   const [submitting, setSubmitting] = useState(false);
 
@@ -46,6 +52,9 @@ export function ConfirmDialog({
     try {
       await onConfirm();
       onOpenChange(false);
+      if (successMessage) toast.success(successMessage);
+    } catch (error) {
+      toast.error(errorMessage ?? (error instanceof Error ? error.message : "Something went wrong."));
     } finally {
       setSubmitting(false);
     }
