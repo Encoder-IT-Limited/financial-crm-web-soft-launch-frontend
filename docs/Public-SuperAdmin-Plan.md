@@ -43,8 +43,10 @@ structure. Four answers do, directly:
 | `/pricing` | exists, needs rework | Plan cards — currently hardcoded; should render real `Plan` records (name, price, base seats, price/additional seat, module checklist) from the same data Super Admin's Plans & Pricing manages |
 | `/login` | exists | Role-tabbed login (unchanged) |
 | `/signup` | **new** | Instant self-serve tenant creation (decided over sales-assisted): plan selection → company details → owner account → confirm, creating the tenant immediately. Matches the SRS's onboarding flow (§22.2) up through "Create Tenant Owner"; everything after that (branches, warehouses, tax config, invite users) happens inside the tenant portal post-signup, not here |
-| `/features` | optional, not building yet | Not in the mock's nav, not required by any answer — flag as a later add if the client asks for it |
-| `/contact` | optional, not building yet | Same — no signal it's needed for Phase 1 |
+| `/privacy` | **new** | Minimal Privacy Policy — real structure, generic/placeholder copy, clearly marked as a draft. Footer links to it now rather than staying dead |
+| `/terms` | **new** | Same treatment as `/privacy`, Terms of Service |
+| `/features` | optional, not building yet | No dedicated route — the module showcase lives as an in-page section on `/`, linked via a navbar anchor, not a separate page |
+| `/contact` | optional, not building yet | No signal it's needed for Phase 1 |
 
 `/signup` as **one page with internal step state** (mirrors the existing `/login` role-tab
 pattern), not four separate routes — simpler, no shareable-URL requirement for a linear
@@ -59,6 +61,10 @@ wizard, and keeps back/forward within the page instead of the browser history st
 - `AuthCard` — extract the `w-[420px] rounded-[20px] ...` shell currently inline in
   `login/page.tsx` so `/signup` reuses the identical visual frame instead of a second copy.
 - `SignupStepper` — small step indicator (Plan → Company → Owner → Done).
+- `ModuleShowcaseCard` — icon + name + one-line description + optional "Coming soon"
+  badge, used by the home page's module grid (§2.4).
+- `LegalPage` — shared shell (title + "last updated" line + prose container) for
+  `/privacy` and `/terms` so the two pages don't duplicate layout markup.
 
 ### 2.3 Data layer
 
@@ -68,6 +74,52 @@ wizard, and keeps back/forward within the page instead of the browser history st
   cookie, same shape as `authService.login`, then the page redirects to `/dashboard`.
 - Both `/pricing` and `/signup` read plans from the same `plansService.list()` — never a
   second hardcoded plan array — so Super Admin editing a plan is instantly reflected.
+
+### 2.4 Navbar, footer & home page content (decided 2026-08-19)
+
+**Navbar** — stays thin, no new routes added to it:
+- Logo/wordmark (existing, links home)
+- In-page anchor links: `Features` (scrolls to the home page's module grid), `Pricing`
+  (routes to `/pricing`)
+- `Log in` (secondary), `Get started` (primary CTA — points at `/signup` once it exists,
+  `/login` until then)
+- Below `lg:`, the same links collapse into a hamburger menu — no new mechanism needed
+  beyond what a handful of links requires
+
+**Footer** — three columns instead of the current single copyright line:
+- Brand: logo mark + one-line tagline
+- Product: same anchor links as the navbar (Features, Pricing, Log in)
+- Legal: `Privacy Policy` (`/privacy`), `Terms of Service` (`/terms`) — both real routes
+  now (§2.1), not dead links
+- Copyright line (existing, unchanged)
+
+No "Company" column (About/Contact/Careers) and no social icons — nothing in the
+proposal or prototype calls for them.
+
+**Home page** (`/`) — sections, in order:
+1. **Hero** (existing) — headline, subheadline, primary + secondary CTA. Strengthen the
+   subheadline to name the unified-platform pitch (SRS §11.2 item 1: "centralize business
+   operations into one platform").
+2. **Problem framing** (new) — short section naming the pain of disconnected tools
+   (spreadsheets, manual reconciliation, no real-time stock visibility) before the module
+   grid below pivots to the solution.
+3. **Module showcase grid** (new) — one `ModuleShowcaseCard` per module, covering the
+   **full lineup from the proposal**, not just what's built today: Accounting, Invoicing,
+   Expenses, Inventory & Procurement, Banking, CRM, Reports & Compliance, AI Assistant,
+   plus the Phase 2/3 set — POS, HR & Payroll, Calendar & Booking, Social Media — each of
+   those four carrying a "Coming soon" badge. Decided over Phase-1-only: the product will
+   eventually ship all of it, so the marketing story should be complete now rather than
+   re-plumbed later.
+4. **AI Assistant spotlight** (new) — dedicated section for OCR receipt scanning /
+   auto-categorization; the proposal calls this out as a specific differentiator, not
+   just another grid card.
+5. **Compliance section** (new) — UAE VAT + Corporate Tax reporting built in, backed by
+   real tenant-portal pages (`/dashboard/reports/vat`, `/dashboard/reports/corp-tax`).
+6. **Pricing teaser** (new) — condensed line/strip ("Plans start at AED X/month") linking
+   to `/pricing`, not a duplicate of the full `PlanCard` grid.
+7. **Final CTA banner** (new) — "Ready to get started?" + Get Started button, with a
+   trial-length line sourced from `Plan.trialDays` where set.
+8. **Footer**.
 
 ---
 
