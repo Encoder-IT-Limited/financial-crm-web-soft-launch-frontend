@@ -1,5 +1,3 @@
-import { PublicNavbar } from "../components/public-navbar";
-import { PublicFooter } from "../components/public-footer";
 import { LegalPage } from "../components/legal-page";
 
 // PLACEHOLDER — generic draft copy pending real legal review, not the final
@@ -8,7 +6,6 @@ import { LegalPage } from "../components/legal-page";
 export default function TermsOfServicePage() {
   return (
     <>
-      <PublicNavbar />
       <LegalPage title="Terms of Service" lastUpdated="Draft — not yet published">
         <p>
           This is a placeholder Terms of Service. It outlines, in general terms, the
@@ -51,7 +48,6 @@ export default function TermsOfServicePage() {
         <h2>Contact</h2>
         <p>Questions about these terms can be directed to MRM Portal support.</p>
       </LegalPage>
-      <PublicFooter />
     </>
   );
 }

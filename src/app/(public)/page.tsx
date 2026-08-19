@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles, Percent, FileCheck2, X, Check } from "lucide-react";
-import { PublicNavbar } from "./components/public-navbar";
-import { PublicFooter } from "./components/public-footer";
 import { ModuleShowcaseCard } from "./components/module-showcase-card";
 import { MODULES } from "./components/modules-data";
 import { FinalCtaBanner } from "./components/final-cta-banner";
@@ -21,8 +19,6 @@ const RELIEF_POINTS = [
 export default function LandingPage() {
   return (
     <>
-      <PublicNavbar />
-
       {/* Hero */}
       <main className="relative flex min-h-[90vh] flex-col justify-center overflow-hidden px-5 pt-16 pb-24 sm:px-8 sm:pt-24">
         {/* Ambient gradient glow */}
@@ -241,8 +237,6 @@ export default function LandingPage() {
       </section>
 
       <FinalCtaBanner />
-
-      <PublicFooter />
     </>
   );
 }

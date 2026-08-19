@@ -1,5 +1,3 @@
-import { PublicNavbar } from "../components/public-navbar";
-import { PublicFooter } from "../components/public-footer";
 import { LegalPage } from "../components/legal-page";
 
 // PLACEHOLDER — generic draft copy pending real legal review, not the final
@@ -8,7 +6,6 @@ import { LegalPage } from "../components/legal-page";
 export default function PrivacyPolicyPage() {
   return (
     <>
-      <PublicNavbar />
       <LegalPage title="Privacy Policy" lastUpdated="Draft — not yet published">
         <p>
           This is a placeholder Privacy Policy. It describes, in outline, the kinds of
@@ -46,7 +43,6 @@ export default function PrivacyPolicyPage() {
         <h2>Contact</h2>
         <p>Questions about this policy can be directed to MRM Portal support.</p>
       </LegalPage>
-      <PublicFooter />
     </>
   );
 }

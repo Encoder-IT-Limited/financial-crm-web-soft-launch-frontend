@@ -1,59 +1,10 @@
 import Link from "next/link";
-import { PublicNavbar } from "../components/public-navbar";
-import { PublicFooter } from "../components/public-footer";
 import { PlanCard } from "../components/plan-card";
-import type { Plan } from "@/types/plan";
-
-// TEMPORARY: no backend/plansService yet (see docs/Public-SuperAdmin-Plan.md §2.3).
-// Once Super Admin's Plans & Pricing exists, this should fetch real plans instead
-// of a hardcoded list, so editing a plan there is reflected here automatically.
-const PLANS: Plan[] = [
-  {
-    id: "starter",
-    name: "Starter",
-    priceMonthly: 199,
-    priceYearly: 1990,
-    baseSeats: 3,
-    additionalSeatPrice: 39,
-    trialDays: 14,
-    modules: ["accounting", "sales", "purchasing", "banking"],
-  },
-  {
-    id: "growth",
-    name: "Growth",
-    priceMonthly: 499,
-    priceYearly: 4990,
-    baseSeats: 10,
-    additionalSeatPrice: 29,
-    trialDays: 14,
-    modules: ["accounting", "sales", "purchasing", "inventory", "banking", "crm", "reports"],
-    popular: true,
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    priceMonthly: 0,
-    priceYearly: 0,
-    baseSeats: 0,
-    additionalSeatPrice: 0,
-    trialDays: 0,
-    modules: [
-      "accounting",
-      "sales",
-      "purchasing",
-      "inventory",
-      "banking",
-      "crm",
-      "reports",
-      "ai-assistant",
-    ],
-  },
-];
+import { PLANS } from "../components/plans-data";
 
 export default function PricingPage() {
   return (
     <>
-      <PublicNavbar />
 
       <main className="relative flex min-h-[90vh] flex-col justify-center overflow-hidden px-5 py-14 sm:px-8">
         <div
@@ -74,7 +25,7 @@ export default function PricingPage() {
               plan={plan}
               cta={
                 <Link
-                  href="/login"
+                  href={plan.id === "enterprise" ? "/contact" : `/signup?plan=${plan.id}`}
                   className="block rounded-lg bg-blue px-4 py-2 text-[12.5px] font-semibold text-white hover:brightness-110"
                 >
                   {plan.id === "enterprise" ? "Contact sales" : `Choose ${plan.name}`}
@@ -85,7 +36,6 @@ export default function PricingPage() {
         </div>
       </main>
 
-      <PublicFooter />
     </>
   );
 }

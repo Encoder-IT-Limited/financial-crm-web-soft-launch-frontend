@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import { PublicNavbar } from "../components/public-navbar";
-import { PublicFooter } from "../components/public-footer";
 import { FeatureDetailCard } from "../components/feature-detail-card";
 import { FinalCtaBanner } from "../components/final-cta-banner";
 import { MODULES } from "../components/modules-data";
@@ -13,7 +11,6 @@ export const metadata: Metadata = {
 export default function FeaturesPage() {
   return (
     <>
-      <PublicNavbar />
 
       <main className="relative flex min-h-[60vh] flex-col justify-center overflow-hidden px-5 pt-16 pb-8 sm:px-8 sm:pt-24">
         <div
@@ -61,7 +58,6 @@ export default function FeaturesPage() {
         <FinalCtaBanner />
       </div>
 
-      <PublicFooter />
     </>
   );
 }

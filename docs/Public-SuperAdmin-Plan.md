@@ -41,16 +41,19 @@ structure. Four answers do, directly:
 |---|---|---|
 | `/` | exists | Landing |
 | `/pricing` | exists, needs rework | Plan cards — currently hardcoded; should render real `Plan` records (name, price, base seats, price/additional seat, module checklist) from the same data Super Admin's Plans & Pricing manages |
-| `/login` | exists | Role-tabbed login (unchanged) |
-| `/signup` | **new** | Instant self-serve tenant creation (decided over sales-assisted): plan selection → company details → owner account → confirm, creating the tenant immediately. Matches the SRS's onboarding flow (§22.2) up through "Create Tenant Owner"; everything after that (branches, warehouses, tax config, invite users) happens inside the tenant portal post-signup, not here |
-| `/privacy` | **new** | Minimal Privacy Policy — real structure, generic/placeholder copy, clearly marked as a draft. Footer links to it now rather than staying dead |
-| `/terms` | **new** | Same treatment as `/privacy`, Terms of Service |
-| `/features` | optional, not building yet | No dedicated route — the module showcase lives as an in-page section on `/`, linked via a navbar anchor, not a separate page |
-| `/contact` | optional, not building yet | No signal it's needed for Phase 1 |
+| `/login` | **rework** (§2.5) | Single-form login — the Client/Super Admin role tabs are being removed; realm resolves from the account server-side, not a pre-login choice |
+| `/signup` | **new** (§2.5) | Instant self-serve tenant creation (decided over sales-assisted): plan selection → company details → owner account → confirm, creating the tenant immediately. Matches the SRS's onboarding flow (§22.2) up through "Create Tenant Owner"; everything after that (branches, warehouses, tax config, invite users) happens inside the tenant portal post-signup, not here |
+| `/forgot-password` | exists (§2.5) | Email entry, triggers an OTP send |
+| `/verify-otp` | exists (§2.5) | OTP code only, then hands off to `/reset-password` |
+| `/reset-password` | exists (§2.5) | New password + confirm, completes the reset |
+| `/privacy` | exists | Minimal Privacy Policy — real structure, generic/placeholder copy, clearly marked as a draft |
+| `/terms` | exists | Same treatment as `/privacy`, Terms of Service |
+| `/features` | exists | Full module lineup grouped into categories, richer than the home page's teaser grid |
+| `/contact` | exists | Working (backend-less) contact form |
 
-`/signup` as **one page with internal step state** (mirrors the existing `/login` role-tab
-pattern), not four separate routes — simpler, no shareable-URL requirement for a linear
-wizard, and keeps back/forward within the page instead of the browser history stack.
+`/signup` as **one page with internal step state**, not four separate routes — simpler,
+no shareable-URL requirement for a linear wizard, and keeps back/forward within the page
+instead of the browser history stack.
 
 ### 2.2 New reusable components (`(public)/components/`)
 
@@ -120,6 +123,61 @@ proposal or prototype calls for them.
 7. **Final CTA banner** (new) — "Ready to get started?" + Get Started button, with a
    trial-length line sourced from `Plan.trialDays` where set.
 8. **Footer**.
+
+> Since this section was written, `/features` and `/contact` shipped as real routes
+> (navbar/footer now link to them directly instead of `/#features`), and the navbar/footer
+> visual design was reworked (centered nav links, dark footer) — see the actual components
+> for current markup; this section's content plan still holds.
+
+### 2.5 Auth pages: login, signup, password reset (built 2026-08-19)
+
+**Decided**: `/login` drops its Client/Super Admin role tabs — a single email+password
+form, with realm resolved from the account server-side rather than asked up front. Every
+auth page reuses `AuthShell`, a split-screen layout (branded panel left, form right) —
+replacing the old plain centered `AuthCard` — and all gain `PublicNavbar` (previously
+full-bleed, navbar-less). `/login` and `/signup` stay separate routes rather than merging
+into one toggled page, since signup doesn't fit a 2-field login form; a "Don't have an
+account? Sign up" / "Already have an account? Log in" cross-link ties them together.
+
+**Routes** (all reuse `AuthShell`; `PublicNavbar`/`PublicFooter` come from `(public)/layout.tsx`, shown on every public route including these):
+
+| Route | Purpose |
+|---|---|
+| `/login` | Email + password, show/hide toggle, "Forgot password?" link, "Sign up" cross-link. Routes to `/admin` or `/dashboard` off the returned `Me.realm` |
+| `/signup` | See below — plan (conditional) → info → payment |
+| `/forgot-password` | Email field only, triggers an OTP send, moves to `/verify-otp` |
+| `/verify-otp` | 6-digit OTP code only (`OtpInput`), then hands off to `/reset-password?email=&otp=` |
+| `/reset-password` | New password + confirm, completes the reset, redirects to `/login` with a success toast |
+
+**`/signup` flow** (reworked from the original 4-step plan→company→owner→confirm wizard):
+
+- **Plan step is conditional** — skipped entirely when arriving via `/signup?plan=<id>`
+  (which `/pricing`'s CTAs now use), shown only when landing on `/signup` directly without
+  a preselected plan. Plans render as a vertical stack of `PlanCard`s (not a 3-column
+  grid) so they fit the split-screen form column.
+- **One combined "info" form** — company name, country, full name, email, password,
+  confirm — replacing the separate company/owner steps. Matches "one single form with all
+  info, not steps" for account details.
+- **Payment step** — mock card fields (cardholder name, number, expiry, CVC) + an order
+  summary, "Pay & create account" simulates processing then calls `signupService.create`.
+  No real payment gateway wired up yet — flagged inline in the code.
+- **Step progress moves into the left panel** — `AuthStepsList` (new, vertical: numbered
+  circles + connecting line + label/description) replaces a horizontal stepper that would
+  have lived in the form column; sits at the bottom of `AuthShell`'s branded panel instead.
+
+**`AuthShell` left panel** was made more deliberately designed rather than a placeholder:
+dual radial glow (blue + purple), a fading dot-grid, an eyebrow badge ("Multi-tenant SaaS
+platform"), gradient-accented tagline, and a `leftFooter` slot — defaults to three
+floating "glass" module chips (login/forgot/OTP/reset pages), or `AuthStepsList` on
+signup.
+
+**API contract change**: `authService.login` drops `realm` — the backend infers it from
+the account. New: `authService.requestPasswordReset({ email })`,
+`authService.resetPassword({ email, otp, newPassword })`, `signupService.create({ planId,
+company, owner })`.
+
+**Not changing**: `/privacy` and `/terms` — already built, already use `PublicNavbar` +
+`PublicFooter`, and nothing about this pass affects them.
 
 ---
 
