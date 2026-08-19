@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { Menu, Bell, Moon, Sun, LogOut } from "lucide-react";
-import { useSidebarCollapse } from "./sidebar-collapse-provider";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { Bell, Moon, Sun, LogOut } from "lucide-react";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useTheme } from "./theme-provider";
 import type { Me } from "@/types/identity";
 import { authService } from "@/lib/auth/auth.service";
-import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 
 type NavbarProps = {
   portal: "admin" | "tenant";
@@ -15,9 +22,7 @@ type NavbarProps = {
 };
 
 export function Navbar({ portal, me }: NavbarProps) {
-  const { setMobileOpen } = useSidebarCollapse();
   const { theme, toggleTheme } = useTheme();
-  const [menuOpen, setMenuOpen] = useState(false);
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -31,13 +36,7 @@ export function Navbar({ portal, me }: NavbarProps) {
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-surface px-4">
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="rounded-md p-1.5 text-text-3 hover:bg-surface-subtle lg:hidden"
-        aria-label="Open menu"
-      >
-        <Menu className="size-5" />
-      </button>
+      <SidebarTrigger />
 
       <div className="min-w-0 flex-1">
         {portal === "tenant" && me?.tenant && (
@@ -62,26 +61,23 @@ export function Navbar({ portal, me }: NavbarProps) {
         <span className="absolute right-1.5 top-1.5 size-[7px] rounded-full border border-surface bg-red" />
       </button>
 
-      <div className="relative">
-        <button
-          onClick={() => setMenuOpen((o) => !o)}
+      <DropdownMenu>
+        <DropdownMenuTrigger
           className="flex size-[30px] items-center justify-center rounded-full bg-blue text-[11px] font-bold text-white"
         >
           {initials}
-        </button>
-        {menuOpen && (
-          <div className="absolute right-0 top-[calc(100%+8px)] w-44 rounded-lg border border-border bg-surface p-1 shadow-lg">
-            <div className="truncate px-2.5 py-1.5 text-xs text-text-3">{me?.email}</div>
-            <button
-              onClick={handleSignOut}
-              className="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12.5px] text-text-2 hover:bg-surface-subtle"
-            >
-              <LogOut className="size-3.5" />
-              Sign out
-            </button>
-          </div>
-        )}
-      </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" sideOffset={8} className="w-48">
+          <DropdownMenuLabel className="truncate font-normal text-text-3">
+            {me?.email}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={handleSignOut}>
+            <LogOut className="size-3.5" />
+            Sign out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </header>
   );
 }

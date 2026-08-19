@@ -1,27 +1,11 @@
 import Link from "next/link";
+import { PublicNavbar } from "./components/public-navbar";
+import { PublicFooter } from "./components/public-footer";
 
 export default function LandingPage() {
   return (
     <>
-      <header className="flex items-center justify-between px-5 py-4 sm:px-8">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-blue text-sm font-extrabold text-white">
-            M
-          </div>
-          <span className="text-sm font-bold text-text">MRM Portal</span>
-        </div>
-        <nav className="flex items-center gap-4 text-[13px] font-medium text-text-2">
-          <Link href="/pricing" className="hover:text-blue">
-            Pricing
-          </Link>
-          <Link
-            href="/login"
-            className="rounded-lg bg-blue px-4 py-2 font-semibold text-white hover:brightness-110"
-          >
-            Log in
-          </Link>
-        </nav>
-      </header>
+      <PublicNavbar />
 
       <main className="flex flex-1 flex-col items-center justify-center px-5 py-16 text-center sm:px-8">
         <h1 className="max-w-2xl text-3xl font-extrabold text-text sm:text-5xl">
@@ -47,9 +31,7 @@ export default function LandingPage() {
         </div>
       </main>
 
-      <footer className="border-t border-border px-5 py-6 text-center text-[12px] text-text-4 sm:px-8">
-        © {new Date().getFullYear()} MRM Portal. All rights reserved.
-      </footer>
+      <PublicFooter />
     </>
   );
 }

@@ -8,7 +8,28 @@ export type ModuleKey =
   | "banking"
   | "crm"
   | "reports"
-  | "ai-assistant";
+  | "ai-assistant"
+  // Phase 2/3 modules — not built yet, but plans can gate them ahead of time
+  // (docs/Public-SuperAdmin-Plan.md §3.8).
+  | "pos"
+  | "hr-payroll"
+  | "calendar-booking"
+  | "social-media";
+
+export const MODULE_LABELS: Record<ModuleKey, string> = {
+  accounting: "Accounting",
+  sales: "Sales",
+  purchasing: "Purchasing",
+  inventory: "Inventory",
+  banking: "Banking",
+  crm: "CRM",
+  reports: "Reports & Compliance",
+  "ai-assistant": "AI Assistant",
+  pos: "POS",
+  "hr-payroll": "HR & Payroll",
+  "calendar-booking": "Calendar & Booking",
+  "social-media": "Social Media",
+};
 
 export function isPlatform(me: Me | undefined | null): boolean {
   return me?.realm === "admin";

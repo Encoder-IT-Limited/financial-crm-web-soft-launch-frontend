@@ -65,3 +65,20 @@ HR/Payroll, Calendar/Booking, Social Media, and the mobile app are later phases 
    (`export function PublicNavbar() { ... }`); only the file on disk is kebab-case.
 9. **Do not run `git commit` automatically.** Stage changes as needed, then hand the user
    a proposed commit message to review — they run the commit themselves.
+10. **Do not use `react-hook-form` in new code**, despite it being in `Basic-Setup.md`
+    §9's suggested baseline and already used in `login/page.tsx`. Build new forms with
+    plain `useState` + `zod`'s `.safeParse()` for validation instead. The package stays
+    installed and `login/page.tsx` is left as-is for now — this only governs forms
+    written from here on (signup, plan editor, etc.). Note: shadcn's `form` primitive
+    isn't installable anyway under our Base UI flavor (`-b base`) — that wrapper only
+    ships for the Radix flavor, so this isn't a loss of tooling either way.
+11. **`@tanstack/react-table` is pinned to `^8`, not the latest `9.x`.** v9 shipped a
+    completely different feature-based API (no more `getCoreRowModel`/`useReactTable`
+    as we use them) that `filterable-table.tsx`/`simple-table.tsx` are not written
+    against. Don't let a bare `npm install @tanstack/react-table` silently bump this to
+    v9 — it will break both table components.
+12. **shadcn's sidebar primitive (`components/ui/sidebar.tsx`) uses `lg:` (1024px), not
+    its default `md:` (768px)**, to match `Basic-Setup.md` §4's desktop breakpoint —
+    every `md:` in that file (and in `hooks/use-mobile.ts`'s `MOBILE_BREAKPOINT`) was
+    deliberately changed to `lg:`/`1024`. If `npx shadcn add sidebar --overwrite` is
+    ever run again, redo that swap — the registry version still ships `md:`.

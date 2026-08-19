@@ -80,13 +80,16 @@
   --radius: 0.5rem;
 
   /* Sidebar chrome is always navy, in both themes — matches the prototype
-     and doesn't need a dark-mode override. */
+     and doesn't need a dark-mode override. --sidebar-accent(-foreground) is
+     the tenant-portal default (blue tint); admin-sidebar.tsx overrides both
+     to a purple tint locally so the two portals stay visually distinct
+     without forking this primitive. */
   --sidebar: var(--color-navy);
   --sidebar-foreground: #ffffff;
   --sidebar-primary: var(--color-blue);
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: rgba(255, 255, 255, 0.08);
-  --sidebar-accent-foreground: #ffffff;
+  --sidebar-accent: rgba(29, 78, 216, 0.25);
+  --sidebar-accent-foreground: #dbeafe;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: var(--color-blue);
 }
