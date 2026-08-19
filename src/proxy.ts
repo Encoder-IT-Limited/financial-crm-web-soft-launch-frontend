@@ -5,6 +5,13 @@ import type { NextRequest } from "next/server";
 // not validation. Real enforcement happens server-side per request.
 const SESSION_COOKIE = "mrm_session";
 
+// TEMPORARY: no backend exists yet, so a real session cookie can never be
+// issued. Skips the auth-cookie redirect outside production so the portals
+// are viewable during Phase 0/1 UI work. useMe() has a matching dev bypass
+// (src/hooks/useMe.ts) that returns a mock identity instead of calling /me.
+// Remove both once a real backend is wired up.
+const DEV_AUTH_BYPASS = process.env.NODE_ENV !== "production";
+
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "";
 
 type Realm = "public" | "admin" | "tenant";
@@ -49,7 +56,7 @@ export function proxy(request: NextRequest) {
   // of authenticated-looking chrome. Client-side AuthGate + server-side
   // enforcement are the real checks.
   const isProtected = pathname.startsWith("/admin") || pathname.startsWith("/dashboard");
-  if (isProtected && !request.cookies.has(SESSION_COOKIE)) {
+  if (isProtected && !DEV_AUTH_BYPASS && !request.cookies.has(SESSION_COOKIE)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
