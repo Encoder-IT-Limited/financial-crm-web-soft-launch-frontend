@@ -35,6 +35,11 @@ export type BillingCycle = "monthly" | "yearly";
 export type Tenant = {
   id: string;
   name: string;
+  /** Registered/legal company name — may differ from the display `name`. */
+  legalName: string;
+  email: string;
+  phone: string;
+  address: string;
   planId: string;
   status: TenantStatus;
   billingCycle: BillingCycle;

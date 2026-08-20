@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { TenantsList } from "../../modules/tenants/components/tenants-list";
 
 export default function Page() {
-  return <TenantsList />;
+  return (
+    <Suspense fallback={null}>
+      <TenantsList />
+    </Suspense>
+  );
 }

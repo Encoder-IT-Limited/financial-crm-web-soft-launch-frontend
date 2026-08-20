@@ -1,17 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
+import { Pencil, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { PageHeading } from "@/components/shared/page-heading";
 import { FilterableTable } from "@/components/shared/filterable-table";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { SeatMeter } from "@/components/shared/seat-meter";
 import { StatusBadge, type TenantStatus } from "@/components/shared/status-badge";
 import { fmtDate, fmtMoney } from "@/lib/format";
-import { usePlansStore } from "../../plans/store/plans-store";
+import { planApi } from "../../plans/api/plans.service";
 import { tenantsApi } from "../api/tenants.service";
 import { seatUsage, tenantMrr, type Tenant } from "../types";
+import { TenantDetailsDialog } from "./tenant-details-dialog";
+import { TenantEditDialog } from "./tenant-edit-dialog";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyColumnDef<TData> = ColumnDef<TData, any>;
@@ -21,18 +27,22 @@ type Filters = { search: string; status: "all" | TenantStatus; planId: string };
 const STATUS_OPTIONS: TenantStatus[] = ["active", "read-only", "pending-deletion", "cancelled"];
 
 export function TenantsList() {
-  const router = useRouter();
-  const plans = usePlansStore((state) => state.plans);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const { data: tenants = [], isLoading: loading } = useQuery({ queryKey: ["tenants"], queryFn: tenantsApi.list });
+  const { data: plans = [] } = useQuery({ queryKey: ["plans"], queryFn: planApi.list });
+  const searchParams = useSearchParams();
   const [filters, setFilters] = useState<Filters>({ search: "", status: "all", planId: "all" });
 
-  useEffect(() => {
-    tenantsApi.list().then((list) => {
-      setTenants(list);
-      setLoading(false);
-    });
-  }, []);
+  // Tri-state row interaction: which tenant (if any) is open in the details
+  // modal, the edit modal, or pending a delete confirmation. Closing Edit
+  // returns to Details (low-risk, nice to see the result); closing the
+  // delete confirm never does — the tenant may no longer exist.
+  // Initialized from ?tenant=<id> so Dashboard can deep-link into a specific
+  // tenant's details now that there's no dedicated detail route to link to.
+  const [detailsId, setDetailsId] = useState<string | null>(() => searchParams.get("tenant"));
+  const [editId, setEditId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const deleteTenant = tenants.find((t) => t.id === deleteId);
 
   const planName = (planId: string) => plans.find((p) => p.id === planId)?.name ?? "—";
 
@@ -57,7 +67,9 @@ export function TenantsList() {
         id: "plan",
         accessorFn: (t: Tenant) => planName(t.planId),
         header: "Plan",
-        cell: ({ row }) => <span className="text-[12.5px] text-text-2">{planName(row.original.planId)}</span>,
+        cell: ({ row }) => (
+          <span className="text-[12.5px] text-text-2 min-[1440px]:text-[13.5px]">{planName(row.original.planId)}</span>
+        ),
       },
       {
         id: "seats",
@@ -81,14 +93,41 @@ export function TenantsList() {
         header: "MRR",
         cell: ({ row }) => {
           const plan = plans.find((p) => p.id === row.original.planId);
-          return <span className="text-[13px] font-semibold text-text">{fmtMoney(tenantMrr(row.original, plan))}</span>;
+          return (
+            <span className="text-[13px] font-semibold text-text min-[1440px]:text-[14px]">
+              {fmtMoney(tenantMrr(row.original, plan))}
+            </span>
+          );
         },
       },
       {
         id: "createdAt",
         accessorFn: (t: Tenant) => t.createdAt,
         header: "Created",
-        cell: ({ row }) => <span className="text-[12.5px] text-text-3">{fmtDate(row.original.createdAt)}</span>,
+        cell: ({ row }) => (
+          <span className="text-[12.5px] text-text-3 min-[1440px]:text-[13.5px]">{fmtDate(row.original.createdAt)}</span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "",
+        enableSorting: false,
+        size: 90,
+        cell: ({ row }) => (
+          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon-sm" aria-label="Edit tenant" onClick={() => setEditId(row.original.id)}>
+              <Pencil />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Delete tenant"
+              onClick={() => setDeleteId(row.original.id)}
+            >
+              <Trash2 className="text-red" />
+            </Button>
+          </div>
+        ),
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,7 +143,7 @@ export function TenantsList() {
         data={filtered}
         loading={loading}
         getRowId={(tenant) => tenant.id}
-        onRowClick={(tenant) => router.push(`/admin/tenants/${tenant.id}`)}
+        onRowClick={(tenant) => setDetailsId(tenant.id)}
         rowClassName="cursor-pointer"
         emptyState="No tenants match your filters."
         search={{ value: filters.search, onChange: (search) => setFilters({ ...filters, search }), placeholder: "Search tenants..." }}
@@ -140,6 +179,47 @@ export function TenantsList() {
         }
         onClearFilters={() => setFilters({ search: "", status: "all", planId: "all" })}
       />
+
+      {detailsId && (
+        <TenantDetailsDialog
+          open={!!detailsId}
+          onOpenChange={(open) => !open && setDetailsId(null)}
+          tenantId={detailsId}
+          onEdit={() => {
+            setEditId(detailsId);
+            setDetailsId(null);
+          }}
+          onDelete={() => {
+            setDeleteId(detailsId);
+            setDetailsId(null);
+          }}
+        />
+      )}
+
+      {editId && (
+        <TenantEditDialog
+          open={!!editId}
+          onOpenChange={(open) => !open && setEditId(null)}
+          tenantId={editId}
+        />
+      )}
+
+      {deleteTenant && (
+        <ConfirmDialog
+          open={!!deleteId}
+          onOpenChange={(open) => !open && setDeleteId(null)}
+          title={`Delete ${deleteTenant.name}?`}
+          description="This permanently removes the tenant account and all its data. This cannot be undone."
+          confirmLabel="Delete tenant"
+          destructive
+          onConfirm={async () => {
+            await tenantsApi.delete(deleteTenant.id);
+            queryClient.invalidateQueries({ queryKey: ["tenants"] });
+            queryClient.invalidateQueries({ queryKey: ["audit"] });
+          }}
+          successMessage={`${deleteTenant.name} deleted`}
+        />
+      )}
     </div>
   );
 }
