@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageHeading } from "@/components/shared/page-heading";
 import { auditApi } from "../api/audit.service";
 import { AuditLogRow } from "./audit-log-row";
-import type { AuditAction, AuditLogEntry } from "../types";
+import type { AuditAction } from "../types";
 import { AUDIT_ACTION_LABELS } from "../types";
 
 type Filters = {
@@ -23,16 +24,8 @@ type Filters = {
 const EMPTY_FILTERS: Filters = { search: "", tenant: "all", module: "all", action: "all", from: "", to: "" };
 
 export function AuditLogList() {
-  const [entries, setEntries] = useState<AuditLogEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: entries = [], isLoading: loading } = useQuery({ queryKey: ["audit"], queryFn: auditApi.list });
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-
-  useEffect(() => {
-    auditApi.list().then((list) => {
-      setEntries(list);
-      setLoading(false);
-    });
-  }, []);
 
   const tenants = useMemo(
     () => Array.from(new Set(entries.filter((e) => e.tenantName).map((e) => e.tenantName!))).sort(),
