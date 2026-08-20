@@ -60,7 +60,7 @@ export function TableToolbar({
             value={search.value}
             onChange={(e) => search.onChange(e.target.value)}
             placeholder={search.placeholder ?? "Search..."}
-            className="h-9 border-border pl-9 text-[12.5px]"
+            className="h-9 border-border pl-9 text-[12.5px] min-[1440px]:text-[13.5px]"
           />
         </div>
       )}

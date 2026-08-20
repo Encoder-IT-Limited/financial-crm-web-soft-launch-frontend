@@ -237,6 +237,6 @@ export function SimpleTable<TData>({
   }
 
   return (
-    <Card className={cn("gap-0 overflow-hidden p-0", className)}>{content}</Card>
+    <Card className={cn("flex flex-col gap-0 overflow-hidden p-0", className)}>{content}</Card>
   );
 }

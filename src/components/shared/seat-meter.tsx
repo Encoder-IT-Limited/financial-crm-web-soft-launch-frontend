@@ -18,7 +18,7 @@ export function SeatMeter({ used, total, className }: SeatMeterProps) {
 
   return (
     <div className={cn("flex min-w-[110px] flex-col gap-1", className)}>
-      <div className="flex items-baseline justify-between text-[11px]">
+      <div className="flex items-baseline justify-between text-[11px] min-[1440px]:text-[12px]">
         <span className="text-text-3">Seats</span>
         <span className={cn("font-semibold", text)}>
           {used} / {total}

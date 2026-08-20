@@ -129,6 +129,38 @@ body.dark {
   --color-purple-t: rgba(167, 139, 250, 0.28);
 
   --color-slate: #94a3b8;
+
+  /* Every shadcn alias redefined explicitly here (not just inherited via the
+     --color-* chain from :root) — every one of these is a var()-of-a-var(),
+     and relying on that resolving live across the :root -> body.dark
+     boundary was the reason buttons/inputs/badges/dialogs all rendered with
+     stale light colors under dark mode. Same shape as :root's aliases,
+     just re-pointed at the dark --color-* values defined above. */
+  --background: var(--color-background);
+  --foreground: var(--color-text);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-text);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-text);
+  --primary: var(--color-blue);
+  --primary-foreground: #ffffff;
+  --secondary: var(--color-surface-subtle);
+  --secondary-foreground: var(--color-text-2);
+  --muted: var(--color-surface-subtle);
+  --muted-foreground: var(--color-text-3);
+  --accent: var(--color-blue-l);
+  --accent-foreground: var(--color-blue);
+  --destructive: var(--color-red);
+  --destructive-foreground: #ffffff;
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-blue);
+
+  --chart-1: var(--color-blue);
+  --chart-2: var(--color-green);
+  --chart-3: var(--color-amber);
+  --chart-4: var(--color-purple);
+  --chart-5: var(--color-red);
 }
 
 @theme inline {

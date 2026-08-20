@@ -14,9 +14,9 @@ export function FormField({
 }) {
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <Label className="text-[11px] font-semibold text-text-2">{label}</Label>
+      <Label className="text-[11px] font-semibold text-text-2 min-[1440px]:text-[12px]">{label}</Label>
       {children}
-      {error && <p className="text-[10.5px] text-red">{error}</p>}
+      {error && <p className="text-[10.5px] text-red min-[1440px]:text-[11.5px]">{error}</p>}
     </div>
   );
 }
