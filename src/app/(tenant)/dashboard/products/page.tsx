@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { ProductsPage } from "../../modules/inventory/components/products-page";
 
 export default function Page() {
-  return <ComingSoon title="Products & SKU" subtitle="Manage your product catalog" />;
+  return <ProductsPage />;
 }

@@ -7,6 +7,22 @@
 
 export type ProductStatus = "active" | "inactive" | "discontinued";
 
+export const PRODUCT_STATUS_LABELS: Record<ProductStatus, string> = {
+  active: "Active",
+  inactive: "Inactive",
+  discontinued: "Discontinued",
+};
+
+export const CATEGORIES = [
+  "Electronics",
+  "Office & Stationery",
+  "Food & Beverage",
+  "Packaging",
+  "Household",
+] as const;
+
+export const UNITS = ["pcs", "box", "carton", "kg", "liter"] as const;
+
 export type Product = {
   id: string;
   sku: string;
@@ -19,10 +35,12 @@ export type Product = {
   taxRate: number; // % — used on invoices/POS lines
   reorderLevel: number; // default global threshold
   reorderLevels: Record<string, number>; // per-warehouse overrides
+  reorderQuantities: Record<string, number>; // per-warehouse reorder qty override
   trackBatch: boolean;
   trackExpiry: boolean;
   status: ProductStatus;
   description?: string;
+  images: string[];
   createdAt: string;
 };
 
@@ -35,6 +53,7 @@ export type Warehouse = {
   location: string;
   status: WarehouseStatus;
   capacityUnits: number;
+  isPOSLinked: boolean; // Q15 — POS registers can be linked to a specific warehouse
 };
 
 export type Batch = {
@@ -58,7 +77,12 @@ export type StockLevel = {
   warehouseId: string;
   quantity: number; // sellable on hand (negative allowed)
   reserved: number; // committed to open POs/transfers
+  inTransit: number; // dispatched transfers not yet received here
+  damaged: number; // damaged/expired units moved aside from sellable
+  averageCost: number; // weighted-average cost per unit at this warehouse
 };
+
+export const STOCK_REORDER_DEFAULTS = { reorderLevel: 10, reorderQuantity: 25 } as const;
 
 export type StockStatus = "in-stock" | "low" | "out" | "negative";
 
@@ -245,6 +269,7 @@ export type StockMovement = {
   quantity: number; // signed: + in, − out
   refType: "po" | "gr" | "transfer" | "adjustment" | "pos" | "return";
   refNumber: string;
+  notes?: string;
   createdBy: string;
 };
 
