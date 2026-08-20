@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { PaymentsList } from "../../modules/payments/components/payments-list";
 
 export default function Page() {
-  return <ComingSoon title="Payments" subtitle="Track platform-wide billing and payments" />;
+  return <PaymentsList />;
 }
