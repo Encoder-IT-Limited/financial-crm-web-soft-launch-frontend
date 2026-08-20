@@ -7,6 +7,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -68,9 +69,11 @@ export function Navbar({ portal, me }: NavbarProps) {
           {initials}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" sideOffset={8} className="w-48">
-          <DropdownMenuLabel className="truncate font-normal text-text-3">
-            {me?.email}
-          </DropdownMenuLabel>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="truncate font-normal text-text-3">
+              {me?.email}
+            </DropdownMenuLabel>
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleSignOut}>
             <LogOut className="size-3.5" />

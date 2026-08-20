@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import {
   Dialog,
@@ -29,6 +30,7 @@ type Props = {
 };
 
 export function AddSeatsDialog({ open, onOpenChange, tenantId, tenantName }: Props) {
+  const queryClient = useQueryClient();
   const [count, setCount] = useState("1");
   const [error, setError] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
@@ -45,6 +47,8 @@ export function AddSeatsDialog({ open, onOpenChange, tenantId, tenantName }: Pro
       .addSeats(tenantId, result.data.count)
       .then(() => {
         toast.success(`${result.data.count} seat(s) added to ${tenantName}`);
+        queryClient.invalidateQueries({ queryKey: ["tenants"] });
+        queryClient.invalidateQueries({ queryKey: ["audit"] });
         setCount("1");
         onOpenChange(false);
       })
@@ -53,7 +57,7 @@ export function AddSeatsDialog({ open, onOpenChange, tenantId, tenantName }: Pro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Add seats</DialogTitle>
           <DialogDescription>Manually add purchased seats to {tenantName}&apos;s plan.</DialogDescription>

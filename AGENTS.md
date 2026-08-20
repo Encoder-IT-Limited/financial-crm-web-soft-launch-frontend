@@ -90,3 +90,9 @@ HR/Payroll, Calendar/Booking, Social Media, and the mobile app are later phases 
     part into its own small named component (e.g. `login-form.tsx`, `signup-flow.tsx`)
     and mark only that file `"use client"`; the page composes it alongside static
     content. This applies everywhere, not just `(public)`.
+14. **Stay strictly inside the requested scope.** Before editing a file, confirm it's
+    actually part of what was asked — don't touch adjacent routes, modules, or files
+    "while you're in there," even if they share a pattern with what's being changed
+    (e.g. a task scoped to the admin portal must not touch the tenant portal, and vice
+    versa). If a broader change genuinely seems necessary, ask first instead of doing
+    it silently.

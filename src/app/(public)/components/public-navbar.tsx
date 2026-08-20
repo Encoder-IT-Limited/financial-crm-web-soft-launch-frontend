@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { PLATFORM_SETTINGS } from "@/config/platform-settings";
+import { PlatformLogo } from "@/components/shared/platform-logo";
 
 const NAV_LINKS = [
   { label: "Features", href: "/features" },
@@ -12,10 +14,13 @@ export function PublicNavbar() {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-surface/75 backdrop-blur-md">
       <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-4 sm:px-8">
         <Link href="/" className="flex items-center gap-2.5 justify-self-start">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-linear-to-br from-blue to-purple text-base font-extrabold text-white shadow-sm shadow-blue/30">
-            M
-          </div>
-          <span className="text-base font-bold text-text">MRM Portal</span>
+          <PlatformLogo
+            logoUrl={PLATFORM_SETTINGS.general.logoUrl}
+            platformName={PLATFORM_SETTINGS.general.platformName}
+            size="size-9"
+            className="text-base"
+          />
+          <span className="text-base font-bold text-text">{PLATFORM_SETTINGS.general.platformName}</span>
         </Link>
 
         <nav className="hidden items-center gap-8 text-[14.5px] font-medium text-text-2 sm:flex">

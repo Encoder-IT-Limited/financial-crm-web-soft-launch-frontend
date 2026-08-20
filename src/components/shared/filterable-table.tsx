@@ -180,7 +180,7 @@ export function FilterableTable<TData>({
         </div>
       )}
 
-      <Card className={cn("gap-4 p-5", cardClassName)}>
+      <Card className={cn("flex flex-col gap-4 p-5", cardClassName)}>
         {showToolbar && (
           <TableToolbar
             search={search}
