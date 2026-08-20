@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
+import { PLATFORM_SETTINGS } from "@/config/platform-settings";
+import { PlatformLogo } from "@/components/shared/platform-logo";
 
 const PRODUCT_LINKS = [
   { label: "Features", href: "/features" },
@@ -36,14 +38,15 @@ export function PublicFooter() {
       <div className="relative mx-auto grid max-w-5xl gap-10 sm:grid-cols-[1.3fr_1fr_1fr]">
         <div className="flex flex-col gap-3">
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-linear-to-br from-blue to-purple text-sm font-extrabold text-white shadow-sm shadow-blue/30">
-              M
-            </div>
-            <span className="text-sm font-bold text-white">MRM Portal</span>
+            <PlatformLogo
+              logoUrl={PLATFORM_SETTINGS.general.logoUrl}
+              platformName={PLATFORM_SETTINGS.general.platformName}
+              size="size-8"
+              className="text-sm"
+            />
+            <span className="text-sm font-bold text-white">{PLATFORM_SETTINGS.general.platformName}</span>
           </Link>
-          <p className="max-w-[220px] text-[12.5px] text-white/50">
-            Run your business finances in one place.
-          </p>
+          <p className="max-w-[220px] text-[12.5px] text-white/50">{PLATFORM_SETTINGS.general.tagline}</p>
         </div>
 
         <div className="flex flex-col gap-3.5">
@@ -62,7 +65,7 @@ export function PublicFooter() {
       </div>
 
       <div className="relative mx-auto mt-12 max-w-5xl border-t border-white/10 pt-6 text-[12px] text-white/40">
-        © {new Date().getFullYear()} MRM Portal. All rights reserved.
+        © {new Date().getFullYear()} {PLATFORM_SETTINGS.general.platformName}. All rights reserved.
       </div>
     </footer>
   );

@@ -1,5 +1,11 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { PageHeading } from "@/components/shared/page-heading";
+import { SettingsTabs } from "@/app/(admin)/modules/settings/components/settings-tabs";
 
 export default function Page() {
-  return <ComingSoon title="Settings" subtitle="Platform branding, gateways, and notification templates" />;
+  return (
+    <div>
+      <PageHeading title="Settings" subtitle="General platform settings, legal content, and social links" />
+      <SettingsTabs />
+    </div>
+  );
 }

@@ -1,4 +1,5 @@
 import { Mail } from "lucide-react";
+import { PLATFORM_SETTINGS } from "@/config/platform-settings";
 import { ContactForm } from "./contact-form";
 
 export default function ContactPage() {
@@ -18,8 +19,7 @@ export default function ContactPage() {
             </div>
             <div>
               <div className="text-[11px] font-semibold text-text-4 uppercase">Email</div>
-              {/* PLACEHOLDER — replace with the real support address before launch */}
-              <div className="text-[13px] font-medium text-text">support@mrmportal.com</div>
+              <div className="text-[13px] font-medium text-text">{PLATFORM_SETTINGS.general.contactEmail}</div>
             </div>
           </div>
         </div>
