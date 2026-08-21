@@ -41,6 +41,15 @@ export const tenantNavSections: SidebarNavSection[] = [
     ],
   },
   {
+    label: "CRM",
+    items: [
+      { label: "Customers", href: "/dashboard/customers", icon: Users, module: "crm" },
+      { label: "Vendors", href: "/dashboard/vendors", icon: UserRound, module: "crm" },
+      { label: "Inquiries", href: "/dashboard/inquiries", icon: MessageSquareText, module: "crm" },
+      { label: "Leads Pipeline", href: "/dashboard/leads", icon: UserPlus, module: "crm" },
+    ],
+  },
+  {
     label: "Sales",
     items: [
       { label: "Invoices", href: "/dashboard/invoices", icon: FileText, module: "sales" },
@@ -65,28 +74,19 @@ export const tenantNavSections: SidebarNavSection[] = [
     ],
   },
   {
-    label: "Banking",
-    items: [
-      { label: "Bank Accounts", href: "/dashboard/banking", icon: Landmark, module: "banking" },
-      { label: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight, module: "banking" },
-    ],
-  },
-  {
-    label: "CRM",
-    items: [
-      { label: "Customers", href: "/dashboard/customers", icon: Users, module: "crm" },
-      { label: "Vendors", href: "/dashboard/vendors", icon: UserRound, module: "crm" },
-      { label: "Inquiries", href: "/dashboard/inquiries", icon: MessageSquareText, module: "crm" },
-      { label: "Leads Pipeline", href: "/dashboard/leads", icon: UserPlus, module: "crm" },
-    ],
-  },
-  {
     label: "Reports & Compliance",
     items: [
       { label: "All Reports", href: "/dashboard/reports", icon: ClipboardList, module: "reports" },
       { label: "VAT Report", href: "/dashboard/reports/vat", icon: Percent, module: "reports" },
       { label: "Corporate Tax", href: "/dashboard/reports/corp-tax", icon: Building2, module: "reports" },
       { label: "Scheduled Reports", href: "/dashboard/reports/scheduled", icon: CalendarClock, module: "reports" },
+    ],
+  },
+  {
+    label: "Banking",
+    items: [
+      { label: "Bank Accounts", href: "/dashboard/banking", icon: Landmark, module: "banking" },
+      { label: "Transactions", href: "/dashboard/transactions", icon: ArrowLeftRight, module: "banking" },
     ],
   },
   {
