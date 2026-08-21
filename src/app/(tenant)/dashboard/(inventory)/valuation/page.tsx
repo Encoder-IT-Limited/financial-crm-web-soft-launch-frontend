@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { ValuationPage } from "./components/valuation-page";
 
 export default function Page() {
-  return <ComingSoon title="Valuation" subtitle="Inventory valuation methods and stock value" />;
+  return <ValuationPage />;
 }
