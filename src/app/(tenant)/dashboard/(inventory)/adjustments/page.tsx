@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { AdjustmentsPage } from "./components/adjustments-page";
 
 export default function Page() {
-  return <ComingSoon title="Adjustments" subtitle="Adjust stock quantities and values" />;
+  return <AdjustmentsPage />;
 }
