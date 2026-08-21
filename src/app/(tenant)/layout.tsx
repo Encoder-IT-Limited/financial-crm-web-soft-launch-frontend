@@ -8,7 +8,11 @@ import { Navbar } from "@/components/shared/navbar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TenantSidebar } from "./components/tenant-sidebar";
 
-export default function TenantLayout({ children }: { children: React.ReactNode }) {
+export default function TenantLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <ReactQueryProvider>
       <SessionEvents />
@@ -23,7 +27,9 @@ export default function TenantLayout({ children }: { children: React.ReactNode }
               <div className="flex h-dvh flex-1 flex-col overflow-hidden">
                 <div className="flex flex-1 flex-col overflow-hidden border-border lg:m-[10px] lg:rounded-[10px] lg:border">
                   <Navbar portal="tenant" me={me} />
-                  <main className="flex-1 overflow-auto p-4 print:overflow-visible print:p-0 lg:p-6">{children}</main>
+                  <main className="flex-1 overflow-auto p-4 print:overflow-visible print:p-0 lg:p-6">
+                    {children}
+                  </main>
                 </div>
               </div>
             </SidebarProvider>
