@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -13,9 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { customerSchema, type CustomerValues } from "../schemas";
-import type { Customer } from "../types";
-import { invoiceApi } from "../api/invoices.service";
+import { customerSchema, type CustomerValues } from "../../crm/schemas";
+import type { Customer } from "../../crm/types";
+import { customersApi } from "../../crm/api/customers.service";
 import { FormField } from "./form-field";
 
 type Props = {
@@ -25,6 +26,7 @@ type Props = {
 };
 
 export function AddCustomerDialog({ open, onOpenChange, onCreated }: Props) {
+  const queryClient = useQueryClient();
   const [form, setForm] = useState<CustomerValues>({ name: "", email: "", phone: "", address: "", trn: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -38,10 +40,11 @@ export function AddCustomerDialog({ open, onOpenChange, onCreated }: Props) {
       return;
     }
     setSaving(true);
-    invoiceApi
-      .addCustomer(result.data)
+    customersApi
+      .create(result.data)
       .then((customer) => {
         toast.success(`${customer.name} added to CRM`);
+        queryClient.invalidateQueries({ queryKey: ["customers"] });
         setForm({ name: "", email: "", phone: "", address: "", trn: "" });
         setErrors({});
         onOpenChange(false);

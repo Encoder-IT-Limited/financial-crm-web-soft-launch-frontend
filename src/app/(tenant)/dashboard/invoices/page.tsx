@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   type Column,
   type ColumnDef,
@@ -40,8 +41,8 @@ import {
   type Invoice,
   type InvoiceDisplayStatus,
 } from "../../modules/billing/types";
-import { useInvoicesStore } from "../../modules/billing/store/invoices-store";
 import { invoiceApi } from "../../modules/billing/api/invoices.service";
+import { customersApi } from "../../modules/crm/api/customers.service";
 import { InvoiceStatusBadge } from "../../modules/billing/components/invoice-status-badge";
 import { StatTiles } from "../../modules/billing/components/stat-tiles";
 import { InvoicePreviewDialog } from "../../modules/billing/components/invoice-preview-dialog";
@@ -58,8 +59,9 @@ type Filters = {
 
 export default function InvoicesPage() {
   const router = useRouter();
-  const invoices = useInvoicesStore((state) => state.invoices);
-  const customers = useInvoicesStore((state) => state.customers);
+  const queryClient = useQueryClient();
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
+  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
   const [filters, setFilters] = useState<Filters>({ search: "", status: "all", customer: "all" });
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -266,6 +268,7 @@ export default function InvoicesPage() {
     setSendingReminders(true);
     try {
       await Promise.all(selectedEligibleForReminder.map((inv) => invoiceApi.sendReminder(inv.id)));
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
       toast.success(`Reminder sent for ${selectedEligibleForReminder.length} invoice(s)`);
       setRowSelection({});
     } finally {

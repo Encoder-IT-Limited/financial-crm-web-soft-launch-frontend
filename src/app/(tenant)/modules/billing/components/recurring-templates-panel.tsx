@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Pause, PencilLine, Play, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,20 +10,20 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toast } from "@/lib/toast";
 import { fmtDate, fmtMoney } from "@/lib/format";
-import { useRecurringStore } from "../recurring/store/recurring-store";
+import { recurringApi } from "../api/recurring.service";
+import { invoiceApi } from "../api/invoices.service";
 import { FREQUENCY_LABELS, type RecurringTemplate } from "../recurring/types";
-import { useInvoicesStore } from "../store/invoices-store";
+import { customersApi } from "../../crm/api/customers.service";
 import { RecurringTemplateDialog } from "./recurring-template-dialog";
 
 export function RecurringTemplatesPanel() {
-  const templates = useRecurringStore((state) => state.templates);
-  const addTemplate = useRecurringStore((state) => state.addTemplate);
-  const updateTemplate = useRecurringStore((state) => state.updateTemplate);
-  const setTemplateStatus = useRecurringStore((state) => state.setTemplateStatus);
-  const removeTemplate = useRecurringStore((state) => state.removeTemplate);
-  const generateInvoice = useRecurringStore((state) => state.generateInvoice);
-  const customers = useInvoicesStore((state) => state.customers);
-  const invoices = useInvoicesStore((state) => state.invoices);
+  const queryClient = useQueryClient();
+  const { data: templates = [], isLoading: templatesLoading } = useQuery({
+    queryKey: ["recurring-templates"],
+    queryFn: recurringApi.list,
+  });
+  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringTemplate | null>(null);
@@ -36,13 +37,31 @@ export function RecurringTemplatesPanel() {
     return templates.find((t) => t.status === "active")?.nextInvoiceDate;
   }, [templates]);
 
-  function handleGenerate(template: RecurringTemplate) {
-    const invoice = generateInvoice(template.id);
+  function invalidate() {
+    queryClient.invalidateQueries({ queryKey: ["recurring-templates"] });
+    queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    queryClient.invalidateQueries({ queryKey: ["invoice-next-number"] });
+  }
+
+  async function handleGenerate(template: RecurringTemplate) {
+    const invoice = await recurringApi.generate(template.id);
     if (invoice) {
+      invalidate();
       toast.success(`${invoice.number} generated as a draft for review`);
     } else {
       toast.info(`${template.number} is paused — resume it to generate invoices`);
     }
+  }
+
+  async function handleToggleStatus(template: RecurringTemplate) {
+    await recurringApi.setStatus(template.id, template.status === "active" ? "paused" : "active");
+    invalidate();
+  }
+
+  async function handleSave(values: Parameters<typeof recurringApi.create>[0]) {
+    if (editing) await recurringApi.update(editing.id, values);
+    else await recurringApi.create(values);
+    invalidate();
   }
 
   return (
@@ -132,7 +151,7 @@ export function RecurringTemplatesPanel() {
                           variant="ghost"
                           size="icon-sm"
                           aria-label={template.status === "active" ? "Pause" : "Resume"}
-                          onClick={() => setTemplateStatus(template.id, template.status === "active" ? "paused" : "active")}
+                          onClick={() => handleToggleStatus(template)}
                         >
                           {template.status === "active" ? <Pause /> : <Play />}
                         </Button>
@@ -161,7 +180,7 @@ export function RecurringTemplatesPanel() {
               {templates.length === 0 && (
                 <tr>
                   <td colSpan={9} className="h-24 text-center text-[13px] text-text-4">
-                    No recurring templates yet — create one to start billing on a schedule.
+                    {templatesLoading ? "Loading templates…" : "No recurring templates yet — create one to start billing on a schedule."}
                   </td>
                 </tr>
               )}
@@ -203,7 +222,7 @@ export function RecurringTemplatesPanel() {
                     </Link>
                   )}
                   <div className="ml-auto flex gap-1">
-                    <Button variant="ghost" size="icon-sm" aria-label="Pause or resume" onClick={() => setTemplateStatus(template.id, template.status === "active" ? "paused" : "active")}>
+                    <Button variant="ghost" size="icon-sm" aria-label="Pause or resume" onClick={() => handleToggleStatus(template)}>
                       {template.status === "active" ? <Pause /> : <Play />}
                     </Button>
                     <Button variant="ghost" size="icon-sm" aria-label="Delete" className="text-red" onClick={() => setDeleteTarget(template)}>
@@ -216,7 +235,7 @@ export function RecurringTemplatesPanel() {
           })}
           {templates.length === 0 && (
             <div className="p-8 text-center text-[13px] text-text-4">
-              No recurring templates yet — create one to start billing on a schedule.
+              {templatesLoading ? "Loading templates…" : "No recurring templates yet — create one to start billing on a schedule."}
             </div>
           )}
         </div>
@@ -227,10 +246,7 @@ export function RecurringTemplatesPanel() {
           open
           onOpenChange={setDialogOpen}
           editing={editing}
-          onSave={(values) => {
-            if (editing) updateTemplate(editing.id, values);
-            else addTemplate(values);
-          }}
+          onSave={handleSave}
         />
       )}
       <ConfirmDialog
@@ -240,8 +256,11 @@ export function RecurringTemplatesPanel() {
         description="Future cycles will stop. Existing invoices generated from this template are kept."
         confirmLabel="Delete Template"
         destructive
-        onConfirm={() => {
-          if (deleteTarget) removeTemplate(deleteTarget.id);
+        onConfirm={async () => {
+          if (deleteTarget) {
+            await recurringApi.remove(deleteTarget.id);
+            invalidate();
+          }
         }}
         successMessage={`${deleteTarget?.number} deleted`}
       />

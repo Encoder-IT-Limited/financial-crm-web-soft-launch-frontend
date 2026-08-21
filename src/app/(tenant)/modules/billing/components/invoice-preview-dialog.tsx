@@ -10,9 +10,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/lib/toast";
+import { useQuery } from "@tanstack/react-query";
 import type { Invoice } from "../types";
 import { InvoicePdf } from "./invoice-pdf";
-import { useInvoicesStore } from "../store/invoices-store";
+import { customersApi } from "../../crm/api/customers.service";
 
 /** List-page "Preview PDF ↗" — mirrors the prototype's modal-inv-preview. */
 export function InvoicePreviewDialog({
@@ -24,7 +25,7 @@ export function InvoicePreviewDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const customers = useInvoicesStore((state) => state.customers);
+  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
   const customer = invoice ? customers.find((c) => c.id === invoice.customerId) : undefined;
 
   return (

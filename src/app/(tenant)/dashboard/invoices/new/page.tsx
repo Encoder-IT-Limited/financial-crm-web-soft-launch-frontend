@@ -3,22 +3,26 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, Save, Eye, UserPlus, FileText } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Send, Save, Eye, UserPlus, FileText, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { fmtMoney, nextSequence } from "@/lib/format";
+import { fmtMoney } from "@/lib/format";
 import { invoiceFormSchema } from "../../../modules/billing/schemas";
 import { computeTotals, type Currency, type Invoice } from "../../../modules/billing/types";
-import { useInvoicesStore } from "../../../modules/billing/store/invoices-store";
 import { invoiceApi } from "../../../modules/billing/api/invoices.service";
+import { retainersApi } from "../../../modules/billing/api/retainers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { LineItemsEditor, emptyLines, type LineDraft } from "../../../modules/billing/components/line-items-editor";
 import { FormField } from "../../../modules/billing/components/form-field";
 import { AddCustomerDialog } from "../../../modules/billing/components/add-customer-dialog";
 import { InvoicePreviewDialog } from "../../../modules/billing/components/invoice-preview-dialog";
+import { InvoiceSummaryCard, SummaryRow } from "../../../modules/billing/components/invoice-summary-card";
 import { PageHeading } from "@/components/shared/page-heading";
 
 export default function NewInvoicePage() {
@@ -32,10 +36,15 @@ export default function NewInvoicePage() {
 function NewInvoiceForm() {
   const router = useRouter();
   const params = useSearchParams();
+  const queryClient = useQueryClient();
   const editId = params.get("edit");
 
-  const customers = useInvoicesStore((state) => state.customers);
-  const invoiceSeq = useInvoicesStore((state) => state.invoiceSeq);
+  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
+  const { data: retainers = [] } = useQuery({ queryKey: ["retainers"], queryFn: retainersApi.list });
+  const { data: nextNumber = "INV-····" } = useQuery({
+    queryKey: ["invoice-next-number"],
+    queryFn: invoiceApi.getNextNumber,
+  });
   const [editing, setEditing] = useState<Invoice | null>(null);
 
   const [customerId, setCustomerId] = useState("");
@@ -53,6 +62,7 @@ function NewInvoiceForm() {
   const [saving, setSaving] = useState<"draft" | "send" | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [payFromRetainer, setPayFromRetainer] = useState(false);
 
   // Load the invoice being edited (draft only) — /invoices/new?edit=<id>
   useEffect(() => {
@@ -83,7 +93,13 @@ function NewInvoiceForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId]);
 
-  const nextNumber = `INV-${nextSequence(invoiceSeq)}`;
+  // Only offered on brand-new invoices — editing an existing (already-sent
+  // or draft) invoice doesn't go through invoiceApi.create, so there's no
+  // single "the invoice that was just made" to draw the retainer against.
+  const activeRetainer = !editing
+    ? retainers.find((r) => r.customerId === customerId && r.status === "active" && r.remainingBalance > 0)
+    : undefined;
+
   const discountPct = Math.min(100, Math.max(0, Number(discountPercent) || 0));
   const totals = useMemo(
     () =>
@@ -97,6 +113,8 @@ function NewInvoiceForm() {
       ),
     [lines, discountPct]
   );
+
+  const canPayFromRetainer = Boolean(activeRetainer && totals.total > 0 && totals.total <= activeRetainer.remainingBalance);
 
   const previewInvoice: Invoice = useMemo(
     () => ({
@@ -121,6 +139,7 @@ function NewInvoiceForm() {
       total: totals.total,
       paidAmount: editing?.paidAmount ?? 0,
       status: "draft",
+      source: editing?.source ?? "manual",
       notes,
       createdBy: "Salma H.",
       createdAt: new Date().toISOString(),
@@ -186,24 +205,44 @@ function NewInvoiceForm() {
       notes: notes.trim() || undefined,
     };
 
+    // Only combined with "Create & Send" — pre-paying a draft doesn't make
+    // sense, so the checkbox has no effect while saving as a draft.
+    const drawRetainer = !editing && mode === "send" && canPayFromRetainer && payFromRetainer ? activeRetainer : undefined;
+
     const action = editing
       ? invoiceApi.update(editing.id, input).then(() => {
           if (mode === "send") return invoiceApi.send(editing.id);
         })
-      : invoiceApi.create(input, mode).then((created) => {
+      : invoiceApi.create(input, mode).then(async (created) => {
+          if (drawRetainer) {
+            await retainersApi.drawForInvoice(drawRetainer.id, {
+              id: created.id,
+              number: created.number,
+              total: created.total,
+              issueDate: created.issueDate,
+            });
+          }
           if (mode === "send") router.replace(`/dashboard/invoices/${created.id}`);
+          return created;
         });
 
     action
-      .then(() => {
+      .then((created) => {
+        queryClient.invalidateQueries({ queryKey: ["invoices"] });
+        queryClient.invalidateQueries({ queryKey: ["invoice-next-number"] });
+        if (editing) queryClient.invalidateQueries({ queryKey: ["invoice", editing.id] });
+        if (drawRetainer) queryClient.invalidateQueries({ queryKey: ["retainers"] });
+        const invoiceNumber = editing ? editing.number : (created as Invoice | undefined)?.number ?? nextNumber;
         toast.success(
-          mode === "draft"
-            ? editing
-              ? "Draft updated"
-              : `Draft saved — ${nextNumber}`
-            : editing
-              ? `${editing.number} sent to customer`
-              : "Invoice created and sent"
+          drawRetainer
+            ? `${invoiceNumber} created and paid from ${drawRetainer.number}`
+            : mode === "draft"
+              ? editing
+                ? "Draft updated"
+                : `Draft saved — ${nextNumber}`
+              : editing
+                ? `${editing.number} sent to customer`
+                : "Invoice created and sent"
         );
         if (mode === "draft") router.replace("/dashboard/invoices");
       })
@@ -319,35 +358,50 @@ function NewInvoiceForm() {
         </Card>
 
         <div className="flex flex-col gap-4">
-          <Card className="gap-0 p-0">
-            <div className="border-b border-border px-5 py-3">
-              <div className="text-sm font-bold text-text">Summary</div>
-            </div>
-            <div className="flex flex-col gap-2.5 px-5 py-4">
-              <SummaryRow label="Subtotal" value={fmtMoney(totals.subtotal, currency)} />
-              <label className="flex items-center justify-between gap-2 text-[13px] text-text-3">
-                <span>Discount (%)</span>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={discountPercent}
-                  onChange={(e) => {
-                    setDiscountPercent(e.target.value);
-                    setErrors({ ...errors, discountPercent: "" });
-                  }}
-                  aria-invalid={!!errors.discountPercent}
-                  className={cn("w-20 text-right", errors.discountPercent && "border-red")}
+          <InvoiceSummaryCard
+            currency={currency}
+            totals={totals}
+            discountPercent={discountPercent}
+            onDiscountPercentChange={(value) => {
+              setDiscountPercent(value);
+              setErrors({ ...errors, discountPercent: "" });
+            }}
+            discountError={errors.discountPercent}
+            extraRows={
+              <>
+                <SummaryRow label="Paid" value={fmtMoney(editing?.paidAmount ?? 0, currency)} />
+                <SummaryRow
+                  label="Balance due"
+                  value={fmtMoney((editing?.total ?? totals.total) - (editing?.paidAmount ?? 0), currency)}
+                  bold
+                  tone="red"
                 />
+              </>
+            }
+          />
+
+          {activeRetainer && !editing && (
+            <Card className="gap-0 p-0">
+              <label className="flex cursor-pointer items-start gap-2.5 px-5 py-4">
+                <Checkbox
+                  checked={payFromRetainer && canPayFromRetainer}
+                  onCheckedChange={(checked) => setPayFromRetainer(!!checked)}
+                  disabled={!canPayFromRetainer}
+                  className="mt-0.5"
+                />
+                <div>
+                  <div className="flex items-center gap-1.5 text-[13px] font-semibold text-text">
+                    <Wallet className="size-3.5 text-blue" /> Pay from {activeRetainer.number}
+                  </div>
+                  <p className="mt-0.5 text-[11.5px] text-text-3">
+                    {canPayFromRetainer
+                      ? `Draws ${fmtMoney(totals.total, currency)} from the ${fmtMoney(activeRetainer.remainingBalance, activeRetainer.currency)} remaining balance and marks this invoice paid on send. Only applies with "Create & Send".`
+                      : `Invoice total exceeds the ${fmtMoney(activeRetainer.remainingBalance, activeRetainer.currency)} remaining on this retainer.`}
+                  </p>
+                </div>
               </label>
-              {errors.discountPercent && <p className="text-[10.5px] text-red">{errors.discountPercent}</p>}
-              {discountPct > 0 && <SummaryRow label={`Discount applied (${discountPct}%)`} value={`−${fmtMoney(totals.discount, currency)}`} tone="red" />}
-              <SummaryRow label="VAT" value={fmtMoney(totals.tax, currency)} />
-              <SummaryRow label="Total" value={fmtMoney(totals.total, currency)} bold />
-              <SummaryRow label="Paid" value={fmtMoney(editing?.paidAmount ?? 0, currency)} />
-              <SummaryRow label="Balance due" value={fmtMoney((editing?.total ?? totals.total) - (editing?.paidAmount ?? 0), currency)} bold tone="red" />
-            </div>
-          </Card>
+            </Card>
+          )}
 
           <Card className="gap-0 border-blue-t bg-blue-l p-0">
             <div className="flex items-start gap-3 px-5 py-4">
@@ -391,25 +445,6 @@ function NewInvoiceForm() {
         onOpenChange={setShowAddCustomer}
         onCreated={(customer) => setCustomerId(customer.id)}
       />
-    </div>
-  );
-}
-
-function SummaryRow({
-  label,
-  value,
-  bold,
-  tone,
-}: {
-  label: string;
-  value: string;
-  bold?: boolean;
-  tone?: "red";
-}) {
-  return (
-    <div className={cn("flex justify-between text-[13px]", bold && "border-t-2 border-text pt-2 text-[15px] font-bold")}>
-      <span className={cn(!bold && "text-text-3")}>{label}</span>
-      <span className={cn(tone === "red" && "text-red", !tone && "text-text")}>{value}</span>
     </div>
   );
 }

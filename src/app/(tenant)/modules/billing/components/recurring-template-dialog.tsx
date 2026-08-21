@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { fmtMoney } from "@/lib/format";
 import { recurringTemplateSchema } from "../schemas";
 import { FREQUENCY_LABELS, RECURRENCE_FREQUENCIES, type RecurringTemplate } from "../recurring/types";
-import { useInvoicesStore } from "../store/invoices-store";
+import { customersApi } from "../../crm/api/customers.service";
 import { FormField } from "./form-field";
 import type { Currency } from "../types";
 
@@ -39,7 +40,7 @@ type RecurringTemplateDialogProps = {
 };
 
 export function RecurringTemplateDialog({ open, onOpenChange, editing, onSave }: RecurringTemplateDialogProps) {
-  const customers = useInvoicesStore((state) => state.customers);
+  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
 
   const [customerId, setCustomerId] = useState(editing?.customerId ?? "");
   const [description, setDescription] = useState(editing?.description ?? "");

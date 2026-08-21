@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { InvoiceDisplayStatus } from "../types";
 
-const STATUS_CONFIG: Record<
+export const STATUS_CONFIG: Record<
   InvoiceDisplayStatus,
   { label: string; tone: "green" | "amber" | "red" | "neutral" | "blue" }
 > = {

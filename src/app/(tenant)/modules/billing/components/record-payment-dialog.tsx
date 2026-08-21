@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,7 @@ export function RecordPaymentDialog({
   onOpenChange: (open: boolean) => void;
   onRecorded?: () => void;
 }) {
+  const queryClient = useQueryClient();
   const balance = invoice ? invoiceBalance(invoice) : 0;
   const [form, setForm] = useState({
     amount: String(balance || ""),
@@ -78,6 +80,8 @@ export function RecordPaymentDialog({
       })
       .then(() => {
         toast.success(amount >= balance - 0.005 ? `Invoice ${invoice.number} marked as paid` : `Payment of ${fmtMoney(amount)} recorded`);
+        queryClient.invalidateQueries({ queryKey: ["invoices"] });
+        queryClient.invalidateQueries({ queryKey: ["invoice", invoice.id] });
         onOpenChange(false);
         onRecorded?.();
       })
@@ -123,11 +127,15 @@ export function RecordPaymentDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[]).map((method) => (
-                    <SelectItem key={method} value={method}>
-                      {PAYMENT_METHOD_LABELS[method]}
-                    </SelectItem>
-                  ))}
+                  {/* "retainer" is excluded — it's only ever set by retainersApi.drawForInvoice,
+                      which also deducts the retainer's balance; picking it here wouldn't. */}
+                  {(Object.keys(PAYMENT_METHOD_LABELS) as PaymentMethod[])
+                    .filter((method) => method !== "retainer")
+                    .map((method) => (
+                      <SelectItem key={method} value={method}>
+                        {PAYMENT_METHOD_LABELS[method]}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </FormField>

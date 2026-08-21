@@ -1,4 +1,4 @@
-import type { Customer, Invoice, InvoiceLine, OrgProfile } from "../types";
+import type { Invoice, InvoiceLine, OrgProfile } from "../types";
 
 /** ISO date `daysFromNow` days from today (local midnight). */
 export function day(daysFromNow: number): string {
@@ -17,45 +17,6 @@ export const seedOrgProfile: OrgProfile = {
   iban: "AE07 0330 0000 0000 0000 001",
   accountName: "Al Reem Trading LLC",
 };
-
-export const seedCustomers: Customer[] = [
-  {
-    id: "cust-gulf",
-    name: "Gulf Tech Solutions",
-    email: "accounts@gulftech.ae",
-    phone: "+971 50 412 7788",
-    address: "Business Bay, Dubai, UAE",
-    trn: "100123456700001",
-    currency: "AED",
-  },
-  {
-    id: "cust-reem",
-    name: "Reem Properties",
-    email: "finance@reemprop.ae",
-    phone: "+971 2 622 4400",
-    address: "Corniche Road, Abu Dhabi, UAE",
-    trn: "100987654300002",
-    currency: "AED",
-  },
-  {
-    id: "cust-alnoor",
-    name: "Al Noor Logistics",
-    email: "ap@alnoor.ae",
-    phone: "+971 4 880 1212",
-    address: "Jebel Ali Free Zone, Dubai, UAE",
-    trn: "100876543200004",
-    currency: "AED",
-  },
-  {
-    id: "cust-khalifa",
-    name: "Khalifa Media",
-    email: "billing@khalifamedia.ae",
-    phone: "+971 6 574 9090",
-    address: "Al Wahda Street, Sharjah, UAE",
-    trn: "100456789000003",
-    currency: "AED",
-  },
-];
 
 function line(description: string, quantity: number, unitPrice: number, taxRate: number): InvoiceLine {
   return {
@@ -83,6 +44,7 @@ export const seedInvoices: Invoice[] = [
     total: 5400,
     paidAmount: 5400,
     status: "paid",
+    source: "manual",
     notes: "Thank you for your business.",
     createdBy: "Salma H.",
     createdAt: day(-70),
@@ -103,6 +65,7 @@ export const seedInvoices: Invoice[] = [
     total: 7250,
     paidAmount: 0,
     status: "sent",
+    source: "manual",
     notes: "Settlement expected on delivery.",
     createdBy: "Salma H.",
     createdAt: day(-72),
@@ -124,6 +87,7 @@ export const seedInvoices: Invoice[] = [
     total: 12000,
     paidAmount: 0,
     status: "sent",
+    source: "estimate",
     createdBy: "Salma H.",
     createdAt: day(-75),
     sentAt: day(-74),
@@ -143,6 +107,7 @@ export const seedInvoices: Invoice[] = [
     total: 18500,
     paidAmount: 18500,
     status: "paid",
+    source: "manual",
     createdBy: "Salma H.",
     createdAt: day(-79),
     sentAt: day(-78),
@@ -162,6 +127,7 @@ export const seedInvoices: Invoice[] = [
     total: 3800,
     paidAmount: 3800,
     status: "paid",
+    source: "manual",
     createdBy: "Salma H.",
     createdAt: day(-89),
     sentAt: day(-88),
@@ -181,6 +147,7 @@ export const seedInvoices: Invoice[] = [
     total: 9200,
     paidAmount: 0,
     status: "sent",
+    source: "recurring",
     createdBy: "Salma H.",
     createdAt: day(-1),
     sentAt: day(-1),
@@ -200,6 +167,7 @@ export const seedInvoices: Invoice[] = [
     total: 3150,
     paidAmount: 0,
     status: "draft",
+    source: "manual",
     notes: "Waiting for final scope sign-off.",
     createdBy: "Salma H.",
     createdAt: day(-6),
@@ -219,6 +187,7 @@ export const seedInvoices: Invoice[] = [
     total: 4500,
     paidAmount: 0,
     status: "draft",
+    source: "manual",
     createdBy: "Salma H.",
     createdAt: day(-9),
     payments: [],

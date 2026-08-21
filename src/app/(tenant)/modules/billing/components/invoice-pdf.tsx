@@ -1,9 +1,10 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { fmtDate, fmtMoney, fmtQty } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { invoiceBalance, type Customer, type Invoice } from "../types";
-import { useInvoicesStore } from "../store/invoices-store";
+import { invoiceApi } from "../api/invoices.service";
 
 /**
  * The printable / previewable invoice layout — mirrors the prototype's
@@ -11,7 +12,8 @@ import { useInvoicesStore } from "../store/invoices-store";
  * Reused on the list page preview dialog, the detail page, and window.print().
  */
 export function InvoicePdf({ invoice, customer }: { invoice: Invoice; customer?: Customer }) {
-  const org = useInvoicesStore((state) => state.orgProfile);
+  // Seed fallback keeps the layout stable during the brief fetch.
+  const { data: org } = useQuery({ queryKey: ["org-profile"], queryFn: invoiceApi.getOrgProfile, staleTime: Infinity });
   const balance = invoiceBalance(invoice);
   const paid = invoice.paidAmount;
   const taxRate = Math.max(0, ...invoice.lines.map((l) => l.taxRate));
@@ -21,9 +23,9 @@ export function InvoicePdf({ invoice, customer }: { invoice: Invoice; customer?:
       {/* Header */}
       <div className="mb-5 flex flex-wrap items-start justify-between gap-4 sm:mb-6">
         <div>
-          <div className="text-lg font-extrabold text-blue sm:text-xl">{org.legalName}</div>
-          <div className="mt-0.5 text-[11px] text-text-4">{org.email}</div>
-          <div className="text-[11px] text-text-4">{org.address}</div>
+          <div className="text-lg font-extrabold text-blue sm:text-xl">{org?.legalName}</div>
+          <div className="mt-0.5 text-[11px] text-text-4">{org?.email}</div>
+          <div className="text-[11px] text-text-4">{org?.address}</div>
         </div>
         <div className="text-left sm:text-right">
           <div className="text-xl font-bold text-text sm:text-[22px]">INVOICE</div>
@@ -115,7 +117,7 @@ export function InvoicePdf({ invoice, customer }: { invoice: Invoice; customer?:
       <div className="mt-4 border-t border-border pt-3 text-[11px] text-text-4">
         {invoice.notes && <div className="mb-1.5">{invoice.notes}</div>}
         <div className={cn("text-text-3")}>
-          Bank: {org.bank} · IBAN: {org.iban} · Account: {org.accountName}
+          Bank: {org?.bank} · IBAN: {org?.iban} · Account: {org?.accountName}
         </div>
       </div>
     </div>
