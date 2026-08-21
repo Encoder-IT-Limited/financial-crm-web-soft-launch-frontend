@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { RetainersList } from "../../modules/billing/components/retainers-list";
 
 export default function Page() {
-  return <ComingSoon title="Retainers" subtitle="Manage recurring retainer agreements" />;
+  return <RetainersList />;
 }
