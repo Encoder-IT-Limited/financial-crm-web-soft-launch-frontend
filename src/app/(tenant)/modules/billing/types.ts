@@ -1,22 +1,36 @@
 /* ------------------------------------------------------------------ */
 /* Sales / Invoicing — domain model. Frontend-only mock of the schema  */
 /* in docs/inv-pos-hr-tenant.md §33.14 (invoices + invoice_items).     */
-/* Timestamps are ISO strings so the Zustand store persists to         */
-/* localStorage without a serializer.                                  */
+/* Timestamps are ISO strings; data lives in in-memory mock services   */
+/* consumed via React Query.                                           */
 /* ------------------------------------------------------------------ */
 
+/** Re-exported from the CRM module — Customer & currency vocabulary are
+ *  owned there so CRM/Sales/POS never duplicate them. */
+import type { Currency } from "../crm/types";
+export type { Currency, Customer } from "../crm/types";
+export { CURRENCIES } from "../crm/types";
+import { pct } from "@/lib/format";
+
 export type InvoiceStatus = "draft" | "sent" | "partially-paid" | "paid" | "cancelled";
+
+/** Where an invoice originated (docs/inv-pos-hr-tenant.md §19). `pos` is
+ *  forward-compat for the future POS module; nothing sets it yet.
+ *  `debit-note`/`credit-note` are set when a standalone note (one issued
+ *  with no linked invoice) is converted into an invoice — positive-value
+ *  for a debit note, negative-value for a credit note. `retainer` is set
+ *  on the funding invoice auto-generated when a Retainer is created. */
+export type InvoiceSource = "manual" | "estimate" | "recurring" | "pos" | "debit-note" | "credit-note" | "retainer";
 
 /** Derived from status + payment state + due date — never stored.
  * `overdue` applies to sent/partially-paid invoices past their due date
  * with a balance remaining. */
 export type InvoiceDisplayStatus = InvoiceStatus | "overdue";
 
-export type Currency = "AED" | "USD" | "EUR" | "GBP" | "SAR";
-
-export const CURRENCIES: Currency[] = ["AED", "USD", "EUR", "GBP", "SAR"];
-
-export type PaymentMethod = "bank-transfer" | "card" | "cash" | "cheque" | "mobile-payment";
+/** `retainer` is set only by `retainersApi.drawForInvoice` — never
+ *  selectable from RecordPaymentDialog, since a manually-recorded "retainer"
+ *  payment there wouldn't actually deduct the retainer's balance. */
+export type PaymentMethod = "bank-transfer" | "card" | "cash" | "cheque" | "mobile-payment" | "retainer";
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   "bank-transfer": "Bank Transfer",
@@ -24,6 +38,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: "Cash",
   cheque: "Cheque",
   "mobile-payment": "Mobile Payment",
+  retainer: "Retainer Draw",
 };
 
 export type InvoiceLine = {
@@ -33,6 +48,9 @@ export type InvoiceLine = {
   unitPrice: number;
   taxRate: number; // VAT %, 0 or 5 in UAE
   total: number; // quantity * unitPrice
+  /** Forward-compat for the Inventory module (docs §2) — unused today. */
+  productId?: string;
+  warehouseId?: string;
 };
 
 export type Payment = {
@@ -58,6 +76,7 @@ export type Invoice = {
   total: number;
   paidAmount: number;
   status: InvoiceStatus;
+  source: InvoiceSource;
   notes?: string;
   createdBy: string;
   createdAt: string;
@@ -65,16 +84,6 @@ export type Invoice = {
   lastReminderAt?: string;
   cancelledAt?: string;
   payments: Payment[];
-};
-
-export type Customer = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  address: string;
-  trn: string; // UAE VAT registration number
-  currency: Currency;
 };
 
 export type OrgProfile = {
@@ -151,4 +160,161 @@ export function daysPast(iso: string): number {
 
 export function isInvoiceOverdue(invoice: Invoice): boolean {
   return invoiceDisplayStatus(invoice) === "overdue";
+}
+
+/* ------------------------------------------------------------------ */
+/* Proposals — merged with "Estimates" (same concept, richer status    */
+/* set) per the Sales & Invoicing plan's Key Decision #3.              */
+/* ------------------------------------------------------------------ */
+
+export type ProposalStatus = "draft" | "sent" | "accepted" | "rejected";
+
+/** Derived from status + expiry date — never stored. `expired` applies to
+ *  a `sent` proposal whose expiry date has passed without a response. */
+export type ProposalDisplayStatus = ProposalStatus | "expired";
+
+export type Proposal = {
+  id: string;
+  number: string; // PRO-0001
+  customerId: string;
+  date: string;
+  expiryDate: string;
+  currency: Currency;
+  lines: InvoiceLine[];
+  subtotal: number;
+  discountPercent?: number;
+  discount: number;
+  tax: number;
+  total: number;
+  status: ProposalStatus;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  sentAt?: string;
+  respondedAt?: string;
+  /** Set once "Convert to Invoice" has run — links to the created invoice. */
+  convertedInvoiceId?: string;
+};
+
+export type NewProposalInput = {
+  customerId: string;
+  date: string;
+  expiryDate: string;
+  currency?: Currency;
+  discountPercent?: number;
+  lines: { description: string; quantity: number; unitPrice: number; taxRate: number }[];
+  notes?: string;
+};
+
+export function proposalDisplayStatus(proposal: Proposal): ProposalDisplayStatus {
+  if (proposal.status === "sent" && daysPast(proposal.expiryDate) > 0) return "expired";
+  return proposal.status;
+}
+
+/* ------------------------------------------------------------------ */
+/* Credit & Debit Notes — one combined "adjustment" model, matching    */
+/* the plan's decision to keep a single route/nav item with a Credit/  */
+/* Debit tab switch rather than two separate entities.                 */
+/* docs/inv-pos-hr-tenant.md §33.16 only specs `credit_notes`; debit    */
+/* notes mirror the same shape with the balance effect inverted.       */
+/* ------------------------------------------------------------------ */
+
+export type AdjustmentKind = "credit" | "debit";
+
+export type AdjustmentStatus = "issued" | "void";
+
+export type Adjustment = {
+  id: string;
+  number: string; // CN-0001 / DN-0001
+  kind: AdjustmentKind;
+  customerId: string;
+  invoiceId?: string;
+  amount: number;
+  reason: string;
+  currency: Currency;
+  status: AdjustmentStatus;
+  createdBy: string;
+  createdAt: string;
+  voidedAt?: string;
+};
+
+export type NewAdjustmentInput = {
+  kind: AdjustmentKind;
+  customerId: string;
+  invoiceId?: string;
+  amount: number;
+  reason: string;
+  currency?: Currency;
+};
+
+/** Issued adjustments linked to a given invoice — voided ones don't count. */
+export function adjustmentsForInvoice(adjustments: Adjustment[], invoiceId: string): Adjustment[] {
+  return adjustments.filter((a) => a.invoiceId === invoiceId && a.status === "issued");
+}
+
+/** Invoice balance after applying its linked credit/debit notes — credits
+ *  reduce what's owed, debits increase it. Never stored on the invoice
+ *  itself; always derived so a voided note instantly stops affecting it. */
+export function adjustedInvoiceBalance(invoice: Invoice, invoiceAdjustments: Adjustment[]): number {
+  const net = invoiceAdjustments.reduce((sum, a) => sum + (a.kind === "credit" ? -a.amount : a.amount), 0);
+  return round2(invoiceBalance(invoice) + net);
+}
+
+/* ------------------------------------------------------------------ */
+/* Retainers — CRUD + balance tracking only. No auto-invoice-          */
+/* generation: nothing in the docs specs that behavior (Phase E note). */
+/* ------------------------------------------------------------------ */
+
+export type RetainerBillingPeriod = "monthly" | "quarterly" | "yearly";
+
+export type RetainerStatus = "active" | "paused" | "closed";
+
+export type RetainerUsage = {
+  id: string;
+  date: string;
+  amount: number;
+  note?: string;
+};
+
+export type Retainer = {
+  id: string;
+  number: string; // RET-0001
+  customerId: string;
+  contractAmount: number;
+  billingPeriod: RetainerBillingPeriod;
+  remainingBalance: number;
+  currency: Currency;
+  status: RetainerStatus;
+  startDate: string;
+  notes?: string;
+  createdBy: string;
+  createdAt: string;
+  usage: RetainerUsage[];
+  /** Invoice auto-generated (and marked paid) for the contract amount when
+   *  the retainer was created — the document behind the upfront funding.
+   *  Absent on retainers seeded before this existed. */
+  fundingInvoiceId?: string;
+};
+
+export type NewRetainerInput = {
+  customerId: string;
+  contractAmount: number;
+  billingPeriod: RetainerBillingPeriod;
+  currency?: Currency;
+  startDate: string;
+  notes?: string;
+};
+
+export type RecordUsageInput = {
+  date: string;
+  amount: number;
+  note?: string;
+};
+
+export function retainerUsedAmount(retainer: Retainer): number {
+  return round2(retainer.contractAmount - retainer.remainingBalance);
+}
+
+export function retainerPercentUsed(retainer: Retainer): number {
+  return pct(retainerUsedAmount(retainer), retainer.contractAmount);
 }
