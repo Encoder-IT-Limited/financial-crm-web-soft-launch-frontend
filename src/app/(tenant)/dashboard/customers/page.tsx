@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { CustomersList } from "../../modules/crm/components/customers-list";
 
 export default function Page() {
-  return <ComingSoon title="Customers" subtitle="Manage your customer directory" />;
+  return <CustomersList />;
 }
