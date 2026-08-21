@@ -194,7 +194,7 @@ export const tenantNavSections: SidebarNavSection[] = [
       },
       {
         label: "Reports",
-        href: "/dashboard/inv-reports",
+        href: "/dashboard/reports",
         icon: FileBarChart,
         module: "inventory",
       },
