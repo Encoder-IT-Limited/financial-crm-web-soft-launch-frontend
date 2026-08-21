@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { BatchesPage } from "./components/batches-page";
 
 export default function Page() {
-  return <ComingSoon title="Batches" subtitle="Track batch and lot numbers with expiry dates" />;
+  return <BatchesPage />;
 }
