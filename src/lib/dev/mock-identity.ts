@@ -2,7 +2,7 @@ import type { Me } from "@/types/identity";
 
 /**
  * TEMPORARY: stands in for a real /me response until a backend exists.
- * Used only by useMe()'s dev bypass (NODE_ENV !== "production").
+ * Used only by useMe()'s always-on dev bypass.
  */
 export function mockIdentity(realm: "admin" | "tenant"): Me {
   if (realm === "admin") {

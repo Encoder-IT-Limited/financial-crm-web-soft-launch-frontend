@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 import { authService } from "@/lib/auth/auth.service";
 import { mockIdentity } from "@/lib/dev/mock-identity";
 
-// TEMPORARY: matches the bypass in src/proxy.ts. No backend exists yet, so
-// /me can never really answer — return a mock identity outside production
-// instead. Remove once a real backend is wired up.
-const DEV_AUTH_BYPASS = process.env.NODE_ENV !== "production";
+// TEMPORARY: matches the bypass in src/proxy.ts. No backend exists yet
+// anywhere — dev machine or the deployed demo — so /me can never really
+// answer; always return a mock identity instead. Remove once a real backend
+// is wired up.
+const DEV_AUTH_BYPASS = true;
 
 /** The one query every authenticated shell can assume is warm — AuthGate
  * triggers it on mount. */
