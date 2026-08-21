@@ -78,6 +78,35 @@ export const tenantNavSections: SidebarNavSection[] = [
     ],
   },
   {
+    label: "CRM",
+    items: [
+      {
+        label: "Customers",
+        href: "/dashboard/customers",
+        icon: Users,
+        module: "crm",
+      },
+      {
+        label: "Vendors",
+        href: "/dashboard/vendors",
+        icon: UserRound,
+        module: "crm",
+      },
+      {
+        label: "Inquiries",
+        href: "/dashboard/inquiries",
+        icon: MessageSquareText,
+        module: "crm",
+      },
+      {
+        label: "Leads Pipeline",
+        href: "/dashboard/leads",
+        icon: UserPlus,
+        module: "crm",
+      },
+    ],
+  },
+  {
     label: "Sales",
     items: [
       {
@@ -272,6 +301,23 @@ export const tenantNavSections: SidebarNavSection[] = [
         href: "/dashboard/reports/scheduled",
         icon: CalendarClock,
         module: "reports",
+      },
+    ],
+  },
+  {
+    label: "Banking",
+    items: [
+      {
+        label: "Bank Accounts",
+        href: "/dashboard/banking",
+        icon: Landmark,
+        module: "banking",
+      },
+      {
+        label: "Transactions",
+        href: "/dashboard/transactions",
+        icon: ArrowLeftRight,
+        module: "banking",
       },
     ],
   },

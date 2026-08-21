@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Ban, Download, PencilLine, Printer, Send, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -10,51 +11,70 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { PageHeading } from "@/components/shared/page-heading";
 import { toast } from "@/lib/toast";
 import { fmtDate, fmtDateTime, fmtMoney } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import {
+  adjustedInvoiceBalance,
+  adjustmentsForInvoice,
   invoiceBalance,
   invoiceDisplayStatus,
   PAYMENT_METHOD_LABELS,
 } from "../../../modules/billing/types";
-import { useInvoicesStore } from "../../../modules/billing/store/invoices-store";
 import { invoiceApi } from "../../../modules/billing/api/invoices.service";
+import { adjustmentsApi } from "../../../modules/billing/api/adjustments.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { InvoicePdf } from "../../../modules/billing/components/invoice-pdf";
 import { InvoiceStatusBadge } from "../../../modules/billing/components/invoice-status-badge";
+import { AdjustmentStatusBadge } from "../../../modules/billing/components/adjustment-status-badge";
 import { RecordPaymentDialog } from "../../../modules/billing/components/record-payment-dialog";
 import { StatTiles } from "../../../modules/billing/components/stat-tiles";
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ invoiceId: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const invoice = useInvoicesStore((state) => state.invoices.find((inv) => inv.id === params.invoiceId));
-  const customers = useInvoicesStore((state) => state.customers);
+  const { data: invoice, isLoading: invoiceLoading } = useQuery({
+    queryKey: ["invoice", params.invoiceId],
+    queryFn: () => invoiceApi.get(params.invoiceId),
+  });
+  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
+  const { data: adjustments = [] } = useQuery({ queryKey: ["adjustments"], queryFn: adjustmentsApi.list });
 
   const [payDialogOpen, setPayDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!invoice) {
+    if (!invoiceLoading && !invoice) {
       const timer = setTimeout(() => router.replace("/dashboard/invoices"), 400);
       return () => clearTimeout(timer);
     }
-  }, [invoice, router]);
+  }, [invoiceLoading, invoice, router]);
 
-  if (!invoice) {
+  if (invoiceLoading || !invoice) {
     return (
       <div className="flex h-64 items-center justify-center text-[13px] text-text-4">
-        Invoice not found — redirecting…
+        {invoiceLoading ? "Loading invoice…" : "Invoice not found — redirecting…"}
       </div>
     );
   }
 
+  function invalidate() {
+    queryClient.invalidateQueries({ queryKey: ["invoice", invoice!.id] });
+    queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    queryClient.invalidateQueries({ queryKey: ["invoice-next-number"] });
+  }
+
   const status = invoiceDisplayStatus(invoice);
   const balance = invoiceBalance(invoice);
+  const invoiceAdjustments = adjustmentsForInvoice(adjustments, invoice.id);
+  const displayedBalance = adjustedInvoiceBalance(invoice, invoiceAdjustments);
   const customer = customers.find((c) => c.id === invoice.customerId);
 
   const sendInvoice = async () => {
     setBusy("send");
     await invoiceApi.send(invoice.id);
+    invalidate();
     toast.success(`${invoice.number} sent to ${customer?.name ?? "customer"}`);
     setBusy(null);
   };
@@ -62,6 +82,7 @@ export default function InvoiceDetailPage() {
   const sendReminder = async () => {
     setBusy("reminder");
     await invoiceApi.sendReminder(invoice.id);
+    invalidate();
     toast.success(`Reminder sent to ${customer?.email}`);
     setBusy(null);
   };
@@ -69,6 +90,7 @@ export default function InvoiceDetailPage() {
   const cancelInvoice = async () => {
     setBusy("cancel");
     await invoiceApi.cancel(invoice.id);
+    invalidate();
     toast.success(`${invoice.number} cancelled`);
     setBusy(null);
     setCancelDialogOpen(false);
@@ -138,7 +160,12 @@ export default function InvoiceDetailPage() {
         tiles={[
           { label: "Total", value: fmtMoney(invoice.total, invoice.currency), tone: "blue" },
           { label: "Paid", value: fmtMoney(invoice.paidAmount, invoice.currency), tone: "green" },
-          { label: "Balance Due", value: fmtMoney(balance, invoice.currency), tone: balance > 0 ? "amber" : "neutral" },
+          {
+            label: "Balance Due",
+            value: fmtMoney(displayedBalance, invoice.currency),
+            tone: displayedBalance > 0 ? "amber" : "neutral",
+            sub: invoiceAdjustments.length > 0 ? "after adjustments" : undefined,
+          },
           { label: "VAT", value: fmtMoney(invoice.tax, invoice.currency), tone: "neutral" },
         ]}
       />
@@ -149,6 +176,29 @@ export default function InvoiceDetailPage() {
         </div>
 
         <div className="flex flex-col gap-4">
+          {invoiceAdjustments.length > 0 && (
+            <Card className="gap-0 p-0">
+              <div className="border-b border-border px-5 py-3 text-sm font-bold text-text">Adjustments</div>
+              <div className="flex flex-col divide-y divide-border">
+                {invoiceAdjustments.map((adj) => (
+                  <div key={adj.id} className="flex items-start justify-between gap-3 px-5 py-3.5">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-[13px] font-semibold text-text">
+                        {adj.number}
+                        <AdjustmentStatusBadge status={adj.status} />
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-text-3">{adj.reason}</div>
+                    </div>
+                    <span className={cn("shrink-0 text-[13px] font-semibold", adj.kind === "credit" ? "text-green" : "text-amber")}>
+                      {adj.kind === "credit" ? "−" : "+"}
+                      {fmtMoney(adj.amount, invoice.currency)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+
           <Card className="gap-0 p-0">
             <div className="border-b border-border px-5 py-3 text-sm font-bold text-text">
               Payment history
