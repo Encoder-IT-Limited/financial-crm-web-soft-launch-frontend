@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { GoodsReceiptsPage } from "./components/goods-receipts-page";
 
 export default function Page() {
-  return <ComingSoon title="Goods Receipt" subtitle="Record received goods against purchase orders" />;
+  return <GoodsReceiptsPage />;
 }
