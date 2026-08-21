@@ -52,6 +52,7 @@ import {
   type SortPreset,
 } from "./products-toolbar";
 import { ProductsEmptyState } from "./products-empty-state";
+import { ProductThumbnail, getStockTone } from "./product-thumbnail";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyColumnDef<TData> = ColumnDef<TData, any>;
@@ -87,29 +88,6 @@ const categoryTone: Record<ProductCategory, "blue" | "purple" | "amber" | "green
   Office: "green",
   Services: "neutral",
 };
-
-const categoryTileClass: Record<ProductCategory, string> = {
-  Laptops: "bg-blue-l text-blue",
-  Accessories: "bg-purple-l text-purple",
-  Furniture: "bg-amber-l text-amber",
-  Office: "bg-green-l text-green",
-  Services: "bg-surface-subtle text-text-3",
-};
-
-function stockTone(stock: number): "green" | "amber" | "red" {
-  if (stock >= 50) return "green";
-  if (stock >= 20) return "amber";
-  return "red";
-}
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase();
-}
 
 function exportProductsCsv(rows: Product[]) {
   const header = ["Product", "SKU", "Category", "Stock", "Price (AED)", "Status"];
@@ -194,15 +172,7 @@ export function ProductsPage() {
         header: "Product",
         cell: ({ row }) => (
           <span className="flex items-center gap-3">
-            <span
-              className={cn(
-                "grid size-9 shrink-0 place-items-center rounded-lg text-[11px] font-bold",
-                categoryTileClass[row.original.category]
-              )}
-              aria-hidden
-            >
-              {initials(row.original.name)}
-            </span>
+            <ProductThumbnail product={row.original} />
             <span className="flex min-w-0 flex-col">
               <span className="truncate text-[13px] font-semibold text-text min-[1440px]:text-[13.5px]">
                 {row.original.name}
@@ -221,7 +191,7 @@ export function ProductsPage() {
         accessorKey: "stock",
         header: "Stock",
         cell: ({ row }) => {
-          const tone = stockTone(row.original.stock);
+          const tone = getStockTone(row.original.stock);
           return (
             <span className={cn("flex items-center justify-start gap-1.5 text-[12.5px] font-semibold tabular-nums min-[1440px]:text-[13.5px]")}>
               <span
