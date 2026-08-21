@@ -1,5 +1,11 @@
-import ProductFormPage from "../../../modules/inventory/components/product-form";
+import { PageHeading } from "@/components/shared/page-heading";
+import { ProductForm } from "../components/product-form";
 
 export default function Page() {
-  return <ProductFormPage />;
+  return (
+    <div>
+      <PageHeading title="Add Product" subtitle="Create a new product in your catalog" />
+      <ProductForm />
+    </div>
+  );
 }

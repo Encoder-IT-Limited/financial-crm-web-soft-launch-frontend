@@ -1,10 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { ProductsPage } from "./components/products-page";
 
 export default function Page() {
-  return (
-    <ComingSoon
-      title="Inventory Dashboard"
-      subtitle="Overview of stock levels, movements, and alerts"
-    />
-  );
+  return <ProductsPage />;
 }
