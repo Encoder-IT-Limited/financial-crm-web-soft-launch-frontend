@@ -156,12 +156,12 @@ export const tenantNavSections: SidebarNavSection[] = [
         icon: ArrowLeftRight,
         module: "inventory",
       },
-      // {
-      //   label: "Stock Transfer",
-      //   href: "/dashboard/stock-transfer",
-      //   icon: ArrowRightLeft,
-      //   module: "inventory",
-      // },
+      {
+        label: "Stock Transfer",
+        href: "/dashboard/stock-transfer",
+        icon: ArrowRightLeft,
+        module: "inventory",
+      },
       {
         label: "Goods Receipt",
         href: "/dashboard/goods-receipt",
