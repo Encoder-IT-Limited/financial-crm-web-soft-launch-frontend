@@ -7,6 +7,48 @@ already scaffolded per `Project-Structure.md`. This plan folds in the client's Q
 
 ---
 
+## Status check (2026-08-24) — plan vs. actual code
+
+This doc describes the *original* plan. A separate build pass (not tracked in this doc as
+it happened) implemented most of §3, but diverged from it in three places, and left part of
+§3.5 unbuilt. Recorded here so the plan and reality don't quietly drift apart again —
+update this section whenever either side changes.
+
+**Aligned, built as planned:**
+- Nav (§3 intro) — exact match: `Dashboard, All Clients, Plans & Pricing, Payments, Audit Log, Settings`.
+- Dashboard (§3.0) — KPI row, plan distribution, at-risk/recent-activity/recent-payments cards, all built.
+- Payments (§3.3) — transactions-only list, gateway toggles correctly kept out of it.
+- Audit Log (§3.4) — platform-wide, filterable, matches spec.
+- Reusable components & types (§3.7/§3.8) — `StatusBadge`, `SeatMeter`, `ModuleToggleGrid`, `ConfirmDialog`, `AuditDiffViewer`, `ModuleKey` Phase-2/3 extension — all present.
+
+**Diverged — architecture changed without the doc being updated:**
+- §3.1/§3.2 plan `/admin/tenants/[tenantId]` and `/admin/plans/new`/`/admin/plans/[planId]`
+  as dedicated page routes. **Those routes no longer exist.** Tenant detail and Plan
+  create/edit are now dialogs (`tenant-details-dialog.tsx`, `tenant-edit-dialog.tsx`,
+  `plan-form-dialog.tsx`) opened from the list views — matching the pattern Payments
+  already used. Not wrong, just undocumented; §3.1/§3.2 below are stale on route shape.
+
+**Diverged — Settings is significantly behind its own spec (§3.5):**
+- Planned 5 tabs: Branding, Notifications, Payment gateways, Platform defaults, Site & legal.
+- Built: **3 tabs** — General settings, Legal & policies, Social links.
+- **Missing entirely**: Notifications (email template editor), Payment gateways
+  (Stripe/PayPal/Telr toggles), Platform defaults (retention window, seat-limit-reached copy).
+- **Regrouped from plan**: Maintenance mode landed inside General settings, not under
+  Site & legal as planned; "Branding" became "General settings" with no primary-color field.
+
+**Diverged — §2.3 states something as true that isn't:**
+- §2.3 claims *"Both `/pricing` and `/signup` read plans from the same `plansService.list()`
+  ... so Super Admin editing a plan is instantly reflected."* **Not actually true in code**:
+  `/pricing` reads the static `plans-data.ts` array directly; admin's `plans.service.ts`
+  only shares that array at initial load (`let plans: Plan[] = PLANS`), not live. Editing a
+  plan in Super Admin does not currently affect `/pricing`.
+
+**Not yet checked**: whether `/signup`'s plan-selection step has the same stale-data issue
+as `/pricing` — likely yes, given it's the same underlying `PLANS` import, but not
+independently confirmed.
+
+---
+
 ## 1. What the new answers change here
 
 Most of the Q&A (batch issuing, GR/PO workflow, offline POS sync, invoice-to-inventory
@@ -77,6 +119,9 @@ instead of the browser history stack.
   cookie, same shape as `authService.login`, then the page redirects to `/dashboard`.
 - Both `/pricing` and `/signup` read plans from the same `plansService.list()` — never a
   second hardcoded plan array — so Super Admin editing a plan is instantly reflected.
+  **⚠️ Not actually true as built — see "Status check" above.** `/pricing` reads the
+  static `plans-data.ts` array directly; it and admin's plan store only share data at
+  initial load, not live.
 
 ### 2.4 Navbar, footer & home page content (decided 2026-08-19)
 
@@ -233,6 +278,24 @@ more"), `/signup?plan=<id>` CTAs for Starter/Growth, `/contact` for Enterprise.
 despite `Client-proposal.md`'s "(Usage-Only)" wording. Simpler, and consistent with how
 every other module is priced.
 
+### 2.7 Per-plan seat range limits (built 2026-08-24)
+
+`Plan` gained `minSeats: number` and `maxSeats?: number` (undefined = unlimited).
+Seed data (`plans-data.ts`): Starter 3–10, Growth 10–30, Enterprise 30+ (no max).
+
+The `/pricing` calculator's seat control stays a single shared stepper across all three
+cards (§2.6's decision), but each `TierCard` now clamps that shared value into its own
+`[minSeats, maxSeats ?? ∞]` range via `clampSeatsForPlan()` before pricing itself — so
+dragging the shared input to, say, 50 doesn't extrapolate Starter/Growth past what
+they're actually sold for; they price at their own maximum (10 / 30) while Enterprise
+prices at 50. The stepper's own floor is `Math.min(...plans.map(p => p.minSeats))` (3)
+rather than a hardcoded 1. Each card shows its range ("For teams of 3–10 seats") and, when
+the shared value falls outside it, a "Priced for X seats (this plan's minimum/maximum)"
+note so the displayed price is never a silent mismatch with what's in the stepper.
+
+Same fields are admin-editable in Plans & Pricing (§3.2) — Minimum/Maximum seats inputs
+with an "Unlimited" checkbox, validated so max can't be below min.
+
 ---
 
 ## 3. Super Admin portal (`(admin)`)
@@ -278,6 +341,9 @@ already grounded in: `TenantSummary`, `Plan`, `AuditLogEntry`, `PaymentTransacti
 
 ### 3.1 All Clients (`/admin/tenants`)
 
+**⚠️ Route shape stale — see "Status check" above.** Built as a dialog
+(`tenant-details-dialog.tsx` + `tenant-edit-dialog.tsx`), not the page route below.
+
 - **List** (existing stub → real page): table with name, plan, seats (`used/total`
   via a `SeatMeter`), status badge, MRR, created date. Filters: status, plan, search.
 - **New: Tenant detail** `/admin/tenants/[tenantId]`, tabbed:
@@ -294,12 +360,18 @@ already grounded in: `TenantSummary`, `Plan`, `AuditLogEntry`, `PaymentTransacti
 
 ### 3.2 Plans & Pricing (`/admin/plans`)
 
+**⚠️ Route shape stale — see "Status check" above.** Built as a dialog
+(`plan-form-dialog.tsx`), not the `/new`/`/[planId]` routes below.
+
 - **List** (existing stub → real page): plan cards/table — name, price, billing cycle,
   base seats, additional-seat price, module summary.
 - **New: Create/edit plan** `/admin/plans/new`, `/admin/plans/[planId]` — form fields:
   name, monthly/yearly price, trial length, base seats, price per additional seat, and a
   **module-toggle grid** covering every `ModuleKey` (see §3.5) so POS/HR/Calendar/Social
   can be gated per plan even before those modules exist in the tenant portal.
+- **✅ Built (2026-08-24), §2.7**: Minimum seats / Maximum seats fields (with an
+  "Unlimited" checkbox for no max) — the same range the public pricing calculator clamps
+  each card to.
 - This is the single source of truth `/pricing` and `/signup` read from (§2.3).
 
 ### 3.3 Payments (`/admin/payments`)
@@ -318,6 +390,11 @@ already grounded in: `TenantSummary`, `Plan`, `AuditLogEntry`, `PaymentTransacti
   tenant detail page's Activity tab (§3.1).
 
 ### 3.5 Settings (`/admin/settings`)
+
+**⚠️ Significantly behind this spec — see "Status check" above.** Only 3 of the 5 tabs
+below exist (General settings, Legal & policies, Social links); Notifications, Payment
+gateways, and Platform defaults are all unbuilt, and Maintenance mode landed in General
+settings instead of Site & legal.
 
 Platform-wide defaults only — never a per-tenant setting (those live under the tenant
 portal's own Settings, out of scope here). Tabbed layout (shadcn `Tabs`, same primitive

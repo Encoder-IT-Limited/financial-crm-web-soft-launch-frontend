@@ -10,4 +10,8 @@ export type Plan = {
   trialDays: number;
   modules: ModuleKey[];
   popular?: boolean;
+  /** Smallest seat count this plan can be purchased/estimated for. */
+  minSeats: number;
+  /** Largest seat count this plan supports — omitted/undefined means unlimited. */
+  maxSeats?: number;
 };

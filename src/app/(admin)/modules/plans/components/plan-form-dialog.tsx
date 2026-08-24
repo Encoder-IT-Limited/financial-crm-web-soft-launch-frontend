@@ -22,6 +22,8 @@ const EMPTY_FORM: PlanFormValues = {
   trialDays: 14,
   modules: [],
   popular: false,
+  minSeats: 1,
+  maxSeats: undefined,
 };
 
 type PlanFormDialogProps = {
@@ -56,6 +58,8 @@ export function PlanFormDialog(props: PlanFormDialogProps) {
         trialDays: plan.trialDays,
         modules: plan.modules,
         popular: plan.popular ?? false,
+        minSeats: plan.minSeats,
+        maxSeats: plan.maxSeats,
       });
       setErrors({});
       setLoading(false);
@@ -161,6 +165,39 @@ export function PlanFormDialog(props: PlanFormDialogProps) {
                 aria-invalid={!!errors.additionalSeatPrice}
                 className={cn(errors.additionalSeatPrice && "border-red")}
               />
+            </FormField>
+
+            <FormField label="Minimum seats" error={errors.minSeats}>
+              <Input
+                type="number"
+                min={1}
+                value={form.minSeats}
+                onChange={(e) => set("minSeats", Number(e.target.value))}
+                aria-invalid={!!errors.minSeats}
+                className={cn(errors.minSeats && "border-red")}
+              />
+            </FormField>
+            <FormField label="Maximum seats" error={errors.maxSeats}>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.maxSeats ?? ""}
+                  onChange={(e) => set("maxSeats", e.target.value === "" ? undefined : Number(e.target.value))}
+                  disabled={form.maxSeats === undefined}
+                  placeholder="Unlimited"
+                  aria-invalid={!!errors.maxSeats}
+                  className={cn("flex-1", errors.maxSeats && "border-red")}
+                />
+                <label htmlFor="plan-unlimited-seats" className="flex shrink-0 items-center gap-1.5 text-[11.5px] text-text-2">
+                  <Checkbox
+                    id="plan-unlimited-seats"
+                    checked={form.maxSeats === undefined}
+                    onCheckedChange={(checked) => set("maxSeats", checked === true ? undefined : form.minSeats)}
+                  />
+                  Unlimited
+                </label>
+              </div>
             </FormField>
 
             <FormField label="Free trial (days)" error={errors.trialDays}>

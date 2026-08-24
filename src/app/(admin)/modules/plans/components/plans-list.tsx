@@ -57,9 +57,14 @@ export function PlansList() {
         id: "seats",
         header: "Seats",
         cell: ({ row }) => (
-          <span className="text-[12.5px] text-text-2 min-[1440px]:text-[13.5px]">
-            {row.original.baseSeats} base · {fmtMoney(row.original.additionalSeatPrice)}/extra
-          </span>
+          <div className="text-[12.5px] text-text-2 min-[1440px]:text-[13.5px]">
+            <div>
+              {row.original.baseSeats} base · {fmtMoney(row.original.additionalSeatPrice)}/extra
+            </div>
+            <div className="text-[11px] text-text-4">
+              Range: {row.original.minSeats}–{row.original.maxSeats ?? "∞"}
+            </div>
+          </div>
         ),
       },
       {

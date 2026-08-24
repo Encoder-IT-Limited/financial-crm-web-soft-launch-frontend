@@ -12,7 +12,10 @@ const BILLING_OPTIONS: { key: BillingPeriod; label: string }[] = [
   { key: "yearly", label: "Yearly" },
 ];
 
-const MIN_SEATS = 1;
+// The shared stepper's own floor is the lowest minimum any plan supports
+// (Starter's 3) — each card still clamps further to its own range on top of
+// this (see TierCard / clampSeatsForPlan).
+const MIN_SEATS = Math.min(...PLANS.map((plan) => plan.minSeats));
 
 export function PricingCalculator() {
   const [seats, setSeats] = useState(10);
