@@ -12,13 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PRODUCT_CATEGORIES, type ProductCategory, type ProductStatus } from "../mock-data";
 
-export type SortPreset =
-  | "featured"
-  | "name-asc"
-  | "stock-asc"
-  | "stock-desc"
-  | "price-asc"
-  | "price-desc";
+export type SortPreset = "featured" | "name-asc" | "stock-asc" | "stock-desc";
 
 export type ProductsToolbarProps = {
   search: string;
@@ -110,8 +104,6 @@ export function ProductsToolbar({
           <SelectItem value="name-asc">Name A–Z</SelectItem>
           <SelectItem value="stock-asc">Stock: Low to High</SelectItem>
           <SelectItem value="stock-desc">Stock: High to Low</SelectItem>
-          <SelectItem value="price-asc">Price: Low to High</SelectItem>
-          <SelectItem value="price-desc">Price: High to Low</SelectItem>
         </SelectContent>
       </Select>
 

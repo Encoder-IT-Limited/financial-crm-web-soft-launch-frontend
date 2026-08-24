@@ -38,7 +38,6 @@ import {
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { PageHeading } from "@/components/shared/page-heading";
 import { TablePagination } from "@/components/shared/table-pagination";
-import { fmtMoney } from "@/lib/format";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import {
@@ -68,8 +67,6 @@ const SORT_PRESETS: Record<SortPreset, SortingState> = {
   "name-asc": [{ id: "name", desc: false }],
   "stock-asc": [{ id: "stock", desc: false }],
   "stock-desc": [{ id: "stock", desc: true }],
-  "price-asc": [{ id: "price", desc: false }],
-  "price-desc": [{ id: "price", desc: true }],
 };
 
 function presetFromSorting(sorting: SortingState): SortPreset {
@@ -90,8 +87,30 @@ const categoryTone: Record<ProductCategory, "blue" | "purple" | "amber" | "green
 };
 
 function exportProductsCsv(rows: Product[]) {
-  const header = ["Product", "SKU", "Category", "Stock", "Price (AED)", "Status"];
-  const body = rows.map((p) => [p.name, p.sku, p.category, p.stock, p.price, p.status]);
+  const header = [
+    "Product",
+    "SKU",
+    "Category",
+    "Warehouse",
+    "Unit",
+    "Stock",
+    "Low Stock",
+    "Reorder Qty",
+    "Batch Tracked",
+    "Status",
+  ];
+  const body = rows.map((p) => [
+    p.name,
+    p.sku,
+    p.category,
+    p.warehouse,
+    p.unit,
+    p.stock,
+    p.lowStock,
+    p.reorderQty,
+    p.batchTracked ? "Yes" : "No",
+    p.status,
+  ]);
   const csv = [header, ...body]
     .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
     .join("\n");
@@ -200,7 +219,7 @@ export function ProductsPage() {
         accessorKey: "stock",
         header: "Stock",
         cell: ({ row }) => {
-          const tone = getStockTone(row.original.stock);
+          const tone = getStockTone(row.original.stock, row.original.lowStock);
           return (
             <span className={cn("flex items-center justify-start gap-1.5 text-[12.5px] font-semibold tabular-nums min-[1440px]:text-[13.5px]")}>
               <span
@@ -213,19 +232,38 @@ export function ProductsPage() {
                 aria-hidden
               />
               <span className={cn(tone === "green" && "text-green", tone === "amber" && "text-amber", tone === "red" && "text-red")}>
-                {row.original.stock}
+                {row.original.stock}{" "}
+                <span className="font-medium">{row.original.unit}</span>
               </span>
             </span>
           );
         },
       },
       {
-        accessorKey: "price",
-        header: "Price",
+        accessorKey: "lowStock",
+        header: "Low Stock",
         cell: ({ row }) => (
-          <span className="text-[12.5px] font-semibold tabular-nums text-text min-[1440px]:text-[13.5px]">
-            {fmtMoney(row.original.price)}
+          <span className="text-[12.5px] tabular-nums text-text-2 min-[1440px]:text-[13.5px]">
+            {row.original.lowStock}
           </span>
+        ),
+      },
+      {
+        accessorKey: "reorderQty",
+        header: "Reorder Qty",
+        cell: ({ row }) => (
+          <span className="text-[12.5px] tabular-nums text-text-2 min-[1440px]:text-[13.5px]">
+            {row.original.reorderQty}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "batchTracked",
+        header: "Batch",
+        cell: ({ row }) => (
+          <Badge tone={row.original.batchTracked ? "green" : "neutral"}>
+            {row.original.batchTracked ? "Tracked" : "No"}
+          </Badge>
         ),
       },
       {

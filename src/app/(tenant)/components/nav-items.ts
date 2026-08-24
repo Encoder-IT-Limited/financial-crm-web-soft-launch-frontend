@@ -13,7 +13,6 @@ import {
   Package,
   PackageCheck,
   ArrowLeftRight,
-  ArrowRightLeft,
   Warehouse,
   SlidersHorizontal,
   Layers,
@@ -168,27 +167,27 @@ export const tenantNavSections: SidebarNavSection[] = [
         module: "inventory",
       },
       {
-        label: "Products",
-        href: "/dashboard/products",
-        icon: Package,
-        module: "inventory",
-      },
-      {
         label: "Warehouses & Stock",
         href: "/dashboard/warehouses",
         icon: Warehouse,
         module: "inventory",
       },
       {
-        label: "Stock Movement",
-        href: "/dashboard/stock-movement",
-        icon: ArrowLeftRight,
+        label: "Products",
+        href: "/dashboard/products",
+        icon: Package,
         module: "inventory",
       },
       {
-        label: "Stock Transfer",
-        href: "/dashboard/stock-transfer",
-        icon: ArrowRightLeft,
+        label: "Batches",
+        href: "/dashboard/batches",
+        icon: Layers,
+        module: "inventory",
+      },
+      {
+        label: "Stock",
+        href: "/dashboard/stock",
+        icon: ArrowLeftRight,
         module: "inventory",
       },
       {
@@ -203,12 +202,7 @@ export const tenantNavSections: SidebarNavSection[] = [
         icon: SlidersHorizontal,
         module: "inventory",
       },
-      {
-        label: "Batches",
-        href: "/dashboard/batches",
-        icon: Layers,
-        module: "inventory",
-      },
+
       {
         label: "Reorder / Low Stock",
         href: "/dashboard/reorder",

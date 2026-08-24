@@ -13,7 +13,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { Ban, ChevronDown, ChevronUp, ChevronsUpDown, Copy, Download, Eye, MapPin, Pencil, Plus } from "lucide-react";
+import { Ban, ChevronDown, ChevronUp, ChevronsUpDown, Copy, Eye, MapPin, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -27,7 +27,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { PageHeading } from "@/components/shared/page-heading";
 import { TablePagination } from "@/components/shared/table-pagination";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -355,27 +354,16 @@ export function StockTransfersPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeading
-        title="Stock Transfers"
-        subtitle="Manage inter-warehouse stock transfers"
-        actions={
-          <>
-            <Button variant="outline" onClick={handleExport}>
-              <Download data-icon="inline-start" />
-              Export
-            </Button>
-            <Button onClick={() => setDialogOpen(true)}>
-              <Plus data-icon="inline-start" />
-              New Transfer
-            </Button>
-          </>
-        }
-      />
-
       <TransferSummaryCards {...summary} />
 
       <Card className="flex flex-col gap-4 p-5">
-        <TransfersToolbar filters={filters} onChange={setFilters} warehouses={TRANSFER_WAREHOUSES} />
+        <TransfersToolbar
+          filters={filters}
+          onChange={setFilters}
+          warehouses={TRANSFER_WAREHOUSES}
+          onExport={handleExport}
+          onNewTransfer={() => setDialogOpen(true)}
+        />
 
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-14 text-center">

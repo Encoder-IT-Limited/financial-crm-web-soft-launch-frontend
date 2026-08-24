@@ -1,5 +1,5 @@
-import { StockTransfersPage } from "./components/stock-transfers-page";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <StockTransfersPage />;
+  redirect("/dashboard/stock");
 }

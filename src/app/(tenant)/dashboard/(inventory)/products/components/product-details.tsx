@@ -11,7 +11,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { fmtMoney } from "@/lib/format";
 import { recentMovements, type MovementType } from "../../inventory/mock-data";
 import type { Product } from "../mock-data";
 import {
@@ -39,8 +38,7 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 }
 
 export function ProductDetails({ product }: { product: Product }) {
-  const tone = getStockTone(product.stock);
-  const stockValue = product.stock * product.price;
+  const tone = getStockTone(product.stock, product.lowStock);
   const movements = recentMovements.filter((m) => m.product === product.name);
 
   return (
@@ -76,12 +74,6 @@ export function ProductDetails({ product }: { product: Product }) {
 
       <div className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <Card className="gap-0 p-4">
-          <div className="text-[11.5px] font-medium text-text-3 min-[1440px]:text-xs">Unit Price</div>
-          <div className="mt-1 text-lg font-extrabold leading-tight text-text min-[1440px]:text-xl">
-            {fmtMoney(product.price)}
-          </div>
-        </Card>
-        <Card className="gap-0 p-4">
           <div className="text-[11.5px] font-medium text-text-3 min-[1440px]:text-xs">Stock on Hand</div>
           <div className={cn(
             "mt-1 flex items-center gap-1.5 text-lg font-extrabold leading-tight min-[1440px]:text-xl",
@@ -90,19 +82,26 @@ export function ProductDetails({ product }: { product: Product }) {
             tone === "red" && "text-red"
           )}>
             <span className="size-2 rounded-full bg-current" aria-hidden />
-            {product.stock.toLocaleString()}
+            {product.stock.toLocaleString()}{" "}
+            <span className="text-sm font-semibold min-[1440px]:text-[15px]">{product.unit}</span>
           </div>
         </Card>
         <Card className="gap-0 p-4">
-          <div className="text-[11.5px] font-medium text-text-3 min-[1440px]:text-xs">Total Stock Value</div>
+          <div className="text-[11.5px] font-medium text-text-3 min-[1440px]:text-xs">Low Stock Alert</div>
           <div className="mt-1 text-lg font-extrabold leading-tight text-text min-[1440px]:text-xl">
-            {fmtMoney(stockValue)}
+            {product.lowStock.toLocaleString()}
           </div>
         </Card>
         <Card className="gap-0 p-4">
-          <div className="text-[11.5px] font-medium text-text-3 min-[1440px]:text-xs">Category</div>
+          <div className="text-[11.5px] font-medium text-text-3 min-[1440px]:text-xs">Reorder Quantity</div>
           <div className="mt-1 text-lg font-extrabold leading-tight text-text min-[1440px]:text-xl">
-            {product.category}
+            {product.reorderQty.toLocaleString()}
+          </div>
+        </Card>
+        <Card className="gap-0 p-4">
+          <div className="text-[11.5px] font-medium text-text-3 min-[1440px]:text-xs">Batch Tracking</div>
+          <div className="mt-1 text-lg font-extrabold leading-tight text-text min-[1440px]:text-xl">
+            {product.batchTracked ? "On" : "Off"}
           </div>
         </Card>
       </div>
@@ -113,6 +112,8 @@ export function ProductDetails({ product }: { product: Product }) {
           <DetailRow label="Product ID" value={<span className="tabular-nums">{product.id}</span>} />
           <DetailRow label="SKU" value={<span className="tabular-nums">{product.sku}</span>} />
           <DetailRow label="Category" value={product.category} />
+          <DetailRow label="Warehouse" value={product.warehouse} />
+          <DetailRow label="Unit" value={product.unit} />
           <DetailRow
             label="Status"
             value={
@@ -123,10 +124,18 @@ export function ProductDetails({ product }: { product: Product }) {
           />
           <DetailRow
             label="Stock on Hand"
-            value={<span className={cn(tone === "green" && "text-green", tone === "amber" && "text-amber", tone === "red" && "text-red")}>{product.stock.toLocaleString()} units</span>}
+            value={<span className={cn(tone === "green" && "text-green", tone === "amber" && "text-amber", tone === "red" && "text-red")}>{product.stock.toLocaleString()} {product.unit}</span>}
           />
-          <DetailRow label="Unit Price" value={fmtMoney(product.price)} />
-          <DetailRow label="Total Stock Value" value={fmtMoney(stockValue)} />
+          <DetailRow label="Low Stock Alert" value={<span className="tabular-nums">{product.lowStock.toLocaleString()}</span>} />
+          <DetailRow label="Reorder Quantity" value={<span className="tabular-nums">{product.reorderQty.toLocaleString()}</span>} />
+          <DetailRow
+            label="Batch Tracking"
+            value={
+              <Badge tone={product.batchTracked ? "green" : "neutral"}>
+                {product.batchTracked ? "Tracked" : "Not tracked"}
+              </Badge>
+            }
+          />
         </Card>
 
         <Card>

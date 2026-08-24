@@ -1,6 +1,7 @@
 "use client";
 
-import { Search } from "lucide-react";
+import { Download, Plus, Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -23,6 +24,8 @@ interface TransfersToolbarProps {
   filters: TransferFilters;
   onChange: (filters: TransferFilters) => void;
   warehouses: string[];
+  onExport: () => void;
+  onNewTransfer: () => void;
 }
 
 const STATUS_OPTIONS: Array<{ value: TransferStatus; label: string }> = [
@@ -62,7 +65,13 @@ function FilterSelect({
   );
 }
 
-export function TransfersToolbar({ filters, onChange, warehouses }: TransfersToolbarProps) {
+export function TransfersToolbar({
+  filters,
+  onChange,
+  warehouses,
+  onExport,
+  onNewTransfer,
+}: TransfersToolbarProps) {
   const set = <K extends keyof TransferFilters>(key: K, value: TransferFilters[K]) =>
     onChange({ ...filters, [key]: value });
 
@@ -134,6 +143,16 @@ export function TransfersToolbar({ filters, onChange, warehouses }: TransfersToo
             </SelectItem>
           ))}
         </FilterSelect>
+
+        <Button variant="outline" onClick={onExport}>
+          <Download data-icon-size />
+          Export
+        </Button>
+
+        <Button onClick={onNewTransfer}>
+          <Plus data-icon-size />
+          New Transfer
+        </Button>
       </div>
     </div>
   );

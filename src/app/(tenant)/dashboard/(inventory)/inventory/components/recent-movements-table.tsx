@@ -27,7 +27,7 @@ export function RecentMovementsTable() {
         <h2 className="text-sm font-bold text-text min-[1440px]:text-[15px]">
           Recent Stock Movements
         </h2>
-        <Button variant="outline" size="sm" render={<Link href="/dashboard/stock-movement" />} nativeButton={false}>
+        <Button variant="outline" size="sm" render={<Link href="/dashboard/stock" />} nativeButton={false}>
           View All
         </Button>
       </div>
@@ -82,7 +82,7 @@ export function RecentMovementsTable() {
           variant="ghost"
           size="sm"
           className="text-blue hover:text-blue"
-          render={<Link href="/dashboard/stock-movement" />}
+          render={<Link href="/dashboard/stock" />}
           nativeButton={false}
         >
           View All Movements

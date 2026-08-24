@@ -11,10 +11,10 @@ const CATEGORY_TILE_CLASS: Record<ProductCategory, string> = {
   Services: "bg-surface-subtle text-text-3",
 };
 
-export function getStockTone(stock: number): StockTone {
-  if (stock >= 50) return "green";
-  if (stock >= 20) return "amber";
-  return "red";
+export function getStockTone(stock: number, lowStock: number): StockTone {
+  if (stock <= lowStock) return "red";
+  if (stock <= lowStock * 2) return "amber";
+  return "green";
 }
 
 export const STOCK_TONE_LABEL: Record<StockTone, string> = {

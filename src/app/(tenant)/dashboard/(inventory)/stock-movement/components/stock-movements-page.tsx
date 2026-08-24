@@ -13,7 +13,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { ArrowRight, ChevronDown, ChevronUp, ChevronsUpDown, Download, Eye } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp, ChevronsUpDown, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,9 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { PageHeading } from "@/components/shared/page-heading";
-import { TablePagination } from "@/components/shared/table-pagination";
-import { toast } from "@/lib/toast";
+import { TablePagination } from "@/components/shared/table-pagination";import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { ProductThumbnail } from "../../products/components/product-thumbnail";
 import {
@@ -294,91 +292,78 @@ export function StockMovementsPage() {
   }
 
   return (
-    <div>
-      <PageHeading
-        title="Stock Movement"
-        subtitle="Track all stock inflows and outflows"
-        actions={
-          <Button variant="outline" onClick={handleExport}>
-            <Download data-icon="inline-start" />
-            Export
-          </Button>
-        }
+    <Card className="flex flex-col gap-4 p-5">
+      <MovementsToolbar
+        filters={filters}
+        onChange={setFilters}
+        warehouses={WAREHOUSES}
+        onExport={handleExport}
       />
 
-      <Card className="flex flex-col gap-4 p-5">
-        <MovementsToolbar
-          filters={filters}
-          onChange={setFilters}
-          warehouses={WAREHOUSES}
-          onExport={handleExport}
-        />
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-14 text-center">
+          <p className="text-sm font-semibold text-text">No stock movements found</p>
+          <p className="max-w-xs text-[12.5px] text-text-3">
+            Nothing matches the current search or filters.
+          </p>
+          <Button variant="outline" size="sm" onClick={clearFilters}>
+            Clear filters
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="overflow-x-auto overflow-y-hidden rounded-[10px] border border-border">
+            <Table className="whitespace-nowrap">
+              <TableHeader>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow key={headerGroup.id} className="bg-surface-subtle hover:bg-surface-subtle">
+                    {headerGroup.headers.map((header) => {
+                      const canSort = header.column.getCanSort();
+                      const sorted = header.column.getIsSorted();
+                      return (
+                        <TableHead key={header.id} className="h-11 px-4 font-semibold text-text-2 first:pl-5 last:pr-5">
+                          {header.isPlaceholder ? null : canSort ? (
+                            <button
+                              type="button"
+                              onClick={header.column.getToggleSortingHandler()}
+                              className="inline-flex items-center gap-1 transition-colors hover:text-text"
+                            >
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                              {sorted === "asc" ? (
+                                <ChevronUp className="size-3.5 text-blue" />
+                              ) : sorted === "desc" ? (
+                                <ChevronDown className="size-3.5 text-blue" />
+                              ) : (
+                                <ChevronsUpDown className="size-3.5 text-text-4" />
+                              )}
+                            </button>
+                          ) : (
+                            flexRender(header.column.columnDef.header, header.getContext())
+                          )}
+                        </TableHead>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableHeader>
 
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-14 text-center">
-            <p className="text-sm font-semibold text-text">No stock movements found</p>
-            <p className="max-w-xs text-[12.5px] text-text-3">
-              Nothing matches the current search or filters.
-            </p>
-            <Button variant="outline" size="sm" onClick={clearFilters}>
-              Clear filters
-            </Button>
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.id} data-selected={row.getIsSelected()}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="px-4 py-3 first:pl-5 last:pr-5">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto overflow-y-hidden rounded-[10px] border border-border">
-              <Table className="whitespace-nowrap">
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id} className="bg-surface-subtle hover:bg-surface-subtle">
-                      {headerGroup.headers.map((header) => {
-                        const canSort = header.column.getCanSort();
-                        const sorted = header.column.getIsSorted();
-                        return (
-                          <TableHead key={header.id} className="h-11 px-4 font-semibold text-text-2 first:pl-5 last:pr-5">
-                            {header.isPlaceholder ? null : canSort ? (
-                              <button
-                                type="button"
-                                onClick={header.column.getToggleSortingHandler()}
-                                className="inline-flex items-center gap-1 transition-colors hover:text-text"
-                              >
-                                {flexRender(header.column.columnDef.header, header.getContext())}
-                                {sorted === "asc" ? (
-                                  <ChevronUp className="size-3.5 text-blue" />
-                                ) : sorted === "desc" ? (
-                                  <ChevronDown className="size-3.5 text-blue" />
-                                ) : (
-                                  <ChevronsUpDown className="size-3.5 text-text-4" />
-                                )}
-                              </button>
-                            ) : (
-                              flexRender(header.column.columnDef.header, header.getContext())
-                            )}
-                          </TableHead>
-                        );
-                      })}
-                    </TableRow>
-                  ))}
-                </TableHeader>
 
-                <TableBody>
-                  {rows.map((row) => (
-                    <TableRow key={row.id} data-selected={row.getIsSelected()}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="px-4 py-3 first:pl-5 last:pr-5">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            <TablePagination table={table} pageSizeOptions={[10, 25, 50]} />
-          </>
-        )}
-      </Card>
-    </div>
+          <TablePagination table={table} pageSizeOptions={[10, 25, 50]} />
+        </>
+      )}
+    </Card>
   );
 }
