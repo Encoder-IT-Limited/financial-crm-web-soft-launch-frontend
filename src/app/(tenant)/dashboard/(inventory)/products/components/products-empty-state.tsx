@@ -28,7 +28,7 @@ export function ProductsEmptyState({
             Clear filters
           </Button>
         )}
-        <Button size="sm" className="h-9" render={<Link href="/dashboard/products/new" />}>
+        <Button size="sm" className="h-9" render={<Link href="/dashboard/products/new" />} nativeButton={false}>
           <Plus data-icon="inline-start" />
           Add your first product
         </Button>

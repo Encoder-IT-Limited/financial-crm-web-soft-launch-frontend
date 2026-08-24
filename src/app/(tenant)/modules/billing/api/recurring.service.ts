@@ -3,6 +3,7 @@ import type { Invoice } from "../types";
 import { advanceDate, type NewRecurringTemplateInput, type RecurringTemplate, type RecurringTemplateStatus } from "../recurring/types";
 import { seedRecurringTemplates, seedRecurringTemplateSeq } from "../mock/seed-recurring";
 import { invoiceApi } from "./invoices.service";
+import { retainersApi } from "./retainers.service";
 
 /** Simulated network latency for the mock API. */
 const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -35,6 +36,8 @@ export const recurringApi = {
       frequency: input.frequency,
       nextInvoiceDate: input.nextInvoiceDate,
       status: "active",
+      kind: input.kind,
+      retainerId: input.retainerId,
       createdAt: new Date().toISOString(),
     };
     templates = [template, ...templates];
@@ -69,18 +72,22 @@ export const recurringApi = {
     templates = templates.filter((template) => template.id !== id);
   },
 
-  /** Generate the next invoice for a template. Returns the created (draft)
-   *  invoice tagged with source "recurring", or null when the template is
-   *  paused. */
+  /** Generate the next invoice for a template. Returns the created invoice,
+   *  or null when the template is paused. A plain "invoice" template
+   *  creates a draft for review, same as always. A "retainer-topup"
+   *  template (Phase H2) instead creates an already-Paid invoice and tops
+   *  up the linked retainer's balance — funding money that's already
+   *  arrived shouldn't sit as an unreviewed draft. */
   generate: async (id: string): Promise<Invoice | null> => {
     await delay();
     const template = templates.find((t) => t.id === id);
     if (!template || template.status !== "active") return null;
 
+    const isTopUp = template.kind === "retainer-topup" && template.retainerId;
     const today = new Date();
     const issueDate = today.toISOString().slice(0, 10);
     const due = new Date(today);
-    due.setDate(due.getDate() + 15);
+    due.setDate(due.getDate() + (isTopUp ? 0 : 15));
 
     const invoice = await invoiceApi.create(
       {
@@ -98,9 +105,22 @@ export const recurringApi = {
         ],
         notes: `Recurring billing from template ${template.number}`,
       },
-      "draft",
-      "recurring"
+      isTopUp ? "send" : "draft",
+      isTopUp ? "retainer-topup" : "recurring"
     );
+
+    if (isTopUp) {
+      // "bank-transfer", not "retainer" — this invoice is money arriving
+      // INTO the retainer (funding), the mirror image of a draw (money
+      // leaving it), which is what the "retainer" method represents.
+      await invoiceApi.recordPayment(invoice.id, {
+        date: issueDate,
+        amount: invoice.total,
+        method: "bank-transfer",
+        reference: template.number,
+      });
+      await retainersApi.topUp(template.retainerId!, invoice.total);
+    }
 
     templates = templates.map((t) =>
       t.id === id

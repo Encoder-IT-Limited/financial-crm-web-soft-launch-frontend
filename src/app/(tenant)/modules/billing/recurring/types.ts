@@ -20,6 +20,13 @@ export const RECURRENCE_FREQUENCIES = Object.keys(FREQUENCY_LABELS) as Recurrenc
 
 export type RecurringTemplateStatus = "active" | "paused";
 
+/** "invoice" (default, absent = invoice) generates a normal draft invoice
+ *  each cycle. "retainer-topup" (Phase H2) instead generates a Paid invoice
+ *  and tops up the linked retainer's balance — reuses this same template/
+ *  cadence engine rather than a second scheduler (Sales-Invoicing-
+ *  Implementation-Plan.md Key Decision #7). */
+export type RecurringTemplateKind = "invoice" | "retainer-topup";
+
 export type RecurringTemplate = {
   id: string;
   number: string; // REC-001 — own sequence, separate from INV-
@@ -30,6 +37,8 @@ export type RecurringTemplate = {
   frequency: RecurrenceFrequency;
   nextInvoiceDate: string; // ISO date — when the next cycle should generate
   status: RecurringTemplateStatus;
+  kind?: RecurringTemplateKind; // absent = "invoice"
+  retainerId?: string; // set when kind is "retainer-topup"
   lastInvoiceId?: string; // most recent generated invoice
   lastGeneratedAt?: string; // ISO
   createdAt: string;
@@ -42,6 +51,8 @@ export type NewRecurringTemplateInput = {
   amount: number;
   frequency: RecurrenceFrequency;
   nextInvoiceDate: string;
+  kind?: RecurringTemplateKind;
+  retainerId?: string;
 };
 
 /** Advance a date by one cycle of the given frequency (longer cycles keep

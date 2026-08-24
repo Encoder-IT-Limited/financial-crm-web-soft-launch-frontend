@@ -114,7 +114,11 @@ function NewInvoiceForm() {
     [lines, discountPct]
   );
 
-  const canPayFromRetainer = Boolean(activeRetainer && totals.total > 0 && totals.total <= activeRetainer.remainingBalance);
+  // Offered even when the retainer doesn't fully cover the invoice — it
+  // pays what it can and the rest stays owed as a normal partial payment
+  // (Sales-Invoicing-Implementation-Plan.md Phase H1 / Key Decision #8).
+  const canPayFromRetainer = Boolean(activeRetainer && totals.total > 0 && activeRetainer.remainingBalance > 0);
+  const retainerCoversFully = Boolean(activeRetainer && totals.total <= activeRetainer.remainingBalance);
 
   const previewInvoice: Invoice = useMemo(
     () => ({
@@ -235,7 +239,9 @@ function NewInvoiceForm() {
         const invoiceNumber = editing ? editing.number : (created as Invoice | undefined)?.number ?? nextNumber;
         toast.success(
           drawRetainer
-            ? `${invoiceNumber} created and paid from ${drawRetainer.number}`
+            ? retainerCoversFully
+              ? `${invoiceNumber} created and paid from ${drawRetainer.number}`
+              : `${invoiceNumber} created — partially paid from ${drawRetainer.number}, remainder still due`
             : mode === "draft"
               ? editing
                 ? "Draft updated"
@@ -394,9 +400,9 @@ function NewInvoiceForm() {
                     <Wallet className="size-3.5 text-blue" /> Pay from {activeRetainer.number}
                   </div>
                   <p className="mt-0.5 text-[11.5px] text-text-3">
-                    {canPayFromRetainer
+                    {retainerCoversFully
                       ? `Draws ${fmtMoney(totals.total, currency)} from the ${fmtMoney(activeRetainer.remainingBalance, activeRetainer.currency)} remaining balance and marks this invoice paid on send. Only applies with "Create & Send".`
-                      : `Invoice total exceeds the ${fmtMoney(activeRetainer.remainingBalance, activeRetainer.currency)} remaining on this retainer.`}
+                      : `Only ${fmtMoney(activeRetainer.remainingBalance, activeRetainer.currency)} remains on this retainer — it'll cover part of this invoice as a partial payment; the rest stays owed normally. Only applies with "Create & Send".`}
                   </p>
                 </div>
               </label>

@@ -97,30 +97,58 @@ export const adjustmentFormSchema = z.object({
 
 export type AdjustmentFormValues = z.infer<typeof adjustmentFormSchema>;
 
-export const retainerFormSchema = z.object({
-  customerId: z.string().min(1, "Select a customer"),
-  contractAmount: z.coerce.number().positive("Contract amount must be greater than 0"),
-  billingPeriod: z.enum(["monthly", "quarterly", "yearly"]),
-  currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR"]).default("AED"),
-  startDate: z.string().min(1, "Start date is required"),
-  notes: z.string().max(500, "Notes too long (max 500 chars)").optional(),
-});
-
-export type RetainerFormValues = z.infer<typeof retainerFormSchema>;
-
-export const recordUsageSchema = z
+export const retainerFormSchema = z
   .object({
-    amount: z.coerce.number().positive("Amount must be greater than 0"),
-    date: z.string().min(1, "Date is required"),
-    note: z.string().max(200, "Note too long (max 200 chars)").optional(),
+    customerId: z.string().min(1, "Select a customer"),
+    contractAmount: z.coerce.number().positive("Contract amount must be greater than 0"),
+    billingPeriod: z.enum(["monthly", "quarterly", "yearly"]),
+    billingModel: z.enum(["one-time", "recurring"]).default("one-time"),
+    currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR"]).default("AED"),
+    startDate: z.string().min(1, "Start date is required"),
+    expiryDate: z.string().optional(),
+    notes: z.string().max(500, "Notes too long (max 500 chars)").optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.date > new Date().toISOString().slice(0, 10)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["date"], message: "Usage date can't be in the future" });
+    if (data.expiryDate && data.expiryDate < data.startDate) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["expiryDate"],
+        message: "Expiry date can't be before the start date",
+      });
     }
   });
 
-export type RecordUsageValues = z.infer<typeof recordUsageSchema>;
+export type RetainerFormValues = z.infer<typeof retainerFormSchema>;
+
+export const retainerTopUpSetupSchema = z
+  .object({
+    nextInvoiceDate: z.string().min(1, "Next top-up date is required"),
+  })
+  .superRefine((data, ctx) => {
+    if (data.nextInvoiceDate < new Date().toISOString().slice(0, 10)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["nextInvoiceDate"], message: "Can't be in the past" });
+    }
+  });
+
+export type RetainerTopUpSetupValues = z.infer<typeof retainerTopUpSetupSchema>;
+
+export const retainerRolloverSchema = z.object({
+  newExpiryDate: z.string().min(1, "New expiry date is required"),
+});
+
+export type RetainerRolloverValues = z.infer<typeof retainerRolloverSchema>;
+
+export const retainerTransferSchema = z.object({
+  toRetainerId: z.string().min(1, "Select a destination retainer"),
+});
+
+export type RetainerTransferValues = z.infer<typeof retainerTransferSchema>;
+
+export const retainerRefundSchema = z.object({
+  reason: z.string().trim().min(3, "A reason is required"),
+});
+
+export type RetainerRefundValues = z.infer<typeof retainerRefundSchema>;
 
 /** Pull the first issue message for a field path, e.g. "lines.0.description". */
 export function firstError(result: { issues: { path: (string | number)[]; message: string }[] }, path: string): string | undefined {

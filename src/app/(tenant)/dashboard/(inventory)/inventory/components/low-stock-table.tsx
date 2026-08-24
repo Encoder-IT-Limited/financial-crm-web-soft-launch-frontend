@@ -20,7 +20,7 @@ export function LowStockTable() {
     <Card>
       <div className="mb-4 flex items-center justify-between gap-2">
         <h2 className="text-sm font-bold text-text min-[1440px]:text-[15px]">Low Stock Items</h2>
-        <Button variant="outline" size="sm" render={<Link href="/dashboard/reorder" />}>
+        <Button variant="outline" size="sm" render={<Link href="/dashboard/reorder" />} nativeButton={false}>
           View All
         </Button>
       </div>
@@ -69,6 +69,7 @@ export function LowStockTable() {
           size="sm"
           className="text-blue hover:text-blue"
           render={<Link href="/dashboard/reorder" />}
+          nativeButton={false}
         >
           View All Low Stock Items
           <span aria-hidden>→</span>

@@ -3,18 +3,26 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pause, Play, Wallet, XCircle } from "lucide-react";
+import { ArrowLeftRight, CalendarSync, Pause, Play, RefreshCw, Undo2, XCircle } from "lucide-react";
 import { EntityDetailsDialog } from "@/components/shared/entity-details-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { useMe } from "@/hooks/useMe";
+import { can } from "@/lib/permissions";
 import { fmtDate, fmtMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { retainerPercentUsed, retainerUsedAmount } from "../types";
+import { toast } from "@/lib/toast";
+import { retainerDisplayStatus, retainerPercentUsed, retainerUsedAmount } from "../types";
 import { customersApi } from "../../crm/api/customers.service";
 import { invoiceApi } from "../api/invoices.service";
 import { retainersApi } from "../api/retainers.service";
+import { recurringApi } from "../api/recurring.service";
 import { RetainerStatusBadge } from "./retainer-status-badge";
-import { RetainerUsageDialog } from "./retainer-usage-dialog";
+import { RetainerTransferDialog } from "./retainer-transfer-dialog";
+import { RetainerRolloverDialog } from "./retainer-rollover-dialog";
+import { RetainerRefundDialog } from "./retainer-refund-dialog";
+import { RetainerTopUpSetupDialog } from "./retainer-topup-setup-dialog";
 
 export function RetainerDetailsDialog({
   open,
@@ -28,13 +36,20 @@ export function RetainerDetailsDialog({
   onEdit: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { data: me } = useMe();
   const { data: retainers = [] } = useQuery({ queryKey: ["retainers"], queryFn: retainersApi.list });
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
   const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
+  const { data: templates = [] } = useQuery({ queryKey: ["recurring-templates"], queryFn: recurringApi.list });
   const retainer = retainers.find((r) => r.id === retainerId);
 
-  const [usageOpen, setUsageOpen] = useState(false);
   const [closeOpen, setCloseOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [rolloverOpen, setRolloverOpen] = useState(false);
+  const [forfeitOpen, setForfeitOpen] = useState(false);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [topUpSetupOpen, setTopUpSetupOpen] = useState(false);
+  const [generatingTopUp, setGeneratingTopUp] = useState(false);
 
   if (!retainer) return null;
 
@@ -42,10 +57,35 @@ export function RetainerDetailsDialog({
   const fundingInvoice = retainer.fundingInvoiceId ? invoices.find((inv) => inv.id === retainer.fundingInvoiceId) : undefined;
   const used = retainerUsedAmount(retainer);
   const percentUsed = retainerPercentUsed(retainer);
+  const displayStatus = retainerDisplayStatus(retainer);
+  const canDispose = displayStatus === "active" || displayStatus === "expired";
+  const canApprove = can(me, "retainer.approve");
+  const transferCandidates = retainers.filter(
+    (r) => r.id !== retainer.id && r.customerId === retainer.customerId && retainerDisplayStatus(r) !== "closed"
+  );
+  const topUpTemplate = templates.find((t) => t.kind === "retainer-topup" && t.retainerId === retainer.id);
 
   async function toggleStatus() {
     await retainersApi.setStatus(retainer!.id, retainer!.status === "active" ? "paused" : "active");
     queryClient.invalidateQueries({ queryKey: ["retainers"] });
+  }
+
+  async function generateTopUpNow() {
+    if (!topUpTemplate) return;
+    setGeneratingTopUp(true);
+    try {
+      const invoice = await recurringApi.generate(topUpTemplate.id);
+      if (invoice) {
+        toast.success(`${invoice.number} generated and applied — balance topped up`);
+        queryClient.invalidateQueries({ queryKey: ["retainers"] });
+        queryClient.invalidateQueries({ queryKey: ["recurring-templates"] });
+        queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      } else {
+        toast.info(`${topUpTemplate.number} is paused — resume it first`);
+      }
+    } finally {
+      setGeneratingTopUp(false);
+    }
   }
 
   return (
@@ -55,7 +95,7 @@ export function RetainerDetailsDialog({
         onOpenChange={onOpenChange}
         title={retainer.number}
         subtitle={`${customer?.name ?? "—"} · started ${fmtDate(retainer.startDate)}`}
-        statusSlot={<RetainerStatusBadge status={retainer.status} />}
+        statusSlot={<RetainerStatusBadge status={displayStatus} />}
         onEdit={onEdit}
       >
         <div className="flex flex-col gap-4 px-1 py-1">
@@ -75,12 +115,58 @@ export function RetainerDetailsDialog({
             </div>
           </div>
 
-          {fundingInvoice && (
-            <div>
-              <div className="text-[10.5px] font-bold uppercase tracking-wide text-text-4">Funding Invoice</div>
-              <Link href={`/dashboard/invoices/${fundingInvoice.id}`} className="mt-0.5 text-[13px] text-blue hover:underline">
-                {fundingInvoice.number}
-              </Link>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <Field label="Contract Type" value={retainer.billingModel === "recurring" ? "Recurring" : "One-time"} />
+            {retainer.expiryDate && <Field label="Contract Ends" value={fmtDate(retainer.expiryDate)} />}
+            {fundingInvoice && (
+              <div>
+                <div className="text-[10.5px] font-bold uppercase tracking-wide text-text-4">Funding Invoice</div>
+                <Link href={`/dashboard/invoices/${fundingInvoice.id}`} className="mt-0.5 text-[13px] text-blue hover:underline">
+                  {fundingInvoice.number}
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {retainer.status === "closed" && retainer.dispositionReason && (
+            <div className="rounded-lg border border-border bg-surface-subtle p-3 text-[12px] text-text-2">
+              {retainer.dispositionReason === "transferred" && "Balance transferred to another retainer."}
+              {retainer.dispositionReason === "rolled-over" && "Rolled over into a new contract."}
+              {retainer.dispositionReason === "forfeited" && "Remaining balance forfeited."}
+              {retainer.dispositionReason === "refunded" && "Remaining balance refunded to the customer."}
+              {retainer.dispositionReason === "refunded" && retainer.refundAdjustmentId && (
+                <span> Reference: {retainer.refundAdjustmentId}</span>
+              )}
+            </div>
+          )}
+
+          {retainer.billingModel === "recurring" && displayStatus !== "closed" && (
+            <div className="rounded-lg border border-border p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-text-2">Recurring top-up</span>
+                {topUpTemplate && (
+                  <Badge tone={topUpTemplate.status === "active" ? "green" : "neutral"}>
+                    {topUpTemplate.status === "active" ? "Active" : "Paused"}
+                  </Badge>
+                )}
+              </div>
+              {topUpTemplate ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[11.5px] text-text-3">Next: {fmtDate(topUpTemplate.nextInvoiceDate)}</span>
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    disabled={topUpTemplate.status !== "active" || generatingTopUp}
+                    onClick={generateTopUpNow}
+                  >
+                    <RefreshCw /> {generatingTopUp ? "Generating..." : "Generate Top-Up Now"}
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="outline" size="xs" onClick={() => setTopUpSetupOpen(true)}>
+                  <CalendarSync /> Set up recurring top-up
+                </Button>
+              )}
             </div>
           )}
 
@@ -109,11 +195,6 @@ export function RetainerDetailsDialog({
 
           {retainer.status !== "closed" && (
             <div className="flex flex-wrap gap-2">
-              {retainer.remainingBalance > 0 && (
-                <Button variant="outline" size="sm" onClick={() => setUsageOpen(true)}>
-                  <Wallet /> Record Usage
-                </Button>
-              )}
               <Button variant="outline" size="sm" onClick={toggleStatus}>
                 {retainer.status === "active" ? (
                   <>
@@ -125,15 +206,36 @@ export function RetainerDetailsDialog({
                   </>
                 )}
               </Button>
+              {canDispose && retainer.remainingBalance > 0 && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => setTransferOpen(true)}>
+                    <ArrowLeftRight /> Transfer
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setRolloverOpen(true)}>
+                    <Undo2 /> Roll Over
+                  </Button>
+                  {canApprove && (
+                    <>
+                      <Button variant="outline" size="sm" className="text-red" onClick={() => setForfeitOpen(true)}>
+                        Forfeit
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-red" onClick={() => setRefundOpen(true)}>
+                        Refund
+                      </Button>
+                    </>
+                  )}
+                </>
+              )}
               <Button variant="ghost" size="sm" className="text-red" onClick={() => setCloseOpen(true)}>
                 <XCircle /> Close
               </Button>
             </div>
           )}
+          {canDispose && retainer.remainingBalance > 0 && !canApprove && (
+            <p className="text-[10.5px] text-text-4">Forfeit and Refund require approval — contact an account Owner/Admin.</p>
+          )}
         </div>
       </EntityDetailsDialog>
-
-      <RetainerUsageDialog open={usageOpen} onOpenChange={setUsageOpen} retainer={retainer} />
 
       <ConfirmDialog
         open={closeOpen}
@@ -148,6 +250,29 @@ export function RetainerDetailsDialog({
         }}
         successMessage={`${retainer.number} closed`}
       />
+
+      <RetainerTransferDialog open={transferOpen} onOpenChange={setTransferOpen} retainer={retainer} candidates={transferCandidates} />
+      <RetainerRolloverDialog open={rolloverOpen} onOpenChange={setRolloverOpen} retainer={retainer} />
+      <RetainerTopUpSetupDialog open={topUpSetupOpen} onOpenChange={setTopUpSetupOpen} retainer={retainer} />
+
+      {canApprove && (
+        <>
+          <ConfirmDialog
+            open={forfeitOpen}
+            onOpenChange={setForfeitOpen}
+            title={`Forfeit ${retainer.number}?`}
+            description={`The remaining balance (${fmtMoney(retainer.remainingBalance, retainer.currency)}) is lost — no invoice or refund is generated. This can't be undone.`}
+            confirmLabel="Forfeit balance"
+            destructive
+            onConfirm={async () => {
+              await retainersApi.forfeit(retainer.id);
+              queryClient.invalidateQueries({ queryKey: ["retainers"] });
+            }}
+            successMessage={`${retainer.number} forfeited`}
+          />
+          <RetainerRefundDialog open={refundOpen} onOpenChange={setRefundOpen} retainer={retainer} />
+        </>
+      )}
     </>
   );
 }

@@ -43,6 +43,7 @@ export function isTenant(me: Me | undefined | null): boolean {
 export function can(me: Me | undefined | null, permission: string | string[]): boolean {
   if (!me) return false;
   if (isPlatform(me)) return true;
+  if (me.permissions.includes("*")) return true;
   const required = Array.isArray(permission) ? permission : [permission];
   return required.some((p) => me.permissions.includes(p));
 }

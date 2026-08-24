@@ -11,7 +11,7 @@ import { FilterableTable } from "@/components/shared/filterable-table";
 import { StatTiles } from "./stat-tiles";
 import { fmtMoney } from "@/lib/format";
 import { customersApi } from "../../crm/api/customers.service";
-import { retainerPercentUsed, type Retainer, type RetainerStatus } from "../types";
+import { retainerDisplayStatus, retainerPercentUsed, type Retainer, type RetainerDisplayStatus } from "../types";
 import { retainersApi } from "../api/retainers.service";
 import { RetainerStatusBadge } from "./retainer-status-badge";
 import { RetainerFormDialog } from "./retainer-form-dialog";
@@ -20,9 +20,9 @@ import { RetainerDetailsDialog } from "./retainer-details-dialog";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyColumnDef<TData> = ColumnDef<TData, any>;
 
-type Filters = { search: string; status: "all" | RetainerStatus };
+type Filters = { search: string; status: "all" | RetainerDisplayStatus };
 
-const STATUS_OPTIONS: RetainerStatus[] = ["active", "paused", "closed"];
+const STATUS_OPTIONS: RetainerDisplayStatus[] = ["active", "paused", "expired", "closed"];
 
 export function RetainersList() {
   const { data: retainers = [], isLoading: loading } = useQuery({ queryKey: ["retainers"], queryFn: retainersApi.list });
@@ -38,7 +38,7 @@ export function RetainersList() {
   const filtered = useMemo(() => {
     const needle = filters.search.trim().toLowerCase();
     return retainers.filter((r) => {
-      if (filters.status !== "all" && r.status !== filters.status) return false;
+      if (filters.status !== "all" && retainerDisplayStatus(r) !== filters.status) return false;
       if (needle && !`${r.number} ${customerName(r.customerId)}`.toLowerCase().includes(needle)) return false;
       return true;
     });
@@ -46,7 +46,7 @@ export function RetainersList() {
   }, [retainers, filters, customers]);
 
   const stats = useMemo(() => {
-    const active = retainers.filter((r) => r.status === "active");
+    const active = retainers.filter((r) => retainerDisplayStatus(r) === "active");
     const totalContracted = retainers.reduce((sum, r) => sum + r.contractAmount, 0);
     const totalRemaining = retainers.reduce((sum, r) => sum + r.remainingBalance, 0);
     return { activeCount: active.length, totalContracted, totalRemaining };
@@ -88,10 +88,10 @@ export function RetainersList() {
       },
       {
         id: "status",
-        accessorFn: (r: Retainer) => r.status,
+        accessorFn: (r: Retainer) => retainerDisplayStatus(r),
         header: "Status",
         enableSorting: false,
-        cell: ({ row }) => <RetainerStatusBadge status={row.original.status} />,
+        cell: ({ row }) => <RetainerStatusBadge status={retainerDisplayStatus(row.original)} />,
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps

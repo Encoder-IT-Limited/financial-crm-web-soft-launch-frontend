@@ -15,16 +15,22 @@ import { SimpleTable } from "@/components/shared/simple-table";
 import { fmtDate, fmtMoney } from "@/lib/format";
 import { invoiceApi } from "../../billing/api/invoices.service";
 import { proposalsApi } from "../../billing/api/proposals.service";
+import { retainersApi } from "../../billing/api/retainers.service";
 import {
   invoiceBalance,
   invoiceDisplayStatus,
   PAYMENT_METHOD_LABELS,
   proposalDisplayStatus,
+  retainerDisplayStatus,
   type Invoice,
   type Proposal,
+  type Retainer,
 } from "../../billing/types";
 import { InvoiceStatusBadge } from "../../billing/components/invoice-status-badge";
 import { ProposalStatusBadge } from "../../billing/components/proposal-status-badge";
+import { RetainerStatusBadge } from "../../billing/components/retainer-status-badge";
+import { RetainerDetailsDialog } from "../../billing/components/retainer-details-dialog";
+import { RetainerFormDialog } from "../../billing/components/retainer-form-dialog";
 import { StatTiles } from "../../billing/components/stat-tiles";
 import { customersApi } from "../api/customers.service";
 import { CustomerStatusBadge } from "./customer-status-badge";
@@ -44,9 +50,12 @@ export function CustomerDetail() {
   });
   const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
   const { data: proposals = [] } = useQuery({ queryKey: ["proposals"], queryFn: proposalsApi.list });
+  const { data: retainers = [] } = useQuery({ queryKey: ["retainers"], queryFn: retainersApi.list });
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [retainerDetailsId, setRetainerDetailsId] = useState<string | null>(null);
+  const [retainerEditId, setRetainerEditId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!customerLoading && !customer) {
@@ -75,6 +84,11 @@ export function CustomerDetail() {
     const totalPaid = live.reduce((sum, inv) => sum + inv.paidAmount, 0);
     return { totalInvoiced, outstanding, totalPaid };
   }, [customerInvoices]);
+
+  const customerRetainers = useMemo(
+    () => retainers.filter((r) => r.customerId === params.customerId),
+    [retainers, params.customerId]
+  );
 
   const customerProposals = useMemo(
     () => proposals.filter((p) => p.customerId === params.customerId),
@@ -125,6 +139,18 @@ export function CustomerDetail() {
     },
   ];
 
+  const retainerColumns: AnyColumnDef<Retainer>[] = [
+    { accessorKey: "number", header: "Retainer #", cell: ({ row }) => <span className="font-semibold text-blue">{row.original.number}</span> },
+    { id: "contractAmount", header: "Contract", cell: ({ row }) => fmtMoney(row.original.contractAmount, row.original.currency) },
+    { id: "remainingBalance", header: "Remaining", cell: ({ row }) => fmtMoney(row.original.remainingBalance, row.original.currency) },
+    { id: "billingModel", header: "Type", cell: ({ row }) => (row.original.billingModel === "recurring" ? "Recurring" : "One-time") },
+    {
+      id: "status",
+      header: "Status",
+      cell: ({ row }) => <RetainerStatusBadge status={retainerDisplayStatus(row.original)} />,
+    },
+  ];
+
   if (customerLoading || !customer) {
     return (
       <div className="flex h-64 items-center justify-center text-[13px] text-text-4">
@@ -172,6 +198,7 @@ export function CustomerDetail() {
           <TabsTrigger value="invoices">Invoices ({customerInvoices.length})</TabsTrigger>
           <TabsTrigger value="payments">Payments ({payments.length})</TabsTrigger>
           <TabsTrigger value="proposals">Proposals ({customerProposals.length})</TabsTrigger>
+          <TabsTrigger value="retainers">Retainers ({customerRetainers.length})</TabsTrigger>
           <TabsTrigger value="credit-notes">Credit Notes</TabsTrigger>
         </TabsList>
 
@@ -224,6 +251,15 @@ export function CustomerDetail() {
           <SimpleTable columns={proposalColumns} data={customerProposals} emptyState="No proposals for this customer yet." />
         </TabsContent>
 
+        <TabsContent value="retainers" className="mt-4">
+          <SimpleTable
+            columns={retainerColumns}
+            data={customerRetainers}
+            emptyState="No retainers for this customer yet."
+            onRowClick={(retainer) => setRetainerDetailsId(retainer.id)}
+          />
+        </TabsContent>
+
         <TabsContent value="credit-notes" className="mt-4">
           <ComingSoonPanel text="Credit and debit notes will appear here once that module is built." />
         </TabsContent>
@@ -245,6 +281,21 @@ export function CustomerDetail() {
         }}
         successMessage={`${customer.name} deleted`}
       />
+
+      {retainerDetailsId && (
+        <RetainerDetailsDialog
+          open={!!retainerDetailsId}
+          onOpenChange={(open) => !open && setRetainerDetailsId(null)}
+          retainerId={retainerDetailsId}
+          onEdit={() => {
+            setRetainerEditId(retainerDetailsId);
+            setRetainerDetailsId(null);
+          }}
+        />
+      )}
+      {retainerEditId && (
+        <RetainerFormDialog open={!!retainerEditId} onOpenChange={(open) => !open && setRetainerEditId(null)} retainerId={retainerEditId} />
+      )}
     </div>
   );
 }

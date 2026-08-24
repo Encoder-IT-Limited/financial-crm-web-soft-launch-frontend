@@ -71,7 +71,7 @@ export function WarehousesPage() {
         title="Warehouses"
         subtitle="Manage your warehouses and stock levels"
         actions={
-          <Button render={<Link href="/dashboard/warehouses/new" />}>
+          <Button render={<Link href="/dashboard/warehouses/new" />} nativeButton={false}>
             <Plus data-icon="inline-start" />
             Add Warehouse
           </Button>

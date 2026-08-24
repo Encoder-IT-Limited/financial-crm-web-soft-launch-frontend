@@ -40,6 +40,8 @@ Everything real was built on `useInvoicesStore` (Zustand, localStorage-persisted
 
 **All of Phases A–G are done.** Every item in this plan has landed and is verified clean (`tsc`/`eslint`).
 
+**Phase H (Retainer Enhancements) is done** — see its own section below; `tsc --noEmit` and `eslint` both clean across the whole project (only pre-existing, unrelated warnings/errors remain — the TanStack Table `react-hooks/incompatible-library` notices, and missing `date-fns`/`recharts`/`react-day-picker`/`@tiptap/*` packages for other, unrelated in-progress modules). Not yet exercised in a running browser, per the standing tsc/lint-only verification rule. **Process note**: this doc was updated in the same pass as every file touched under Phase H — sub-items, the Files table's Status column, and mid-build discoveries (the removed `RecordUsage` path, the `can()` wildcard fix) are all reflected below, the same discipline Phases B–G's "not originally listed as its own row" entries show.
+
 ## Key Decisions
 
 1. **State management**: Migrate billing to React Query + in-memory mock services, matching the admin pattern (`tenants.service.ts` / `payments.service.ts`). Zustand's localStorage persistence has already caused a stale-field bug once.
@@ -47,6 +49,21 @@ Everything real was built on `useInvoicesStore` (Zustand, localStorage-persisted
 3. **Estimates vs Proposals**: Same concept under two names; merged into the existing "Proposals" nav item using the richer Estimate status set (`draft/sent/accepted/rejected/expired`).
 4. **Folder/route naming**: Keep existing `modules/billing/` folder and `/dashboard/*` routes — renaming to `modules/sales/` + `/sales/*` is pure churn with no functional benefit.
 5. **Credit/Debit Notes routing**: Keep the existing single combined route/nav item (`/dashboard/credit-notes`) with an internal tab switch, rather than splitting into two nav items.
+6. **Retainer Refund reuses Adjustments, not a new concept** (Phase H): a retainer refund is issued as an `Adjustment(kind: "credit")` against the retainer's funding invoice, then run through the existing `convertToInvoice()` — same "every dollar has a document" pattern already built for standalone credit notes, rather than a parallel refund mechanism.
+7. **Retainer top-ups reuse the Recurring Invoices engine, not a new scheduler** (Phase H2): `RecurringTemplate` gains an optional `kind`/`retainerId` rather than building a second templates-and-cadence system; `advanceDate()` and the manual "Generate now" trigger are shared as-is, and stay manual — no scheduler, matching the existing Recurring Invoices UX exactly.
+8. **Expired is derived, never stored** (Phase H3): `retainerDisplayStatus()` follows the exact `invoiceDisplayStatus()`/`proposalDisplayStatus()` pattern — `RetainerStatus` itself gains no `"expired"` value.
+9. **Forfeit/Refund gating uses the existing `can()` primitive, not new RBAC**: one new permission string (`retainer.approve`) checked the same way every other `can(me, ...)` call already works in this codebase — deliberately not scoped as "build a permission system."
+
+The following decisions (#10–#14) resolve everything section B/C/E/D left unanswered in
+`docs/Questions for MRM.md`. None were re-confirmed by the client — each is inferred from a
+philosophy the client *did* state elsewhere in their answers, recorded here so the reasoning
+survives even if the specific answer later changes:
+
+10. **Overdraw stays a permanent hard cap — no manual-approval override, ever** (resolves E's overdraw sub-question). The client only ever gated *removing* value (Forfeit/Refund need approval); nothing in their answers suggests *creating* value (an overdraw exception) should ever be allowed, approved or not. A draw or split can never exceed what's currently in the retainer.
+11. **Every draw generates a real Invoice — no invoice-less log entries going forward** (resolves B's first sub-question). Matches the "every dollar has a document" principle behind A's answer and the existing credit/debit-note-to-invoice pattern. `RetainerUsageDialog`'s free-text-only path is retired for new draws; all usage goes through `drawForInvoice()`.
+12. **Draws are always auto-paid when the retainer covers them — no confirm-first step** (resolves B's second sub-question). A's own wording — "mark as paid if funding can cover all" — reads as a direct instruction, not an invitation to add a review gate.
+13. **Split/partial draws are allowed, using the existing `"partially-paid"` invoice status — no new mechanism** (resolves B's third sub-question). "Pay from Retainer" is offered even when the balance won't fully cover the invoice; it pays what it can as a partial payment (`method: "retainer"`), the rest stays owed exactly like any other partially-paid invoice today.
+14. **Unused balance rolls over, both per-cycle and at contract end — never resets/forfeits by default** (resolves C's rollover sub-question, extending D/E's contract-end answer to the recurring case). The client's own default for leftover balance at contract end is Transfer/Roll-over, not Forfeit — Forfeit is the *exception* requiring approval. Applying that same preserve-by-default posture to each recurring cycle is the consistent read, not a new policy.
 
 ## Phase-by-Phase Implementation
 
@@ -102,6 +119,26 @@ Everything real was built on `useInvoicesStore` (Zustand, localStorage-persisted
 - **Shared UI**: `InvoiceSummaryCard` (subtotal/discount/VAT/total, exported `SummaryRow` for extra rows) extracted and used by both create/edit forms — Proposals from the start, and Invoices' own form (`dashboard/invoices/new/page.tsx`) swapped over from its inline duplicate, passing Paid/Balance-due as `extraRows` (Proposals has none, since it has no payment concept).
 - **Badges**: `ProposalStatusBadge`, `AdjustmentStatusBadge`, `CustomerStatusBadge`, `RetainerStatusBadge` — all match the existing `InvoiceStatusBadge`/admin `StatusBadge` convention (a `STATUS_CONFIG` map of label + `Badge` tone).
 - `fmtMoney` already covers CurrencyFormatter — no new component needed, as originally noted.
+
+### Phase H: Retainer Enhancements (client Q&A round 2) — ✅ Done
+
+Follow-up to Phase E, driven by `docs/Questions for MRM.md`. The client confirmed retainers
+can be one-time **or** recurring, that contracts have an end date with Transfer/Roll-over as
+self-serve dispositions (Forfeit/Refund needing approval), and that all retainer activity
+should surface in the Customer Statement. The remaining open sub-questions (section B in
+full, per-cycle rollover-vs-reset, manual-vs-auto top-up generation, overdraw policy, and who
+approves Forfeit/Refund) were resolved by inference from the client's own stated philosophy —
+recorded as Key Decisions #6–14. **These are working defaults, not re-confirmed by the
+client** — worth a quick sanity check with them, but built and shipped in the meantime.
+
+- **H1 — Split/partial draws** — ✅ Done (Key Decision #8). `retainersApi.drawForInvoice()` now draws `Math.min(invoice.total, remainingBalance)` instead of requiring full coverage; `invoiceApi.recordPayment` already turns a partial draw into `"partially-paid"` the normal way. `dashboard/invoices/new/page.tsx`'s "Pay from Retainer" checkbox is offered whenever the retainer has *any* remaining balance, with copy that distinguishes full vs. partial coverage. No `RecordPaymentDialog` changes were needed — a retainer partial payment is just another `Payment` row.
+- **H2 — Recurring top-ups** — ✅ Done (Key Decisions #7/#14). `Retainer.billingModel: "one-time" | "recurring"` added. `RecurringTemplate` gained `kind?: "invoice" | "retainer-topup"` and `retainerId?`; `recurring.service.ts`'s `generate()` special-cases a retainer template — creates a Paid invoice (`source: "retainer-topup"`, `method: "bank-transfer"` since it's money *arriving*, not a draw) and calls the new `retainersApi.topUp()`, which **adds** to the balance, never resets it. New `RetainerTopUpSetupDialog` (creates the template) and a "Recurring top-up" panel + "Generate Top-Up Now" button in `RetainerDetailsDialog`, reusing `recurringApi.generate()` as-is.
+- **H3 — Contract expiry & disposition** — ✅ Done (Key Decisions #6/#9/#11). `Retainer.expiryDate` added; `retainerDisplayStatus()` derives `"expired"` the same never-stored way `invoiceDisplayStatus()`/`proposalDisplayStatus()` do. **Transfer** (`RetainerTransferDialog`) and **Roll Over** (`RetainerRolloverDialog`, no new funding invoice — the money's already documented on the original contract, linked via `rolledOverFromRetainerId`) are self-serve. **Forfeit** and **Refund** (`RetainerRefundDialog`, reuses `adjustmentsApi.create()` + `convertToInvoice()` as a *standalone* credit note — `convertToInvoice` only acts on notes with no linked `invoiceId`, so the funding invoice is referenced in the reason text instead) are gated behind `can(me, "retainer.approve")`. Overdraw stays a permanent hard cap everywhere (Key Decision #6) — `drawForInvoice`/`transfer`/`rollOver` all cap at what's actually available.
+- **H4 — Expiry & low-balance alerts** — ✅ Done (Key Decision #12), scoped as its own mini-module rather than a one-line addition: new `(tenant)/modules/alerts/` (`types.ts`, `api/alerts.service.ts`, `components/alerts-list.tsx`) computes alerts live from retainer data on every read — no stored alerts table, nothing to keep in sync with a background job that doesn't exist. Thresholds (14 days, 20% remaining) live in one exported `RETAINER_ALERT_THRESHOLDS` constant, ready to wire to a real Settings field once tenant Settings exists. `/dashboard/alerts` replaced its `ComingSoon` stub.
+- **H5 — Reporting completeness** — ✅ Verified, no changes needed. Every H1–H3 action routes through real Invoices/Payments/Adjustments, so the Customer Statement picks them up automatically. Checked: no page currently renders `InvoiceSource` as a label anywhere (including the invoice detail page), so `"retainer-topup"` needed no new label mapping; `PAYMENT_METHOD_LABELS` already covered every method used.
+- **Customer detail parity** — ✅ Done. Added a **Retainers** tab to `customer-detail.tsx` (`SimpleTable`, click-through to `RetainerDetailsDialog`/`RetainerFormDialog`, same pattern as the Invoices/Proposals tabs).
+- **Retired, not carried forward**: `retainersApi.recordUsage()`, `RecordUsageInput`, `recordUsageSchema`, and `RetainerUsageDialog` (the free-text, invoice-less usage log) were deleted outright rather than left dead — Key Decision #11 explicitly retires this path in favor of every draw going through `drawForInvoice()`. The underlying `usage: RetainerUsage[]` history array stays; only the manual-entry mechanism is gone.
+- **Build-time fix, not originally scoped**: `can()` (`lib/permissions/index.ts`) didn't honor the dev mock identity's `permissions: ["*"]` — every `can()` check silently returned `false` outside the `admin` realm regardless of the wildcard, which would have made `retainer.approve` unreachable in dev. Added a wildcard check; one line, no new permission concepts.
 
 ## Files to Create/Change
 
@@ -159,6 +196,29 @@ Paths relative to `src/app/`. Existing billing module lives at `(tenant)/modules
 | `(tenant)/dashboard/invoices/page.tsx` | Update | ✅ Done | Zustand removed; consumes `invoiceApi` + `customersApi` via React Query; kept on its hand-rolled table deliberately (bulk selection/CSV export/sortable columns `FilterableTable` doesn't support) |
 | `(tenant)/dashboard/invoices/[invoiceId]/page.tsx` | Update | ✅ Done | Zustand removed, on `invoiceApi`/`customersApi` via React Query; now also shows linked Adjustments and the adjusted Balance Due (added in Phase D) |
 | `(tenant)/dashboard/invoices/new/page.tsx` | Update | ✅ Done | Zustand removed, on `invoiceApi`/`customersApi` via React Query; summary block swapped onto shared `InvoiceSummaryCard` (Phase G) |
+| `(tenant)/modules/billing/types.ts` | Update | ✅ Done | `Retainer.billingModel`/`expiryDate`/`dispositionReason`/`transferredToRetainerId`/`rolledOverFromRetainerId`/`rolledOverToRetainerId`/`refundAdjustmentId`; `retainerDisplayStatus()`; `InvoiceSource: "retainer-topup"`; removed `RecordUsageInput` |
+| `(tenant)/modules/billing/recurring/types.ts` | Update | ✅ Done | `RecurringTemplate.kind` (`"invoice" \| "retainer-topup"`) and `retainerId` |
+| `(tenant)/modules/billing/api/recurring.service.ts` | Update | ✅ Done | `generate()` special-cases `kind: "retainer-topup"` — Paid invoice + `retainersApi.topUp()` instead of a normal draft/sent invoice |
+| `(tenant)/modules/billing/api/retainers.service.ts` | Update | ✅ Done | Added `topUp()`, `transfer()`, `rollOver()`, `forfeit()`, `requestRefund()`; `drawForInvoice()` now supports partial coverage; removed `recordUsage()` |
+| `(tenant)/modules/billing/schemas.ts` | Update | ✅ Done | Added `retainerTopUpSetupSchema`, `retainerRolloverSchema`, `retainerTransferSchema`, `retainerRefundSchema`; extended `retainerFormSchema` with `billingModel`/`expiryDate`; removed `recordUsageSchema` |
+| `(tenant)/modules/billing/mock/seed-retainers.ts` | Update | ✅ Done | Added `billingModel`/`expiryDate` per seeded retainer (one recurring, one expiring within the alert window for a live H4 example) |
+| `(tenant)/modules/billing/components/retainer-details-dialog.tsx` | Update | ✅ Done | Expiry/disposition info, recurring top-up panel, Transfer/Roll Over/Forfeit/Refund actions (`can(me, "retainer.approve")`-gated); "Record Usage" button removed |
+| `(tenant)/modules/billing/components/retainer-form-dialog.tsx` | Update | ✅ Done | Added Contract type (`billingModel`) and Contract end date (`expiryDate`) fields |
+| `(tenant)/modules/billing/components/retainers-list.tsx` | Update | ✅ Done | Status column/filter now use `retainerDisplayStatus()` (includes "Expired") instead of raw stored status |
+| `(tenant)/modules/billing/components/retainer-status-badge.tsx` | Update | ✅ Done | Takes `RetainerDisplayStatus`, adds an "Expired" (red) tone |
+| `(tenant)/modules/billing/components/retainer-transfer-dialog.tsx` | Create | ✅ Done | Destination-retainer picker + confirm for Transfer |
+| `(tenant)/modules/billing/components/retainer-rollover-dialog.tsx` | Create | ✅ Done | New expiry date input + confirm for Roll Over |
+| `(tenant)/modules/billing/components/retainer-refund-dialog.tsx` | Create | ✅ Done | Reason input + confirm for Refund; approval-gated by its caller |
+| `(tenant)/modules/billing/components/retainer-topup-setup-dialog.tsx` | Create | ✅ Done | Creates the `kind: "retainer-topup"` `RecurringTemplate` for a recurring retainer |
+| `(tenant)/modules/billing/components/retainer-usage-dialog.tsx` | Delete | ✅ Done | Retired free-text usage-log dialog (Key Decision #11); confirmed no remaining references before deleting |
+| `(tenant)/modules/crm/components/customer-detail.tsx` | Update | ✅ Done | Added a Retainers tab (`SimpleTable`, click-through to `RetainerDetailsDialog`/`RetainerFormDialog`) alongside Overview/Invoices/Payments/Proposals/Credit Notes |
+| `(tenant)/modules/alerts/types.ts` | Create | ✅ Done | `Alert`, `AlertType`, `AlertSeverity`, `RETAINER_ALERT_THRESHOLDS` |
+| `(tenant)/modules/alerts/api/alerts.service.ts` | Create | ✅ Done | `alertsApi.list()` — computed live from retainer data, no stored table |
+| `(tenant)/modules/alerts/components/alerts-list.tsx` | Create | ✅ Done | Alerts page content component |
+| `(tenant)/dashboard/alerts/page.tsx` | Replace stub | ✅ Done | Was `ComingSoon`; now renders `<AlertsList />` |
+| `(tenant)/dashboard/invoices/new/page.tsx` | Update | ✅ Done | "Pay from Retainer" offered on partial coverage too — pays what's available as a `"partially-paid"` partial payment; copy distinguishes full vs. partial |
+| `(tenant)/modules/billing/components/record-payment-dialog.tsx` | — | ✅ Already fine | No change needed — a retainer partial payment is just another `Payment` row, same as today |
+| `src/lib/permissions/index.ts` | Update | ✅ Done (unscoped fix) | `can()` now honors `permissions: ["*"]` (dev mock identity) — without it, `retainer.approve` would never resolve `true` outside the `admin` realm |
 
 ## Migration Steps
 
@@ -182,7 +242,8 @@ Paths relative to `src/app/`. Existing billing module lives at `(tenant)/modules
 - **Customer Flow**: `Create Customer` → `Link to Proposal/Invoice` → `Track Balance`.
 - **Adjustment Flow**: `Issue Credit/Debit Note` → `Link to Invoice` → "Adjustments" entry appears on invoice detail → invoice displayed balance updates.
 - **Recurring Flow**: `Create Template` → `Generate Now` (manual trigger) → Invoice created with `source: "recurring"`.
-- **Retainer Flow**: `Create Retainer` → `Track Remaining Balance`.
+- **Retainer Flow (current, Phase E)**: `Create Retainer` → `Track Remaining Balance`.
+- **Retainer Flow (planned, Phase H)**: `Create Retainer` (funding Invoice, Paid) → `Draw` (invoice-linked, always auto-paid — fully if the balance covers it, partially via `"partially-paid"` if it doesn't) → *(recurring only)* `Generate Top-Up` (manual trigger → Paid invoice, `source: "retainer-topup"`, balance topped up) → *(at expiry)* `Transfer` / `Roll Over` (self-serve) **or** `Forfeit` / `Refund` (permission-gated, Refund → negative invoice via the Adjustments pattern) → visible throughout in the Customer Statement.
 
 ## Testing Checklist
 
@@ -192,19 +253,117 @@ Paths relative to `src/app/`. Existing billing module lives at `(tenant)/modules
 - [x] Proposal → Invoice conversion populates all lines and sets `source: "estimate"`; proposal marked accepted with `convertedInvoiceId`; navigates to new invoice (verified in `proposals.service.ts`'s `convertToInvoice()`).
 - [x] Credit/Debit notes correctly decrement/increment linked invoice balances and appear in its Adjustments section (verified in `adjustedInvoiceBalance()`/`adjustmentsForInvoice()` and the Invoice detail page's Adjustments card + Balance Due tile).
 - [ ] Dashboard KPIs/charts reflect seeded data and update after create/edit/delete actions — implemented, not yet exercised in a running browser (AGENTS.md §7: verify via `tsc`/lint, not the dev server, for routine work).
-- [x] Retainer usage can't exceed the remaining balance (blocked client-side in `RetainerUsageDialog`); retainer auto-closes at zero remaining; Pause/Resume/Close all update status correctly (verified in `retainers.service.ts`).
+- [x] Retainer draws can't exceed the remaining balance — `drawForInvoice()` caps at `Math.min(invoice.total, remainingBalance)`, no override path (Key Decision #10); retainer auto-closes at zero remaining; Pause/Resume/Close all update status correctly (verified in `retainers.service.ts`).
 - [x] Reports reflect the same live data as the rest of the module — Sales/Invoice Report and Customer Statement all read from `invoiceApi`/`adjustmentsApi`/`customersApi`, no separate/stale report-only dataset; CSV export works on all three tabs.
 - [ ] All new pages are responsive (down to 360px) and support Dark Mode — built with the same responsive/dark-mode utility classes as the rest of the tenant portal; not yet visually spot-checked.
 - [ ] Desktop (lg:) matches prototype markup where a page exists in it — Customers/Proposals/Retainers/Reports have no prototype reference page, so this applies to Invoices/Recurring only, already true pre-migration.
 - [x] `tsc` and lint pass with no errors (verified after every phase, most recently after Phase F).
+- [x] **Phase H** — Recurring top-ups generate a Paid invoice (`source: "retainer-topup"`) and correctly increment `remainingBalance` (verified in `recurring.service.ts`'s `generate()` and `retainers.service.ts`'s `topUp()`).
+- [x] **Phase H** — Transfer moves the full `remainingBalance` and zeroes the source retainer; Roll Over creates a new retainer seeded with the leftover balance and links back via `rolledOverFromRetainerId`/`rolledOverToRetainerId` (verified in `retainers.service.ts`'s `transfer()`/`rollOver()`).
+- [x] **Phase H** — Forfeit/Refund are unreachable without `can(me, "retainer.approve")` — both action buttons and their dialogs only render when `canApprove` is true in `retainer-details-dialog.tsx`; Refund produces a real negative-value invoice via `adjustmentsApi.convertToInvoice()`, not just a status flip.
+- [x] **Phase H** — `retainerDisplayStatus()` returns `"expired"` once `expiryDate` has passed, without mutating stored `status` (same never-stored pattern as invoices/proposals).
+- [x] **Phase H** — Retainer funding/top-up/refund activity appears correctly in the Customer Statement — every one of them is a real Invoice/Payment/Adjustment, so no separate wiring was needed (H5).
+- [ ] **Phase H** — Not yet exercised in a running browser (AGENTS.md §7: verify via `tsc`/lint for routine work) — logic verified by reading every code path, not by clicking through the UI. Worth a manual pass before shipping, same caveat as the Dashboard KPIs item above.
 
 ## Explicitly Out of Scope
 
 - **Vendors, Inquiries, Leads** — not in this spec; still ComingSoon. Separate future task.
-- **Action-level permissions** (`invoice.create` etc., spec §23) — no role/action permission system exists yet and sub-role RBAC is an unanswered open question (Project-Structure.md §7). Action buttons will be structured so gating is a trivial one-line addition later, but no permission engine now.
+- **Action-level permissions** (`invoice.create` etc., spec §23) — no full role/action permission *system* (admin-configurable RBAC UI) exists yet, and sub-role RBAC is an unanswered open question (Project-Structure.md §7). Phase H's Forfeit/Refund gating uses the existing `can(me, permission)` primitive with one new permission string (`retainer.approve`) — not a new engine, just one more check of the same caliber already used elsewhere; still no UI to assign/configure who holds it.
 - **POS integration & real Inventory stock movement** — type fields added for forward-compat only (spec §2); neither module exists yet.
-- **Scheduler/auto-send for Recurring Invoices** — stays manual-trigger; flagged as an open question in existing code/docs.
-- **Auto-invoice-generation from Retainers** — nothing in the docs specs it; clean CRUD demo only.
+- **Scheduler/auto-send for Recurring Invoices, including retainer top-ups** — stays manual-trigger ("Generate now"), consistent with the rest of the Recurring Invoices UX; flagged as an open question in existing code/docs.
+- **Overdraw with manual approval** — decided against (Key Decision #10); the hard cap stays permanent, not a togglable exception.
+- **Full Alerts module beyond retainer triggers** — `(tenant)/modules/alerts/` built, but scoped strictly to the two retainer triggers (Phase H4); not a general-purpose alerting system for the rest of the app. Extend `alertsApi.list()` if/when other trigger sources are needed.
+- **Alert thresholds wired to a real Settings UI** — `RETAINER_ALERT_THRESHOLDS` is one exported constant, not yet configurable through the tenant Settings page (still a `ComingSoon` stub). Revisit once that page exists.
+- **Re-confirming Key Decisions #10–14 with the client** — not a code task, but flagged: these are working defaults inferred from the client's other answers, not re-confirmed line items. Phase H shipped on them; worth a quick sanity check with the client regardless.
+
+## Appendix: Module-by-module flow (plain language)
+
+A walkthrough of how each screen actually behaves in real use, written for a non-technical
+reader. Uses one running example — **"Bloom Café Group"** ordering equipment from the tenant.
+
+**Structural note**: a client-facing nav list for this module named 12 items. The built system
+has 9 working screens — Estimates and Proposals are one screen (Key Decision, same concept
+under two names), Credit Notes and Debit Notes are one screen (Key Decision, one `Adjustment`
+type with a `kind` discriminator), and Delivery/Fulfillment doesn't exist anywhere in this
+plan or the codebase. If literal 1:1 nav items are required later, that's a new scoping
+decision, not an oversight here.
+
+### 📊 Dashboard
+The homepage. Shows total invoiced this month, outstanding (unpaid), collected, an invoicing
+trend chart, a status breakdown, and a feed of recent invoices/payments. Read-only — nothing
+happens here, it just summarizes everything below it.
+
+### 👥 Customers
+The address book, with money attached. Each customer has contact info, a credit limit, an
+opening balance, and a status (Active/Inactive). Added once, reused everywhere. Their profile
+page shows every invoice, payment, proposal, and retainer tied to them in one place. Deleting
+a customer is permanent (confirmation required).
+
+### 📄 Estimates / 📑 Proposals (one screen)
+You draft a Proposal ("10 espresso machines, AED 45,000") → **Send** it → they respond.
+Accepted → **Convert to Invoice** turns it into a real Invoice pre-filled with the same lines,
+nothing retyped. No response before the expiry date → automatically shows **Expired** (derived,
+not a manual step). Can also be **Rejected**. A converted proposal is locked — can't convert
+twice, so there's never a duplicate invoice from the same estimate.
+
+### 🧾 Invoices
+The core document. **Save Draft** (private, fully editable) or **Create & Send** (locks the
+line items, customer gets it, status → Sent). Payments recorded against it — full → **Paid**,
+partial → **Partially Paid**. Due date passes with balance owed → automatically **Overdue**.
+Can be cancelled if nothing's been paid yet. Every invoice has a QR code and downloadable PDF.
+Credit/Debit notes and retainer draws also apply against the balance — what you see as "owed"
+always reflects all of that combined, not just cash payments.
+
+### 🔁 Recurring Invoices
+For customers billed the same amount on a schedule. Set up once (customer, amount, frequency,
+start date). **Nothing fires automatically** — each cycle, someone clicks **Generate Now**,
+which creates a new draft invoice for review before it's sent; deliberate, so nothing bills
+without a human looking at it first. Templates can be Paused (skip cycles) or Deleted (past
+invoices already generated are untouched).
+
+### 💳 Payments
+Not a separate list — payments live inside invoices. Recording one captures amount, date,
+method (bank transfer, card, cash, cheque, mobile, or "Retainer"), and an optional reference.
+The invoice's paid/balance figures update immediately.
+
+### ↩ Credit Notes / ➕ Debit Notes (one screen)
+One screen, tab switch between the two — a Credit Note reduces what a customer owes, a Debit
+Note increases it. Example: Bloom Café returns a faulty machine → a Credit Note for AED 3,000
+linked to the original invoice → that invoice's balance drops by 3,000 automatically. Issued
+immediately, no draft stage — it's a record of something that already happened, not a document
+awaiting a response. Can be **Voided** if issued by mistake (balance reverts instantly). A
+standalone note (no linked invoice) can be **Converted to an Invoice** so it shows up as a real
+document instead of floating unlinked.
+
+### 📋 Retainers
+A prepaid wallet a customer keeps with the tenant.
+- **Funding**: customer pays AED 60,000 upfront → a funding invoice is generated and marked
+  Paid immediately → the retainer balance starts at AED 60,000.
+- **One-time vs. Recurring**: a single lump sum that drains down, or a recurring one that tops
+  itself back up every billing period (again, only on manual **Generate**, never automatic).
+- **Drawing it down**: ticking "Pay from Retainer" on a new invoice — full coverage marks it
+  Paid instantly; partial coverage pays what it can and the rest stays owed normally, like any
+  partial payment.
+- **Hard cap**: a retainer can never be over-drawn — it only ever takes what's actually there.
+- **Contract end**: every retainer has an end date. **Transfer** (move the leftover balance to
+  another of the customer's retainers) and **Roll Over** (start a fresh contract seeded with
+  the leftover) are self-serve. **Forfeit** (balance is simply lost) and **Refund** (money goes
+  back as a real negative invoice) require an approval permission — not every staff member can
+  do those two.
+- **Alerts**: a retainer expiring within 14 days or with under 20% balance left shows up on the
+  Alerts page automatically, so nothing quietly runs out unnoticed.
+
+### 🚚 Delivery / Fulfillment
+**Not built** — no module for this exists in the system or anywhere in this plan. Would need
+its own scoping as new work if required.
+
+### 📈 Reports
+Three tabs, all reading the same live data as everything above (no separate reporting dataset
+that could drift out of sync): **Sales Report** (12-month invoiced-vs-collected trend),
+**Invoice Report** (every invoice, filterable by status), and **Customer Statement** (one
+customer's full running-balance ledger — every invoice, payment, and note in date order; this
+is where retainer activity surfaces too, since it's all just invoices/payments underneath). All
+three export to CSV.
 
 ## Definition of Done
 

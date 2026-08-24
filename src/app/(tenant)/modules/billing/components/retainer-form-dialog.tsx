@@ -40,16 +40,20 @@ export function RetainerFormDialog({
           customerId: retainer.customerId,
           contractAmount: retainer.contractAmount,
           billingPeriod: retainer.billingPeriod,
+          billingModel: retainer.billingModel,
           currency: retainer.currency,
           startDate: retainer.startDate.slice(0, 10),
+          expiryDate: retainer.expiryDate?.slice(0, 10) ?? "",
           notes: retainer.notes ?? "",
         }
       : {
           customerId: "",
           contractAmount: 0,
           billingPeriod: "monthly",
+          billingModel: "one-time",
           currency: "AED",
           startDate: new Date().toISOString().slice(0, 10),
+          expiryDate: "",
           notes: "",
         }
   );
@@ -129,6 +133,22 @@ export function RetainerFormDialog({
         </FormField>
       </div>
 
+      <FormField label="Contract type" error={errors.billingModel}>
+        <Select
+          value={form.billingModel}
+          onValueChange={(v) => setForm({ ...form, billingModel: (v ?? "one-time") as RetainerFormValues["billingModel"] })}
+          disabled={editing}
+        >
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="one-time">One-time — a single upfront payment, drawn down until it&apos;s gone</SelectItem>
+            <SelectItem value="recurring">Recurring — tops back up to the contract amount every billing period</SelectItem>
+          </SelectContent>
+        </Select>
+      </FormField>
+
       <div className="grid gap-3 sm:grid-cols-2">
         <FormField label="Currency">
           <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: (v ?? "AED") as Currency })}>
@@ -154,6 +174,16 @@ export function RetainerFormDialog({
           />
         </FormField>
       </div>
+
+      <FormField label="Contract end date (optional)" error={errors.expiryDate}>
+        <Input
+          type="date"
+          value={form.expiryDate}
+          onChange={(e) => setForm({ ...form, expiryDate: e.target.value })}
+          aria-invalid={!!errors.expiryDate}
+          className={cn(errors.expiryDate && "border-red")}
+        />
+      </FormField>
 
       <FormField label="Notes" error={errors.notes}>
         <textarea

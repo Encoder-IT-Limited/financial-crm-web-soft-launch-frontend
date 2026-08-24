@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { AlertsList } from "../../modules/alerts/components/alerts-list";
 
 export default function Page() {
-  return <ComingSoon title="Alerts" subtitle="Stay on top of dues, renewals, and anomalies" />;
+  return <AlertsList />;
 }

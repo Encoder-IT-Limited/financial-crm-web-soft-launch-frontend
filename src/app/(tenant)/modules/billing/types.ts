@@ -19,8 +19,17 @@ export type InvoiceStatus = "draft" | "sent" | "partially-paid" | "paid" | "canc
  *  `debit-note`/`credit-note` are set when a standalone note (one issued
  *  with no linked invoice) is converted into an invoice — positive-value
  *  for a debit note, negative-value for a credit note. `retainer` is set
- *  on the funding invoice auto-generated when a Retainer is created. */
-export type InvoiceSource = "manual" | "estimate" | "recurring" | "pos" | "debit-note" | "credit-note" | "retainer";
+ *  on the funding invoice auto-generated when a Retainer is created;
+ *  `retainer-topup` on each subsequent recurring top-up invoice (Phase H2). */
+export type InvoiceSource =
+  | "manual"
+  | "estimate"
+  | "recurring"
+  | "pos"
+  | "debit-note"
+  | "credit-note"
+  | "retainer"
+  | "retainer-topup";
 
 /** Derived from status + payment state + due date — never stored.
  * `overdue` applies to sent/partially-paid invoices past their due date
@@ -261,13 +270,23 @@ export function adjustedInvoiceBalance(invoice: Invoice, invoiceAdjustments: Adj
 }
 
 /* ------------------------------------------------------------------ */
-/* Retainers — CRUD + balance tracking only. No auto-invoice-          */
-/* generation: nothing in the docs specs that behavior (Phase E note). */
+/* Retainers — CRUD + balance tracking, plus Phase H's recurring        */
+/* top-ups, expiry disposition (Transfer/Roll Over/Forfeit/Refund), and */
+/* draws that generate real invoices (see docs/Sales-Invoicing-         */
+/* Implementation-Plan.md Phase H and its Key Decisions #6-14).         */
 /* ------------------------------------------------------------------ */
 
 export type RetainerBillingPeriod = "monthly" | "quarterly" | "yearly";
 
 export type RetainerStatus = "active" | "paused" | "closed";
+
+/** Derived from status + expiryDate — never stored. Same never-stored
+ *  pattern as invoiceDisplayStatus()/proposalDisplayStatus(). */
+export type RetainerDisplayStatus = RetainerStatus | "expired";
+
+/** Set on a closed retainer to record *why* it closed — distinguishes a
+ *  plain balance-exhausted close from an expiry disposition. */
+export type RetainerDispositionReason = "forfeited" | "refunded" | "transferred" | "rolled-over";
 
 export type RetainerUsage = {
   id: string;
@@ -282,33 +301,52 @@ export type Retainer = {
   customerId: string;
   contractAmount: number;
   billingPeriod: RetainerBillingPeriod;
+  /** One-time lump sum vs. recurring subscription that tops the balance
+   *  back up each cycle (client Q&A section C — "both" are supported). */
+  billingModel: "one-time" | "recurring";
   remainingBalance: number;
   currency: Currency;
   status: RetainerStatus;
   startDate: string;
+  /** Contract end date (client Q&A section D — confirmed every retainer has
+   *  one). Optional only because retainers seeded/created before Phase H
+   *  don't have it. */
+  expiryDate?: string;
   notes?: string;
   createdBy: string;
   createdAt: string;
   usage: RetainerUsage[];
   /** Invoice auto-generated (and marked paid) for the contract amount when
    *  the retainer was created — the document behind the upfront funding.
-   *  Absent on retainers seeded before this existed. */
+   *  Absent on retainers seeded before this existed, and on a retainer
+   *  created via Roll Over (the funding already happened on the original
+   *  contract — see rolledOverFromRetainerId). */
   fundingInvoiceId?: string;
+  /** Why this retainer is closed (Phase H disposition actions). Absent for
+   *  a plain balance-exhausted close. */
+  dispositionReason?: RetainerDispositionReason;
+  /** Set on the *source* retainer of a Transfer, pointing at the
+   *  destination retainer that received the balance. */
+  transferredToRetainerId?: string;
+  /** Set on the *new* retainer created by a Roll Over, pointing back at the
+   *  contract it carried the balance over from. */
+  rolledOverFromRetainerId?: string;
+  /** Set on the *old* retainer once rolled over, pointing at the new one. */
+  rolledOverToRetainerId?: string;
+  /** The credit-note Adjustment issued for a Refund disposition, once
+   *  converted to a real (negative-value) invoice — see requestRefund(). */
+  refundAdjustmentId?: string;
 };
 
 export type NewRetainerInput = {
   customerId: string;
   contractAmount: number;
   billingPeriod: RetainerBillingPeriod;
+  billingModel?: "one-time" | "recurring";
   currency?: Currency;
   startDate: string;
+  expiryDate?: string;
   notes?: string;
-};
-
-export type RecordUsageInput = {
-  date: string;
-  amount: number;
-  note?: string;
 };
 
 export function retainerUsedAmount(retainer: Retainer): number {
@@ -317,4 +355,11 @@ export function retainerUsedAmount(retainer: Retainer): number {
 
 export function retainerPercentUsed(retainer: Retainer): number {
   return pct(retainerUsedAmount(retainer), retainer.contractAmount);
+}
+
+/** The status shown in lists/badges — expired is derived from `expiryDate`,
+ *  never stored, so it always reflects "today" without a background job. */
+export function retainerDisplayStatus(retainer: Retainer): RetainerDisplayStatus {
+  if (retainer.status === "active" && retainer.expiryDate && daysPast(retainer.expiryDate) > 0) return "expired";
+  return retainer.status;
 }
