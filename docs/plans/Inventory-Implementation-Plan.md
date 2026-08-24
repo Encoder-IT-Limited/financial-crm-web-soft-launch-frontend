@@ -299,7 +299,7 @@ Module-specific additions:
 ## Explicitly Out of Scope
 
 - Purchasing/Bills module screens (goods receipt only *reads* seeded open POs until purchasing connects)
-- Accounting, Sales/Invoicing, CRM, Banking, HR/Payroll, Calendar, Social, POS, mobile app (later phases per `docs/Project-Structure.md` §5)
+- Accounting, Sales/Invoicing, CRM, Banking, HR/Payroll, Calendar, Social, POS, mobile app (later phases per `docs/architecture/Project-Structure.md` §5)
 - Super Admin portal concerns (tenants, plans, platform audit log)
 - Barcode/QR/serial-number tracking (not requested anywhere in current context)
 - Multi-currency pricing (AED only throughout)

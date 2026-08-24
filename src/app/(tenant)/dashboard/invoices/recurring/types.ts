@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------ */
-/* Recurring invoices — template model for docs/inv-pos-hr-tenant.md   */
+/* Recurring invoices — template model for docs/source/inv-pos-hr-tenant-SRS.md */
 /* §22.11 (Recurring Invoice Workflow). Each active template generates */
 /* a new invoice when its next billing date arrives (manual due-date   */
 /* worker in the UI for this frontend-only build).                     */

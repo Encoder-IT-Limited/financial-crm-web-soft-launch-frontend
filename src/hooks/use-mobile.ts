@@ -1,6 +1,6 @@
 import * as React from "react"
 
-// 1024px (Tailwind's `lg:`) per docs/Basic-Setup.md §4 — desktop sidebar
+// 1024px (Tailwind's `lg:`) per docs/architecture/Basic-Setup.md §4 — desktop sidebar
 // layout is `lg:` and up, off-canvas drawer below it.
 const MOBILE_BREAKPOINT = 1024
 

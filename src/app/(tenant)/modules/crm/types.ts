@@ -1,7 +1,7 @@
 /* ------------------------------------------------------------------ */
 /* CRM — shared contact domain model. Owned here (not inside billing)  */
 /* so Customers — and later Vendors, Inquiries, Leads — live in one    */
-/* place per docs/Project-Structure.md instead of under Sales.         */
+/* place per docs/architecture/Project-Structure.md instead of under Sales. */
 /* ------------------------------------------------------------------ */
 
 export type Currency = "AED" | "USD" | "EUR" | "GBP" | "SAR";
@@ -14,7 +14,7 @@ export const CUSTOMER_STATUSES: CustomerStatus[] = ["active", "inactive"];
 
 export type Customer = {
   id: string;
-  customerCode: string; // CUST-0001 — docs/inv-pos-hr-tenant.md §33.7
+  customerCode: string; // CUST-0001 — docs/source/inv-pos-hr-tenant-SRS.md §33.7
   name: string;
   email: string;
   phone: string;

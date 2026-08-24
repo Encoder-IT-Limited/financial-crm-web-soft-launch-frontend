@@ -1,6 +1,6 @@
 import type { PlatformSettings } from "@/app/(admin)/modules/settings/types";
 
-// TEMPORARY: no backend/settingsService yet (see docs/Public-SuperAdmin-Plan.md
+// TEMPORARY: no backend/settingsService yet (see docs/plans/Public-SuperAdmin-Plan.md
 // §3.5). This is the single source both (admin)'s Settings page and (public)'s
 // navbar/footer/legal pages read from, the same pattern plans-data.ts used
 // before Plans & Pricing existed. Editing it here is the only way to change

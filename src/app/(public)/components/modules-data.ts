@@ -15,7 +15,7 @@ import {
 import type { ModuleShowcaseItem } from "./module-showcase-card";
 
 // Full module lineup from the proposal — including Phase 2/3 modules not
-// built yet (marked comingSoon) — per docs/Public-SuperAdmin-Plan.md §2.4:
+// built yet (marked comingSoon) — per docs/plans/Public-SuperAdmin-Plan.md §2.4:
 // the product will eventually ship all of it, so the marketing story is
 // complete now rather than re-plumbed as each phase lands.
 export const MODULES: ModuleShowcaseItem[] = [

@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------ */
 /* Alerts — minimal, Phase H4 scope only: retainer expiry and low-      */
-/* balance warnings (docs/Sales-Invoicing-Implementation-Plan.md Phase  */
+/* balance warnings (docs/plans/Sales-Invoicing-Implementation-Plan.md Phase */
 /* H4). Not a general-purpose alerting system for the rest of the app — */
 /* alerts here are derived on read from live retainer data, never       */
 /* stored, so there's nothing to keep in sync with a background job     */

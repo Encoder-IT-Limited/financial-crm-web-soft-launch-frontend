@@ -21,30 +21,33 @@ public marketing site:
   ledger, invoicing/sales, purchasing/expenses, inventory, banking, CRM, tax/compliance
   reports, alerts, AI assistant.
 
-There is no Figma/design-file handoff for this project — `docs/mrm-portal-v3 (1).html`
-(a static prototype) is the only visual reference, and `docs/Project-Structure.md` is
-the derived design system + folder structure + phased build plan. Read
-**`docs/Project-Structure.md` first** for anything structural or visual; it supersedes
-guessing from the HTML file directly. `docs/Basic-Setup.md` is the underlying
-architecture guide (route groups, auth layering, theming, API client) both documents
-build on — read it before scaffolding anything.
+There is no Figma/design-file handoff for this project —
+`docs/source/mrm-portal-v3-prototype.html` (a static prototype) is the only visual
+reference, and `docs/architecture/Project-Structure.md` is the derived design system +
+folder structure + phased build plan. Read **`docs/architecture/Project-Structure.md`
+first** for anything structural or visual; it supersedes guessing from the HTML file
+directly. `docs/architecture/Basic-Setup.md` is the underlying architecture guide (route
+groups, auth layering, theming, API client) both documents build on — read it before
+scaffolding anything.
 
-`docs/Client-proposal.md` and `docs/MRM_Project_Proposal_v2.pdf` are the feature-scope
-source of truth; the HTML prototype covers Phase 1 (accounting core) only — POS, full
-HR/Payroll, Calendar/Booking, Social Media, and the mobile app are later phases (see
-`Project-Structure.md` §5), not MVP.
+`docs/source/Client-proposal.md` and `docs/source/MRM_Project_Proposal_v2.pdf` are the
+feature-scope source of truth; the HTML prototype covers Phase 1 (accounting core) only
+— POS, full HR/Payroll, Calendar/Booking, Social Media, and the mobile app are later
+phases (see `Project-Structure.md` §5), not MVP. `docs/README.md` indexes everything
+under `docs/` — check it first if you're not sure where something lives.
 
 ## Instructions
 
-1. Follow `docs/Basic-Setup.md` exactly for folder structure, route groups
+1. Follow `docs/architecture/Basic-Setup.md` exactly for folder structure, route groups
    (`(public)`, `(admin)`, `(tenant)`), the five-layer auth model, sidebar/navbar
    wiring, theming, and the API client layer. Don't improvise structure that
    contradicts it.
-2. Use `docs/Project-Structure.md` §2 for all colors, typography, spacing, radii, and
-   component specs — don't invent new tokens or pull colors ad hoc from the HTML file;
-   the doc already extracted and organized them (light + a proposed dark palette).
-3. Build in the phase order in `docs/Project-Structure.md` §5 — Phase 1 (accounting
-   core matching the prototype) before Phase 2 (inventory) before Phase 3
+2. Use `docs/architecture/Project-Structure.md` §2 for all colors, typography, spacing,
+   radii, and component specs — don't invent new tokens or pull colors ad hoc from the
+   HTML file; the doc already extracted and organized them (light + a proposed dark
+   palette).
+3. Build in the phase order in `docs/architecture/Project-Structure.md` §5 — Phase 1
+   (accounting core matching the prototype) before Phase 2 (inventory) before Phase 3
    (HR/Payroll/Calendar/Social/POS/mobile).
 4. **Every UI change ships responsive (down to 360px) and with dark mode in the same
    diff.** Desktop (`lg:` and up) must match the prototype exactly where a page exists

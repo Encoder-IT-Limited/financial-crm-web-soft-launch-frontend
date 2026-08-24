@@ -55,7 +55,7 @@ Everything real was built on `useInvoicesStore` (Zustand, localStorage-persisted
 9. **Forfeit/Refund gating uses the existing `can()` primitive, not new RBAC**: one new permission string (`retainer.approve`) checked the same way every other `can(me, ...)` call already works in this codebase — deliberately not scoped as "build a permission system."
 
 The following decisions (#10–#14) resolve everything section B/C/E/D left unanswered in
-`docs/Questions for MRM.md`. None were re-confirmed by the client — each is inferred from a
+`docs/source/client-qa-retainers.md`. None were re-confirmed by the client — each is inferred from a
 philosophy the client *did* state elsewhere in their answers, recorded here so the reasoning
 survives even if the specific answer later changes:
 
@@ -122,7 +122,7 @@ survives even if the specific answer later changes:
 
 ### Phase H: Retainer Enhancements (client Q&A round 2) — ✅ Done
 
-Follow-up to Phase E, driven by `docs/Questions for MRM.md`. The client confirmed retainers
+Follow-up to Phase E, driven by `docs/source/client-qa-retainers.md`. The client confirmed retainers
 can be one-time **or** recurring, that contracts have an end date with Transfer/Roll-over as
 self-serve dispositions (Forfeit/Refund needing approval), and that all retainer activity
 should surface in the Customer Statement. The remaining open sub-questions (section B in

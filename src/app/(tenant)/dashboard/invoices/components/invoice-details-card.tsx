@@ -1,17 +1,18 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { Currency } from "../types";
 import type { Customer } from "../../../modules/crm/types";
+import { productLookupApi } from "../api/product-lookup.service";
 import { LineItemsEditor, type LineDraft } from "./line-items-editor";
 import { FormField } from "./form-field";
 
 /** The main "Invoice details" card on the New/Edit Invoice page — customer,
- * currency, dates, line items, notes — extracted verbatim; behavior
- * unchanged. */
+ * currency, dates, warehouse, line items, notes. */
 export function InvoiceDetailsCard({
   editing,
   nextNumber,
@@ -24,6 +25,8 @@ export function InvoiceDetailsCard({
   onIssueDateChange,
   dueDate,
   onDueDateChange,
+  warehouseId,
+  onWarehouseIdChange,
   lines,
   onLinesChange,
   notes,
@@ -41,12 +44,18 @@ export function InvoiceDetailsCard({
   onIssueDateChange: (value: string) => void;
   dueDate: string;
   onDueDateChange: (value: string) => void;
+  /** Which warehouse product-linked lines draw stock from — a demo-catalog
+   *  concept (see api/product-lookup.service.ts), unrelated to the real
+   *  Inventory module, which isn't touched by this. */
+  warehouseId: string;
+  onWarehouseIdChange: (value: string) => void;
   lines: LineDraft[];
   onLinesChange: (lines: LineDraft[]) => void;
   notes: string;
   onNotesChange: (value: string) => void;
   errors: Record<string, string>;
 }) {
+  const { data: warehouses = [] } = useQuery({ queryKey: ["product-lookup-warehouses"], queryFn: productLookupApi.listWarehouses });
   return (
     <Card className="gap-0 p-0 lg:col-span-2">
       <div className="flex items-center justify-between border-b border-border px-5 py-3">
@@ -110,12 +119,27 @@ export function InvoiceDetailsCard({
               className={cn(errors.dueDate && "border-red")}
             />
           </FormField>
+
+          <FormField label="Warehouse (for product lines)" error={errors.warehouseId}>
+            <Select value={warehouseId} onValueChange={(v) => onWarehouseIdChange(v ?? "")}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select warehouse" />
+              </SelectTrigger>
+              <SelectContent>
+                {warehouses.map((warehouse) => (
+                  <SelectItem key={warehouse.id} value={warehouse.id}>
+                    {warehouse.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
         </div>
 
         <div>
           <div className="mb-1.5 text-[11px] font-semibold text-text-2">Line items</div>
           {errors.lines && <p className="mb-1.5 text-[10.5px] text-red">{errors.lines}</p>}
-          <LineItemsEditor lines={lines} onChange={onLinesChange} errors={errors} />
+          <LineItemsEditor lines={lines} onChange={onLinesChange} errors={errors} warehouseId={warehouseId || undefined} />
         </div>
 
         <FormField label="Notes (printed on the invoice)" error={errors.notes}>

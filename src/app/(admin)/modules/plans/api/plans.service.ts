@@ -12,7 +12,7 @@ const delay = (ms = 350) => new Promise((resolve) => setTimeout(resolve, ms));
 // reactivity layer, this is just the data these functions read/write.
 // Seeded from the same PLANS array `/pricing` and `/signup` read from
 // (src/app/(public)/components/plans-data.ts) so the two stay in sync at
-// load time — see docs/Public-SuperAdmin-Plan.md §2.3/§3.2.
+// load time — see docs/plans/Public-SuperAdmin-Plan.md §2.3/§3.2.
 let plans: Plan[] = PLANS;
 
 /**

@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------ */
 /* Sales / Invoicing — domain model. Frontend-only mock of the schema  */
-/* in docs/inv-pos-hr-tenant.md §33.14 (invoices + invoice_items).     */
+/* in docs/source/inv-pos-hr-tenant-SRS.md §33.14 (invoices + invoice_items). */
 /* Timestamps are ISO strings; data lives in in-memory mock services   */
 /* consumed via React Query.                                           */
 /* ------------------------------------------------------------------ */
@@ -14,7 +14,7 @@ import { pct } from "@/lib/format";
 
 export type InvoiceStatus = "draft" | "sent" | "partially-paid" | "paid" | "cancelled";
 
-/** Where an invoice originated (docs/inv-pos-hr-tenant.md §19). `pos` is
+/** Where an invoice originated (docs/source/inv-pos-hr-tenant-SRS.md §19). `pos` is
  *  forward-compat for the future POS module; nothing sets it yet.
  *  `debit-note`/`credit-note` are set when a standalone note (one issued
  *  with no linked invoice) is converted into an invoice — positive-value
@@ -111,7 +111,7 @@ export type NewInvoiceInput = {
   dueDate: string;
   currency?: Currency;
   discountPercent?: number;
-  lines: { description: string; quantity: number; unitPrice: number; taxRate: number }[];
+  lines: { description: string; quantity: number; unitPrice: number; taxRate: number; productId?: string; warehouseId?: string }[];
   notes?: string;
 };
 
@@ -224,7 +224,7 @@ export function proposalDisplayStatus(proposal: Proposal): ProposalDisplayStatus
 /* Credit & Debit Notes — one combined "adjustment" model, matching    */
 /* the plan's decision to keep a single route/nav item with a Credit/  */
 /* Debit tab switch rather than two separate entities.                 */
-/* docs/inv-pos-hr-tenant.md §33.16 only specs `credit_notes`; debit    */
+/* docs/source/inv-pos-hr-tenant-SRS.md §33.16 only specs `credit_notes`; debit */
 /* notes mirror the same shape with the balance effect inverted.       */
 /* ------------------------------------------------------------------ */
 

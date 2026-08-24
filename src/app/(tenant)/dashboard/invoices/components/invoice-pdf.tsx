@@ -8,7 +8,7 @@ import { invoiceApi } from "../api/invoices.service";
 
 /**
  * The printable / previewable invoice layout — mirrors the prototype's
- * `.pdf-preview` block (docs/mrm-portal-v3 (1).html §INVOICE PDF PREVIEW).
+ * `.pdf-preview` block (docs/source/mrm-portal-v3-prototype.html §INVOICE PDF PREVIEW).
  * Reused on the list page preview dialog, the detail page, and window.print().
  */
 export function InvoicePdf({ invoice, customer }: { invoice: Invoice; customer?: Customer }) {

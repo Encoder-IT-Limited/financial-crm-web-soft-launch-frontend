@@ -44,6 +44,7 @@ export function NewInvoiceForm() {
     d.setDate(d.getDate() + 15);
     return d.toISOString().slice(0, 10);
   });
+  const [warehouseId, setWarehouseId] = useState("");
   const [lines, setLines] = useState<LineDraft[]>(emptyLines);
   const [notes, setNotes] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -67,13 +68,16 @@ export function NewInvoiceForm() {
       setDiscountPercent(String(invoice.discountPercent ?? 0));
       setIssueDate(invoice.issueDate);
       setDueDate(invoice.dueDate);
+      setWarehouseId(invoice.lines.find((l) => l.warehouseId)?.warehouseId ?? "");
       setLines(
         invoice.lines.map((l) => ({
           id: l.id,
+          mode: l.productId ? "product" : "text",
           description: l.description,
           quantity: String(l.quantity),
           unitPrice: String(l.unitPrice),
           taxRate: String(l.taxRate),
+          productId: l.productId,
         }))
       );
       setNotes(invoice.notes ?? "");
@@ -193,6 +197,8 @@ export function NewInvoiceForm() {
         quantity: Number(l.quantity),
         unitPrice: Number(l.unitPrice),
         taxRate: Number(l.taxRate),
+        productId: l.mode === "product" ? l.productId : undefined,
+        warehouseId: l.mode === "product" && l.productId ? warehouseId || undefined : undefined,
       })),
       notes: notes.trim() || undefined,
     };
@@ -278,6 +284,8 @@ export function NewInvoiceForm() {
           }}
           dueDate={dueDate}
           onDueDateChange={setDueDate}
+          warehouseId={warehouseId}
+          onWarehouseIdChange={setWarehouseId}
           lines={lines}
           onLinesChange={setLines}
           notes={notes}

@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react";
 
 // Answers reflect decided product rules from the client Q&A, not invented
-// copy — see docs/Public-SuperAdmin-Plan.md §1 and §2.6.
+// copy — see docs/plans/Public-SuperAdmin-Plan.md §1 and §2.6.
 const FAQS = [
   {
     q: "What happens if I go over my included seats?",

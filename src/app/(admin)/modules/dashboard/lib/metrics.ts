@@ -3,7 +3,7 @@ import type { Plan } from "@/types/plan";
 import { tenantMrr, type Tenant } from "../../tenants/types";
 
 /** Days left in a tenant's trial, derived from `Plan.trialDays` vs. the
- * tenant's `createdAt` (docs/Public-SuperAdmin-Plan.md §3.0) — there's no
+ * tenant's `createdAt` (docs/plans/Public-SuperAdmin-Plan.md §3.0) — there's no
  * separate trial-start field to track yet. */
 export function trialDaysLeft(tenant: Tenant, plan: Plan | undefined): number | null {
   if (!plan || plan.trialDays <= 0) return null;

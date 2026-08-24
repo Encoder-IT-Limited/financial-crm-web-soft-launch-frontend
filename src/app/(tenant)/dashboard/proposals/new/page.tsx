@@ -75,6 +75,7 @@ function NewProposalForm() {
       setLines(
         proposal.lines.map((l) => ({
           id: l.id,
+          mode: "text" as const,
           description: l.description,
           quantity: String(l.quantity),
           unitPrice: String(l.unitPrice),

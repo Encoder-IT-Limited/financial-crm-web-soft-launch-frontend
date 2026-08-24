@@ -20,7 +20,7 @@ import { customersApi } from "../../../modules/crm/api/customers.service";
 import { StatTiles } from "./stat-tiles";
 import { InvoiceStatusBadge, STATUS_CONFIG } from "./invoice-status-badge";
 
-/** Sales Dashboard (docs/inv-pos-hr-tenant.md §6) — KPIs, 6-month invoicing
+/** Sales Dashboard (docs/source/inv-pos-hr-tenant-SRS.md §6) — KPIs, 6-month invoicing
  *  trend, status breakdown, quick actions and recent activity, all derived
  *  from the live billing services. */
 export function SalesDashboard() {

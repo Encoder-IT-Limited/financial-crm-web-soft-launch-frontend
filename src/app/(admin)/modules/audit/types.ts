@@ -1,6 +1,6 @@
 /* ------------------------------------------------------------------ */
 /* Platform-wide audit log — domain model. Frontend-only mock of the   */
-/* audit_logs schema (docs/Public-SuperAdmin-Plan.md §3.4/§3.8).       */
+/* audit_logs schema (docs/plans/Public-SuperAdmin-Plan.md §3.4/§3.8). */
 /* ------------------------------------------------------------------ */
 
 export type AuditAction = "create" | "update" | "delete" | "suspend" | "reactivate" | "login" | "export";

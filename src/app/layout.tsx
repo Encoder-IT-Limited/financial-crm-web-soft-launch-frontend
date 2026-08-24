@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: "Multi-tenant accounting & operations platform",
 };
 
-// System font stack per docs/Project-Structure.md §2.2 — matches the client's
+// System font stack per docs/architecture/Project-Structure.md §2.2 — matches the client's
 // prototype exactly, no webfont dependency.
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

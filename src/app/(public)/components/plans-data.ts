@@ -1,6 +1,6 @@
 import type { Plan } from "@/types/plan";
 
-// TEMPORARY: no backend/plansService yet (see docs/Public-SuperAdmin-Plan.md §2.3).
+// TEMPORARY: no backend/plansService yet (see docs/plans/Public-SuperAdmin-Plan.md §2.3).
 // Once Super Admin's Plans & Pricing exists, this should be replaced by a real fetch
 // so /pricing and /signup's plan step both reflect the same source of truth.
 export const PLANS: Plan[] = [

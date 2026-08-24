@@ -20,7 +20,7 @@ export const TENANT_ROLE_LABELS: Record<TenantUserRole, string> = {
 };
 
 /** Which account roles count toward the plan's seat limit — service/API and
- * read-only auditor accounts don't (docs/Public-SuperAdmin-Plan.md §3.1). */
+ * read-only auditor accounts don't (docs/plans/Public-SuperAdmin-Plan.md §3.1). */
 const SEAT_COUNTING_ROLES: TenantUserRole[] = ["owner", "admin", "staff", "pos-cashier"];
 
 export type TenantUser = {

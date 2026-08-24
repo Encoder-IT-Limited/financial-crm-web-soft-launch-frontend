@@ -10,7 +10,7 @@ export type ModuleKey =
   | "reports"
   | "ai-assistant"
   // Phase 2/3 modules — not built yet, but plans can gate them ahead of time
-  // (docs/Public-SuperAdmin-Plan.md §3.8).
+  // (docs/plans/Public-SuperAdmin-Plan.md §3.8).
   | "pos"
   | "hr-payroll"
   | "calendar-booking"

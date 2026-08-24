@@ -230,7 +230,7 @@ Design reference: `https://comprehensive-hr-and-operations-pla.vercel.app/pricin
 HR reference project's deployed pricing page) — used for **structural** ideas only; its
 colors, USD currency, per-user-only pricing model, and vertical-specific content
 (nursing homes/care types) don't carry over. Cross-checked against
-`docs/Client-proposal.md`, the SRS, and the client Q&A so the real product rules aren't
+`docs/source/Client-proposal.md`, the SRS, and the client Q&A so the real product rules aren't
 lost under a redesign.
 
 **What's staying**: `PLANS` data shape (`plans-data.ts`), AED currency, the flat-base +
