@@ -13,7 +13,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { Ban, ChevronDown, ChevronUp, ChevronsUpDown, Copy, Eye, MapPin, Pencil } from "lucide-react";
+import { Ban, Check, ChevronDown, ChevronUp, ChevronsUpDown, Copy, Eye, MapPin, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -43,7 +43,7 @@ import {
 } from "../mock-data";
 import { TransferSummaryCards } from "./transfer-summary-cards";
 import { TransfersToolbar, type TransferFilters } from "./transfers-toolbar";
-import { NewTransferDialog } from "./new-transfer-dialog";
+import { TransferDialog } from "./transfer-dialog";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyColumnDef<TData> = ColumnDef<TData, any>;
@@ -106,6 +106,7 @@ export function StockTransfersPage() {
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [cancelTarget, setCancelTarget] = useState<StockTransfer | null>(null);
+  const [editTarget, setEditTarget] = useState<StockTransfer | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const summary = useMemo(() => {
@@ -156,11 +157,28 @@ export function StockTransfersPage() {
     });
   }
 
+  function handleUpdate(transfer: StockTransfer) {
+    setItems((prev) => prev.map((t) => (t.id === transfer.id ? transfer : t)));
+    setDialogOpen(false);
+    toast.success("Transfer updated", {
+      description: `${transfer.quantity} × ${transfer.productName}: ${transfer.fromWarehouse} → ${transfer.toWarehouse}.`,
+    });
+  }
+
   function handleCancelTransfer() {
     if (!cancelTarget) return;
     setItems((prev) =>
       prev.map((t) => (t.id === cancelTarget.id ? { ...t, status: "cancelled" as const } : t))
     );
+  }
+
+  function handleAcceptTransfer(transfer: StockTransfer) {
+    setItems((prev) =>
+      prev.map((t) => (t.id === transfer.id ? { ...t, status: "in-transit" as const } : t))
+    );
+    toast.success("Transfer accepted", {
+      description: `${transfer.quantity} × ${transfer.productName}: ${transfer.fromWarehouse} → ${transfer.toWarehouse} is now in transit.`,
+    });
   }
 
   const columns = useMemo<AnyColumnDef<StockTransfer>[]>(
@@ -288,6 +306,7 @@ export function StockTransfersPage() {
         enableSorting: false,
         cell: ({ row }) => {
           const transfer = row.original;
+          const canAccept = transfer.status === "pending";
           const canCancel = transfer.status === "pending" || transfer.status === "in-transit";
           return (
             <span className="flex items-center justify-end gap-0.5">
@@ -305,11 +324,23 @@ export function StockTransfersPage() {
                 variant="ghost"
                 size="icon-sm"
                 aria-label={`Edit ${transfer.id}`}
-                onClick={() =>
-                  toast.info("Editing will be available once the inventory API is connected")
-                }
+                disabled={transfer.status === "cancelled" || transfer.status === "completed"}
+                onClick={() => {
+                  setEditTarget(transfer);
+                  setDialogOpen(true);
+                }}
               >
                 <Pencil />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Accept ${transfer.id}`}
+                disabled={!canAccept}
+                className="text-green hover:text-green"
+                onClick={() => handleAcceptTransfer(transfer)}
+              >
+                <Check />
               </Button>
               <Button
                 variant="ghost"
@@ -431,12 +462,18 @@ export function StockTransfersPage() {
         )}
       </Card>
 
-      <NewTransferDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        warehouses={TRANSFER_WAREHOUSES}
-        onCreate={handleCreate}
-      />
+      {dialogOpen && (
+        <TransferDialog
+          onClose={() => {
+            setDialogOpen(false);
+            setEditTarget(null);
+          }}
+          warehouses={TRANSFER_WAREHOUSES}
+          transfer={editTarget}
+          onCreate={handleCreate}
+          onUpdate={handleUpdate}
+        />
+      )}
 
       <ConfirmDialog
         open={!!cancelTarget}

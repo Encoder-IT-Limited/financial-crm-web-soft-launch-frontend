@@ -96,7 +96,9 @@ function exportBatchesCsv(rows: Batch[]) {
     b.notes,
   ]);
   const csv = [header, ...body]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .map((row) =>
+      row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
+    )
     .join("\n");
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -109,7 +111,9 @@ function exportBatchesCsv(rows: Batch[]) {
 }
 
 export function BatchesPage() {
-  const [items, setItems] = useState<Batch[]>(batchSeed.filter((b) => !b.archived));
+  const [items, setItems] = useState<Batch[]>(
+    batchSeed.filter((b) => !b.archived),
+  );
   const [filters, setFilters] = useState<BatchFilters>({
     search: "",
     product: "all",
@@ -118,7 +122,10 @@ export function BatchesPage() {
     range: "all",
   });
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Batch | null>(null);
@@ -130,10 +137,18 @@ export function BatchesPage() {
   const summary = useMemo(() => {
     const counts = { active: 0, "expiring-soon": 0, expired: 0 };
     for (const b of items) counts[getBatchStatus(b.expDate)] += 1;
-    return { total: items.length, active: counts.active, expiringSoon: counts["expiring-soon"], expired: counts.expired };
+    return {
+      total: items.length,
+      active: counts.active,
+      expiringSoon: counts["expiring-soon"],
+      expired: counts.expired,
+    };
   }, [items]);
 
-  const productOptions = useMemo(() => [...new Set(items.map((b) => b.productName))].sort(), [items]);
+  const productOptions = useMemo(
+    () => [...new Set(items.map((b) => b.productName))].sort(),
+    [items],
+  );
 
   const filtered = useMemo(() => {
     const needle = filters.search.trim().toLowerCase();
@@ -143,10 +158,17 @@ export function BatchesPage() {
         : Date.now() + Number(filters.range) * DAY_MS;
 
     return items.filter((b) => {
-      if (filters.product !== "all" && b.productName !== filters.product) return false;
-      if (filters.warehouse !== "all" && b.warehouse !== filters.warehouse) return false;
-      if (filters.status !== "all" && getBatchStatus(b.expDate) !== filters.status) return false;
-      if (cutoff !== null && new Date(b.expDate).getTime() > cutoff) return false;
+      if (filters.product !== "all" && b.productName !== filters.product)
+        return false;
+      if (filters.warehouse !== "all" && b.warehouse !== filters.warehouse)
+        return false;
+      if (
+        filters.status !== "all" &&
+        getBatchStatus(b.expDate) !== filters.status
+      )
+        return false;
+      if (cutoff !== null && new Date(b.expDate).getTime() > cutoff)
+        return false;
       if (needle) {
         const haystack = `${b.id} ${b.productName} ${b.sku}`.toLowerCase();
         if (!haystack.includes(needle)) return false;
@@ -156,7 +178,13 @@ export function BatchesPage() {
   }, [items, filters]);
 
   function clearFilters() {
-    setFilters({ search: "", product: "all", warehouse: "all", status: "all", range: "all" });
+    setFilters({
+      search: "",
+      product: "all",
+      warehouse: "all",
+      status: "all",
+      range: "all",
+    });
     setSorting([]);
   }
 
@@ -187,8 +215,8 @@ export function BatchesPage() {
                 expDate: data.expDate,
                 notes: data.notes ?? "",
               }
-            : b
-        )
+            : b,
+        ),
       );
       toast.success("Batch updated", {
         description: `${data.id} — ${data.quantity} units at ${data.warehouse}.`,
@@ -219,7 +247,9 @@ export function BatchesPage() {
 
   function handleArchive(batch: Batch) {
     setItems((prev) => prev.filter((b) => b.id !== batch.id));
-    toast.success("Batch archived", { description: `${batch.id} is no longer tracked.` });
+    toast.success("Batch archived", {
+      description: `${batch.id} is no longer tracked.`,
+    });
   }
 
   function handleBulkArchive() {
@@ -246,7 +276,9 @@ export function BatchesPage() {
             aria-label="Select all batches on this page"
             checked={table.getIsAllPageRowsSelected()}
             indeterminate={table.getIsSomePageRowsSelected()}
-            onCheckedChange={(checked) => table.toggleAllPageRowsSelected(checked === true)}
+            onCheckedChange={(checked) =>
+              table.toggleAllPageRowsSelected(checked === true)
+            }
           />
         ),
         cell: ({ row }) => (
@@ -286,13 +318,18 @@ export function BatchesPage() {
         cell: ({ row }) => (
           <span className="flex items-center gap-3">
             <ProductThumbnail
-              product={{ name: row.original.productName, category: row.original.category }}
+              product={{
+                name: row.original.productName,
+                category: row.original.category,
+              }}
             />
             <span className="flex min-w-0 flex-col">
               <span className="truncate text-[13px] font-semibold text-text min-[1440px]:text-[13.5px]">
                 {row.original.productName}
               </span>
-              <span className="text-[11px] tabular-nums text-text-4">{row.original.sku}</span>
+              <span className="text-[11px] tabular-nums text-text-4">
+                {row.original.sku}
+              </span>
             </span>
           </span>
         ),
@@ -303,7 +340,9 @@ export function BatchesPage() {
         cell: ({ row }) => (
           <span className="flex items-center gap-1.5 text-[12.5px] font-semibold text-text min-[1440px]:text-[13.5px]">
             <MapPin className="size-3.5 shrink-0 text-text-4" aria-hidden />
-            <span className="max-w-[150px] truncate">{row.original.warehouse}</span>
+            <span className="max-w-[150px] truncate">
+              {row.original.warehouse}
+            </span>
           </span>
         ),
       },
@@ -344,7 +383,11 @@ export function BatchesPage() {
             <span
               className={cn(
                 "text-[12.5px] font-bold tabular-nums min-[1440px]:text-[13.5px]",
-                days < 0 ? "text-red" : days <= 30 ? "text-amber" : "text-green"
+                days < 0
+                  ? "text-red"
+                  : days <= 30
+                    ? "text-amber"
+                    : "text-green",
               )}
             >
               {days} <span className="font-medium">days</span>
@@ -375,7 +418,9 @@ export function BatchesPage() {
                 size="icon-sm"
                 aria-label={`View details of ${batch.id}`}
                 onClick={() =>
-                  toast.info("Batch details will be available once the inventory API is connected")
+                  toast.info(
+                    "Batch details will be available once the inventory API is connected",
+                  )
                 }
               >
                 <Eye />
@@ -401,7 +446,7 @@ export function BatchesPage() {
         },
       },
     ],
-    []
+    [],
   );
 
   const table = useReactTable({
@@ -438,10 +483,10 @@ export function BatchesPage() {
               <Download data-icon="inline-start" />
               Export
             </Button>
-            <Button onClick={openAddDialog}>
+            {/* <Button onClick={openAddDialog}>
               <Plus data-icon="inline-start" />
               Add Batch
-            </Button>
+            </Button> */}
           </>
         }
       />
@@ -495,19 +540,28 @@ export function BatchesPage() {
               <Table className="whitespace-nowrap">
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id} className="bg-surface-subtle hover:bg-surface-subtle">
+                    <TableRow
+                      key={headerGroup.id}
+                      className="bg-surface-subtle hover:bg-surface-subtle"
+                    >
                       {headerGroup.headers.map((header) => {
                         const canSort = header.column.getCanSort();
                         const sorted = header.column.getIsSorted();
                         return (
-                          <TableHead key={header.id} className="h-11 px-4 font-semibold text-text-2 first:pl-5 last:pr-5">
+                          <TableHead
+                            key={header.id}
+                            className="h-11 px-4 font-semibold text-text-2 first:pl-5 last:pr-5"
+                          >
                             {header.isPlaceholder ? null : canSort ? (
                               <button
                                 type="button"
                                 onClick={header.column.getToggleSortingHandler()}
                                 className="inline-flex items-center gap-1 transition-colors hover:text-text"
                               >
-                                {flexRender(header.column.columnDef.header, header.getContext())}
+                                {flexRender(
+                                  header.column.columnDef.header,
+                                  header.getContext(),
+                                )}
                                 {sorted === "asc" ? (
                                   <ChevronUp className="size-3.5 text-blue" />
                                 ) : sorted === "desc" ? (
@@ -517,7 +571,10 @@ export function BatchesPage() {
                                 )}
                               </button>
                             ) : (
-                              flexRender(header.column.columnDef.header, header.getContext())
+                              flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )
                             )}
                           </TableHead>
                         );
@@ -530,8 +587,14 @@ export function BatchesPage() {
                   {rows.map((row) => (
                     <TableRow key={row.id} data-selected={row.getIsSelected()}>
                       {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="px-4 py-3 first:pl-5 last:pr-5">
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        <TableCell
+                          key={cell.id}
+                          className="px-4 py-3 first:pl-5 last:pr-5"
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
                         </TableCell>
                       ))}
                     </TableRow>

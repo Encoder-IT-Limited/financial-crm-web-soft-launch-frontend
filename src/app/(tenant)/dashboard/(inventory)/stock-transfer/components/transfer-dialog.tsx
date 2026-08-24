@@ -58,28 +58,41 @@ type FormErrors = Partial<Record<keyof FormValues, string>>;
 
 const initialValues: FormValues = { from: "", to: "", sku: "", quantity: "", notes: "" };
 
-interface NewTransferDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface TransferDialogProps {
+  onClose: () => void;
   warehouses: string[];
+  /** When set, the dialog edits this transfer instead of creating a new one. */
+  transfer?: StockTransfer | null;
   onCreate: (transfer: StockTransfer) => void;
+  onUpdate: (transfer: StockTransfer) => void;
 }
 
-export function NewTransferDialog({ open, onOpenChange, warehouses, onCreate }: NewTransferDialogProps) {
-  const [values, setValues] = useState<FormValues>(initialValues);
+export function TransferDialog({
+  onClose,
+  warehouses,
+  transfer,
+  onCreate,
+  onUpdate,
+}: TransferDialogProps) {
+  const editing = Boolean(transfer);
+  // The parent mounts this dialog only while open, so the initializer seeds
+  // the form — prefilled when editing, blank when creating.
+  const [values, setValues] = useState<FormValues>(() =>
+    transfer
+      ? {
+          from: transfer.fromWarehouse,
+          to: transfer.toWarehouse,
+          sku: transfer.sku,
+          quantity: String(transfer.quantity),
+          notes: "",
+        }
+      : initialValues
+  );
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
   function setField<K extends keyof FormValues>(key: K, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }));
-  }
-
-  function handleClose(next: boolean) {
-    if (!next) {
-      setValues(initialValues);
-      setErrors({});
-    }
-    onOpenChange(next);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -97,39 +110,52 @@ export function NewTransferDialog({ open, onOpenChange, warehouses, onCreate }: 
     setErrors({});
     setSubmitting(true);
     try {
-      // TODO: replace with transfersApi.create once the inventory API exists.
+      // TODO: replace with transfersApi.create/update once the inventory API exists.
       await new Promise((resolve) => setTimeout(resolve, 400));
       const product = products.find((p) => p.sku === result.data.sku)!;
-      const expected = new Date();
-      expected.setDate(expected.getDate() + 3);
-      onCreate({
-        id: "",
-        fromWarehouse: result.data.from,
-        toWarehouse: result.data.to,
-        productName: product.name,
-        sku: product.sku,
-        category: product.category,
-        quantity: result.data.quantity,
-        unit: "pcs",
-        transferDate: new Date().toISOString(),
-        expectedDelivery: expected.toISOString().slice(0, 10),
-        status: "pending",
-      });
-      setValues(initialValues);
+      if (transfer) {
+        onUpdate({
+          ...transfer,
+          fromWarehouse: result.data.from,
+          toWarehouse: result.data.to,
+          productName: product.name,
+          sku: product.sku,
+          category: product.category,
+          quantity: result.data.quantity,
+        });
+      } else {
+        const expected = new Date();
+        expected.setDate(expected.getDate() + 3);
+        onCreate({
+          id: "",
+          fromWarehouse: result.data.from,
+          toWarehouse: result.data.to,
+          productName: product.name,
+          sku: product.sku,
+          category: product.category,
+          quantity: result.data.quantity,
+          unit: "pcs",
+          transferDate: new Date().toISOString(),
+          expectedDelivery: expected.toISOString().slice(0, 10),
+          status: "pending",
+        });
+      }
     } catch {
-      toast.error("Could not create the transfer. Try again.");
+      toast.error(editing ? "Could not update the transfer. Try again." : "Could not create the transfer. Try again.");
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>New Stock Transfer</DialogTitle>
+          <DialogTitle>{editing ? "Update Stock Transfer" : "New Stock Transfer"}</DialogTitle>
           <DialogDescription>
-            Move stock between warehouses. The transfer is created as Pending.
+            {editing
+              ? `Modify transfer ${transfer?.id ?? ""}. Changes apply immediately.`
+              : "Move stock between warehouses. The transfer is created as Pending."}
           </DialogDescription>
         </DialogHeader>
 
@@ -194,22 +220,30 @@ export function NewTransferDialog({ open, onOpenChange, warehouses, onCreate }: 
             />
           </FormField>
 
-          <FormField label="Notes / Reason (optional)">
-            <textarea
-              value={values.notes}
-              onChange={(e) => setField("notes", e.target.value)}
-              placeholder="e.g. Restock ahead of weekend demand"
-              rows={3}
-              className="w-full resize-none rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
-            />
-          </FormField>
+          {!editing && (
+            <FormField label="Notes / Reason (optional)">
+              <textarea
+                value={values.notes}
+                onChange={(e) => setField("notes", e.target.value)}
+                placeholder="e.g. Restock ahead of weekend demand"
+                rows={3}
+                className="w-full resize-none rounded-lg border border-input bg-transparent px-2.5 py-2 text-sm outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+            </FormField>
+          )}
 
           <DialogFooter>
-            <Button variant="outline" type="button" onClick={() => handleClose(false)}>
+            <Button variant="outline" type="button" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Creating..." : "Create Transfer"}
+              {editing
+                ? submitting
+                  ? "Saving..."
+                  : "Save Changes"
+                : submitting
+                  ? "Creating..."
+                  : "Create Transfer"}
             </Button>
           </DialogFooter>
         </form>
