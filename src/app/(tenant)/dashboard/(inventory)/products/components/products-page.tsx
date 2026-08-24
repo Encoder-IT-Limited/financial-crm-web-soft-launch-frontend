@@ -188,6 +188,15 @@ export function ProductsPage() {
         cell: ({ row }) => <Badge tone={categoryTone[row.original.category]}>{row.original.category}</Badge>,
       },
       {
+        accessorKey: "warehouse",
+        header: "Warehouse",
+        cell: ({ row }) => (
+          <span className="text-[12.5px] text-text-2 min-[1440px]:text-[13.5px]">
+            {row.original.warehouse}
+          </span>
+        ),
+      },
+      {
         accessorKey: "stock",
         header: "Stock",
         cell: ({ row }) => {

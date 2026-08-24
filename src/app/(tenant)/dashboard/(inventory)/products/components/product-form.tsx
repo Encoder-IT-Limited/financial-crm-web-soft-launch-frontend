@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { FormField } from "@/components/shared/form-field";
 import { toast } from "@/lib/toast";
-import { PRODUCT_CATEGORIES } from "../mock-data";
+import { PRODUCT_CATEGORIES, WAREHOUSES } from "../mock-data";
 
 const toNumber = (value: unknown) =>
   typeof value === "string" ? (value.trim() === "" ? undefined : Number(value)) : value;
@@ -25,6 +25,7 @@ const productSchema = z.object({
   name: z.string().trim().min(1, "Product name is required"),
   sku: z.string().trim().min(1, "SKU is required"),
   category: z.enum(PRODUCT_CATEGORIES, { error: "Category is required" }),
+  warehouse: z.enum(WAREHOUSES, { error: "Warehouse is required" }),
   stock: z
     .preprocess(
       toNumber,
@@ -44,6 +45,7 @@ type FormValues = {
   name: string;
   sku: string;
   category: string;
+  warehouse: string;
   stock: string;
   price: string;
   status: string;
@@ -55,6 +57,7 @@ const initialValues: FormValues = {
   name: "",
   sku: "",
   category: "",
+  warehouse: "",
   stock: "",
   price: "",
   status: "active",
@@ -172,20 +175,44 @@ export function ProductForm() {
           </FormField>
         </div>
 
-        <FormField label="Status" error={errors.status} className="max-w-[calc(50%-0.5rem)] max-sm:max-w-none">
-          <Select value={values.status} onValueChange={(value) => setField("status", value ?? "")}>
-            <SelectTrigger
-              aria-label="Status"
-              className="h-9 w-full border-border text-[12.5px] min-[1440px]:text-[13.5px]"
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FormField label="Status" error={errors.status}>
+            <Select value={values.status} onValueChange={(value) => setField("status", value ?? "")}>
+              <SelectTrigger
+                aria-label="Status"
+                className="h-9 w-full border-border text-[12.5px] min-[1440px]:text-[13.5px]"
+              >
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </FormField>
+
+          <FormField label="Warehouse" error={errors.warehouse}>
+            <Select
+              value={values.warehouse}
+              onValueChange={(value) => setField("warehouse", value ?? "")}
             >
-              <SelectValue placeholder="Select status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-        </FormField>
+              <SelectTrigger
+                aria-label="Warehouse"
+                aria-invalid={!!errors.warehouse}
+                className="h-9 w-full border-border text-[12.5px] min-[1440px]:text-[13.5px]"
+              >
+                <SelectValue placeholder="Select warehouse" />
+              </SelectTrigger>
+              <SelectContent>
+                {WAREHOUSES.map((warehouse) => (
+                  <SelectItem key={warehouse} value={warehouse}>
+                    {warehouse}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+        </div>
 
         <div className="mt-2 flex items-center justify-end gap-2 border-t border-border pt-4">
           <Button variant="outline" render={<Link href="/dashboard/products" />} nativeButton={false}>
