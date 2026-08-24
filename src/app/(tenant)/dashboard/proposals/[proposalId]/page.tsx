@@ -11,11 +11,11 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { PageHeading } from "@/components/shared/page-heading";
 import { toast } from "@/lib/toast";
 import { fmtDate, fmtDateTime, fmtMoney, fmtQty } from "@/lib/format";
-import { proposalDisplayStatus } from "../../../modules/billing/types";
-import { proposalsApi } from "../../../modules/billing/api/proposals.service";
+import { proposalDisplayStatus } from "../../invoices/types";
+import { proposalsApi } from "../../invoices/api/proposals.service";
 import { customersApi } from "../../../modules/crm/api/customers.service";
-import { ProposalStatusBadge } from "../../../modules/billing/components/proposal-status-badge";
-import { StatTiles } from "../../../modules/billing/components/stat-tiles";
+import { ProposalStatusBadge } from "../../invoices/components/proposal-status-badge";
+import { StatTiles } from "../../invoices/components/stat-tiles";
 
 export default function ProposalDetailPage() {
   const params = useParams<{ proposalId: string }>();

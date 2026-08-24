@@ -1,4 +1,4 @@
-import { ProposalsList } from "../../modules/billing/components/proposals-list";
+import { ProposalsList } from "../invoices/components/proposals-list";
 
 export default function Page() {
   return <ProposalsList />;

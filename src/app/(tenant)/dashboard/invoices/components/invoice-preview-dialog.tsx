@@ -13,7 +13,7 @@ import { toast } from "@/lib/toast";
 import { useQuery } from "@tanstack/react-query";
 import type { Invoice } from "../types";
 import { InvoicePdf } from "./invoice-pdf";
-import { customersApi } from "../../crm/api/customers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 
 /** List-page "Preview PDF ↗" — mirrors the prototype's modal-inv-preview. */
 export function InvoicePreviewDialog({

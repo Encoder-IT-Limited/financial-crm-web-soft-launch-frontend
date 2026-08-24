@@ -16,7 +16,7 @@ import {
   type InvoiceDisplayStatus,
 } from "../types";
 import { invoiceApi } from "../api/invoices.service";
-import { customersApi } from "../../crm/api/customers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { StatTiles } from "./stat-tiles";
 import { InvoiceStatusBadge, STATUS_CONFIG } from "./invoice-status-badge";
 

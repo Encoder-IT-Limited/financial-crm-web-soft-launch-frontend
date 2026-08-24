@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 import { MODULE_LABELS, type ModuleKey } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import type { Plan } from "@/types/plan";
-import { computePlanTotal, type BillingPeriod } from "./pricing-utils";
+import { clampSeatsForPlan, computePlanTotal, type BillingPeriod } from "./pricing-utils";
 
 type TierCardProps = {
   plan: Plan;
@@ -20,7 +20,10 @@ export function TierCard({ plan, seats, billing, incrementalModuleKeys, previous
   const isSalesAssisted = plan.id === "enterprise";
   const isCustom = plan.priceMonthly === 0;
   const isPopular = Boolean(plan.popular);
-  const total = computePlanTotal(plan, seats, billing);
+  const effectiveSeats = clampSeatsForPlan(plan, seats);
+  const seatsClamped = effectiveSeats !== seats;
+  const total = computePlanTotal(plan, effectiveSeats, billing);
+  const seatRangeLabel = plan.maxSeats ? `${plan.minSeats}–${plan.maxSeats}` : `${plan.minSeats}+`;
 
   return (
     <div
@@ -59,10 +62,15 @@ export function TierCard({ plan, seats, billing, incrementalModuleKeys, previous
         </div>
       )}
       <div className={cn("mt-1 text-[11.5px] xl:text-[13px] 3xl:text-sm", isPopular ? "text-white/60" : "text-text-4")}>
-        {plan.baseSeats > 0
-          ? `${plan.baseSeats} seats included · AED ${plan.additionalSeatPrice}/extra seat`
-          : "Seats tailored to your team"}
+        {isCustom
+          ? "Seats tailored to your team"
+          : `For teams of ${seatRangeLabel} seats · AED ${plan.additionalSeatPrice}/extra seat`}
       </div>
+      {!isCustom && seatsClamped && (
+        <div className={cn("mt-0.5 text-[10.5px] xl:text-[12px]", isPopular ? "text-white/50" : "text-text-4")}>
+          Priced for {effectiveSeats} seats (this plan&apos;s {effectiveSeats === plan.minSeats ? "minimum" : "maximum"})
+        </div>
+      )}
 
       <Link
         href={isSalesAssisted ? "/contact" : `/signup?plan=${plan.id}`}

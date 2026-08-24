@@ -12,6 +12,8 @@ export const PLANS: Plan[] = [
     baseSeats: 3,
     additionalSeatPrice: 39,
     trialDays: 14,
+    minSeats: 3,
+    maxSeats: 10,
     modules: ["accounting", "sales", "purchasing", "banking"],
   },
   {
@@ -22,6 +24,8 @@ export const PLANS: Plan[] = [
     baseSeats: 10,
     additionalSeatPrice: 29,
     trialDays: 14,
+    minSeats: 10,
+    maxSeats: 30,
     modules: ["accounting", "sales", "purchasing", "inventory", "banking", "crm", "reports"],
     popular: true,
   },
@@ -33,6 +37,8 @@ export const PLANS: Plan[] = [
     baseSeats: 25,
     additionalSeatPrice: 19,
     trialDays: 14,
+    minSeats: 30,
+    // maxSeats intentionally omitted — Enterprise is 30+, unlimited.
     modules: [
       "accounting",
       "sales",

@@ -14,7 +14,7 @@ import { fmtDate, fmtMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 import { retainerDisplayStatus, retainerPercentUsed, retainerUsedAmount } from "../types";
-import { customersApi } from "../../crm/api/customers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { invoiceApi } from "../api/invoices.service";
 import { retainersApi } from "../api/retainers.service";
 import { recurringApi } from "../api/recurring.service";

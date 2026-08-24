@@ -13,7 +13,7 @@ import { fmtDate, fmtMoney } from "@/lib/format";
 import { recurringApi } from "../api/recurring.service";
 import { invoiceApi } from "../api/invoices.service";
 import { FREQUENCY_LABELS, type RecurringTemplate } from "../recurring/types";
-import { customersApi } from "../../crm/api/customers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { RecurringTemplateDialog } from "./recurring-template-dialog";
 
 export function RecurringTemplatesPanel() {

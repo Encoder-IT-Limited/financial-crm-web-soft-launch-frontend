@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeading } from "@/components/shared/page-heading";
 import { FilterableTable } from "@/components/shared/filterable-table";
 import { fmtDate, fmtMoney } from "@/lib/format";
-import { customersApi } from "../../crm/api/customers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { invoiceApi } from "../api/invoices.service";
 import { adjustmentsApi } from "../api/adjustments.service";
 import type { Adjustment, AdjustmentKind } from "../types";

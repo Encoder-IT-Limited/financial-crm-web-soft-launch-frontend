@@ -13,9 +13,9 @@ import { PageHeading } from "@/components/shared/page-heading";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { SimpleTable } from "@/components/shared/simple-table";
 import { fmtDate, fmtMoney } from "@/lib/format";
-import { invoiceApi } from "../../billing/api/invoices.service";
-import { proposalsApi } from "../../billing/api/proposals.service";
-import { retainersApi } from "../../billing/api/retainers.service";
+import { invoiceApi } from "../../../dashboard/invoices/api/invoices.service";
+import { proposalsApi } from "../../../dashboard/invoices/api/proposals.service";
+import { retainersApi } from "../../../dashboard/invoices/api/retainers.service";
 import {
   invoiceBalance,
   invoiceDisplayStatus,
@@ -25,13 +25,13 @@ import {
   type Invoice,
   type Proposal,
   type Retainer,
-} from "../../billing/types";
-import { InvoiceStatusBadge } from "../../billing/components/invoice-status-badge";
-import { ProposalStatusBadge } from "../../billing/components/proposal-status-badge";
-import { RetainerStatusBadge } from "../../billing/components/retainer-status-badge";
-import { RetainerDetailsDialog } from "../../billing/components/retainer-details-dialog";
-import { RetainerFormDialog } from "../../billing/components/retainer-form-dialog";
-import { StatTiles } from "../../billing/components/stat-tiles";
+} from "../../../dashboard/invoices/types";
+import { InvoiceStatusBadge } from "../../../dashboard/invoices/components/invoice-status-badge";
+import { ProposalStatusBadge } from "../../../dashboard/invoices/components/proposal-status-badge";
+import { RetainerStatusBadge } from "../../../dashboard/invoices/components/retainer-status-badge";
+import { RetainerDetailsDialog } from "../../../dashboard/invoices/components/retainer-details-dialog";
+import { RetainerFormDialog } from "../../../dashboard/invoices/components/retainer-form-dialog";
+import { StatTiles } from "../../../dashboard/invoices/components/stat-tiles";
 import { customersApi } from "../api/customers.service";
 import { CustomerStatusBadge } from "./customer-status-badge";
 import { CustomerEditDialog } from "./customer-edit-dialog";

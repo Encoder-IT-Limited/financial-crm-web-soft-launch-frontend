@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { fmtMoney } from "@/lib/format";
 import { recurringTemplateSchema } from "../schemas";
 import { FREQUENCY_LABELS, RECURRENCE_FREQUENCIES, type RecurringTemplate } from "../recurring/types";
-import { customersApi } from "../../crm/api/customers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { FormField } from "./form-field";
 import type { Currency } from "../types";
 

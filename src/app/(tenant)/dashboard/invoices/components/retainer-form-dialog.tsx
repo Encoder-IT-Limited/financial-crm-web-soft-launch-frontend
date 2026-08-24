@@ -10,7 +10,7 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { retainerFormSchema, type RetainerFormValues } from "../schemas";
 import type { Currency, RetainerBillingPeriod } from "../types";
-import { customersApi } from "../../crm/api/customers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { retainersApi } from "../api/retainers.service";
 
 const BILLING_PERIODS: RetainerBillingPeriod[] = ["monthly", "quarterly", "yearly"];

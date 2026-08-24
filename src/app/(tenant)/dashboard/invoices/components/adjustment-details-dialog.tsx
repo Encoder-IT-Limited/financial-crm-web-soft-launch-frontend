@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toast } from "@/lib/toast";
 import { fmtDateTime, fmtMoney } from "@/lib/format";
-import { customersApi } from "../../crm/api/customers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { invoiceApi } from "../api/invoices.service";
 import { adjustmentsApi } from "../api/adjustments.service";
 import { AdjustmentStatusBadge } from "./adjustment-status-badge";

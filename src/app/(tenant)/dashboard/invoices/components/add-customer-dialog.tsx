@@ -14,9 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { customerSchema, type CustomerValues } from "../../crm/schemas";
-import type { Customer } from "../../crm/types";
-import { customersApi } from "../../crm/api/customers.service";
+import { customerSchema, type CustomerValues } from "../../../modules/crm/schemas";
+import type { Customer } from "../../../modules/crm/types";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { FormField } from "./form-field";
 
 type Props = {

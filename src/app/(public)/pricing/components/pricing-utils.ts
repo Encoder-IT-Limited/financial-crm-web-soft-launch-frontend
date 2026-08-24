@@ -17,6 +17,15 @@ export function computePlanTotal(plan: Plan, seats: number, billing: BillingPeri
   return plan.priceYearly + extraSeats * extraSeatYearly;
 }
 
+/** Clamps a requested seat count into what this plan actually supports —
+ * e.g. Starter tops out at 10 seats, so an Enterprise-sized team estimated
+ * on the shared seat control still prices Starter at its own maximum
+ * rather than extrapolating past what the plan is sold for. */
+export function clampSeatsForPlan(plan: Plan, seats: number): number {
+  const upper = plan.maxSeats ?? Infinity;
+  return Math.min(upper, Math.max(plan.minSeats, seats));
+}
+
 /** Modules newly introduced at this tier vs. the previous one — lets each
  * card read "Everything in X, plus…" instead of repeating the full list. */
 export function incrementalModules(plans: Plan[], index: number): ModuleKey[] {
