@@ -21,7 +21,12 @@ import {
 } from "@/components/ui/select";
 import { FormField } from "@/components/shared/form-field";
 import { toast } from "@/lib/toast";
-import { RECEIPT_WAREHOUSES, type OpenPurchaseOrder, type ReceiptSubmission, type ReceiptSubmissionLine } from "../mock-data";
+import {
+  RECEIPT_WAREHOUSES,
+  type OpenPurchaseOrder,
+  type ReceiptSubmission,
+  type ReceiptSubmissionLine,
+} from "../mock-data";
 
 const headerSchema = z.object({
   poNumber: z.string().min(1, "Select a purchase order"),
@@ -35,11 +40,10 @@ interface DraftLine {
   /** Quantity still outstanding on the PO line. */
   remainingQty: number;
   receiveQty: string;
-  batchNumber: string;
   expiryDate: string;
 }
 
-type LineErrors = Partial<Record<"receiveQty" | "batchNumber" | "expiryDate", string>>;
+type LineErrors = Partial<Record<"receiveQty" | "expiryDate", string>>;
 
 interface RecordReceiptDialogProps {
   open: boolean;
@@ -58,13 +62,15 @@ export function RecordReceiptDialog({
   const [warehouse, setWarehouse] = useState("");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([]);
-  const [errors, setErrors] = useState<Partial<Record<"poNumber" | "warehouse" | "lines", string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<"poNumber" | "warehouse" | "lines", string>>
+  >({});
   const [lineErrors, setLineErrors] = useState<Record<string, LineErrors>>({});
   const [submitting, setSubmitting] = useState(false);
 
   const selectedPo = useMemo(
     () => purchaseOrders.find((po) => po.poNumber === poNumber),
-    [purchaseOrders, poNumber]
+    [purchaseOrders, poNumber],
   );
 
   function handlePoChange(next: string | null) {
@@ -84,9 +90,8 @@ export function RecordReceiptDialog({
             unit: line.unit,
             remainingQty: line.orderedQty - line.receivedQty,
             receiveQty: "",
-            batchNumber: "",
             expiryDate: "",
-          }))
+          })),
       );
       setLineErrors({});
     } else {
@@ -96,7 +101,9 @@ export function RecordReceiptDialog({
   }
 
   function setLine(sku: string, patch: Partial<DraftLine>) {
-    setLines((prev) => prev.map((line) => (line.sku === sku ? { ...line, ...patch } : line)));
+    setLines((prev) =>
+      prev.map((line) => (line.sku === sku ? { ...line, ...patch } : line)),
+    );
   }
 
   function handleClose(next: boolean) {
@@ -118,7 +125,8 @@ export function RecordReceiptDialog({
     if (!header.success) {
       const fieldErrors: typeof errors = {};
       for (const issue of header.error.issues) {
-        fieldErrors[issue.path[0] as "poNumber" | "warehouse"] ??= issue.message;
+        fieldErrors[issue.path[0] as "poNumber" | "warehouse"] ??=
+          issue.message;
       }
       setErrors(fieldErrors);
       return;
@@ -151,11 +159,15 @@ export function RecordReceiptDialog({
           lineError.expiryDate = "Expiry must be in the future";
         }
       }
-      if (Object.keys(lineError).length > 0) nextLineErrors[line.sku] = lineError;
+      if (Object.keys(lineError).length > 0)
+        nextLineErrors[line.sku] = lineError;
     }
 
     if (!anyReceived && Object.keys(nextLineErrors).length === 0) {
-      setErrors((prev) => ({ ...prev, lines: "Enter at least one received quantity above 0" }));
+      setErrors((prev) => ({
+        ...prev,
+        lines: "Enter at least one received quantity above 0",
+      }));
       return;
     }
 
@@ -175,7 +187,6 @@ export function RecordReceiptDialog({
         return {
           ...poLine,
           receivedNow: Number(line.receiveQty.trim()),
-          batchNumber: line.batchNumber.trim(),
           expiryDate: line.expiryDate,
         };
       });
@@ -198,19 +209,27 @@ export function RecordReceiptDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Record Receipt</DialogTitle>
           <DialogDescription>
-            Select a purchase order and record the received quantities against it.
+            Select a purchase order and record the received quantities against
+            it.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-4"
+          noValidate
+        >
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Purchase Order" error={errors.poNumber}>
               <Select value={poNumber} onValueChange={handlePoChange}>
-                <SelectTrigger aria-label="Purchase order" className="w-full border-border text-[12.5px] min-[1440px]:text-[13.5px]">
+                <SelectTrigger
+                  aria-label="Purchase order"
+                  className="w-full border-border text-[12.5px] min-[1440px]:text-[13.5px]"
+                >
                   <SelectValue placeholder="Search and select a PO" />
                 </SelectTrigger>
                 <SelectContent>
@@ -225,7 +244,11 @@ export function RecordReceiptDialog({
 
             <FormField label="Supplier (auto-populated)">
               <Input
-                value={selectedPo ? `${selectedPo.supplier} · ${selectedPo.supplierContact}` : ""}
+                value={
+                  selectedPo
+                    ? `${selectedPo.supplier} · ${selectedPo.supplierContact}`
+                    : ""
+                }
                 placeholder="Select a purchase order first"
                 readOnly
                 className="h-9 border-border bg-surface-subtle text-[12.5px] text-text-2 min-[1440px]:text-[13.5px]"
@@ -235,11 +258,17 @@ export function RecordReceiptDialog({
           </div>
 
           <FormField label="Warehouse" error={errors.warehouse}>
-            <Select value={warehouse} onValueChange={(value) => {
-              setWarehouse(value ?? "");
-              setErrors((prev) => ({ ...prev, warehouse: undefined }));
-            }}>
-              <SelectTrigger aria-label="Destination warehouse" className="w-full border-border text-[12.5px] min-[1440px]:text-[13.5px]">
+            <Select
+              value={warehouse}
+              onValueChange={(value) => {
+                setWarehouse(value ?? "");
+                setErrors((prev) => ({ ...prev, warehouse: undefined }));
+              }}
+            >
+              <SelectTrigger
+                aria-label="Destination warehouse"
+                className="w-full border-border text-[12.5px] min-[1440px]:text-[13.5px]"
+              >
                 <SelectValue placeholder="Select destination" />
               </SelectTrigger>
               <SelectContent>
@@ -258,28 +287,36 @@ export function RecordReceiptDialog({
                 Product lines
               </span>
               <div className="overflow-x-auto rounded-[10px] border border-border">
-                <table className="w-full min-w-[620px] whitespace-nowrap">
+                <table className="w-full min-w-[480px] whitespace-nowrap">
                   <thead>
                     <tr className="bg-surface-subtle text-left text-[11px] font-semibold text-text-2">
                       <th className="px-3 py-2">Product</th>
                       <th className="px-3 py-2 text-right">Expected</th>
                       <th className="w-[100px] px-3 py-2">Receive Qty</th>
-                      <th className="w-[130px] px-3 py-2">Batch / Lot</th>
                       <th className="w-[150px] px-3 py-2">Expiry Date</th>
                     </tr>
                   </thead>
                   <tbody>
                     {lines.map((line) => (
-                      <tr key={line.sku} className="border-t border-border align-top">
+                      <tr
+                        key={line.sku}
+                        className="border-t border-border align-top"
+                      >
                         <td className="px-3 py-2.5">
                           <span className="flex flex-col">
-                            <span className="truncate text-[12.5px] font-semibold text-text">{line.name}</span>
-                            <span className="text-[11px] tabular-nums text-text-4">{line.sku}</span>
+                            <span className="truncate text-[12.5px] font-semibold text-text">
+                              {line.name}
+                            </span>
+                            <span className="text-[11px] tabular-nums text-text-4">
+                              {line.sku}
+                            </span>
                           </span>
                         </td>
                         <td className="px-3 py-2.5 text-right text-[12.5px] font-medium tabular-nums text-text-2">
                           {line.remainingQty}{" "}
-                          <span className="font-normal text-text-4">{line.unit}</span>
+                          <span className="font-normal text-text-4">
+                            {line.unit}
+                          </span>
                         </td>
                         <td className="px-3 py-2.5">
                           <Input
@@ -289,7 +326,9 @@ export function RecordReceiptDialog({
                             step={1}
                             placeholder="0"
                             value={line.receiveQty}
-                            onChange={(e) => setLine(line.sku, { receiveQty: e.target.value })}
+                            onChange={(e) =>
+                              setLine(line.sku, { receiveQty: e.target.value })
+                            }
                             aria-label={`Received quantity for ${line.name}`}
                             aria-invalid={!!lineErrors[line.sku]?.receiveQty}
                             className="h-8 border-border text-[12.5px]"
@@ -302,19 +341,11 @@ export function RecordReceiptDialog({
                         </td>
                         <td className="px-3 py-2.5">
                           <Input
-                            type="text"
-                            placeholder="e.g. LOT-2419"
-                            value={line.batchNumber}
-                            onChange={(e) => setLine(line.sku, { batchNumber: e.target.value })}
-                            aria-label={`Batch or lot number for ${line.name}`}
-                            className="h-8 border-border text-[12.5px]"
-                          />
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <Input
                             type="date"
                             value={line.expiryDate}
-                            onChange={(e) => setLine(line.sku, { expiryDate: e.target.value })}
+                            onChange={(e) =>
+                              setLine(line.sku, { expiryDate: e.target.value })
+                            }
                             aria-label={`Expiry date for ${line.name}`}
                             aria-invalid={!!lineErrors[line.sku]?.expiryDate}
                             className="h-8 border-border text-[12.5px]"
@@ -331,7 +362,9 @@ export function RecordReceiptDialog({
                 </table>
               </div>
               {errors.lines && (
-                <p className="text-[11.5px] font-medium text-red">{errors.lines}</p>
+                <p className="text-[11.5px] font-medium text-red">
+                  {errors.lines}
+                </p>
               )}
             </div>
           )}
@@ -347,7 +380,11 @@ export function RecordReceiptDialog({
           </FormField>
 
           <DialogFooter>
-            <Button variant="outline" type="button" onClick={() => handleClose(false)}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => handleClose(false)}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={submitting || !selectedPo}>

@@ -50,7 +50,6 @@ export interface OpenPurchaseOrder {
 export interface ReceiptSubmissionLine extends PurchaseOrderLine {
   /** Quantity being received in this submission. */
   receivedNow: number;
-  batchNumber: string;
   expiryDate: string;
 }
 
