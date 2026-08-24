@@ -42,6 +42,8 @@ Everything real was built on `useInvoicesStore` (Zustand, localStorage-persisted
 
 **Phase H (Retainer Enhancements) is done** — see its own section below; `tsc --noEmit` and `eslint` both clean across the whole project (only pre-existing, unrelated warnings/errors remain — the TanStack Table `react-hooks/incompatible-library` notices, and missing `date-fns`/`recharts`/`react-day-picker`/`@tiptap/*` packages for other, unrelated in-progress modules). Not yet exercised in a running browser, per the standing tsc/lint-only verification rule. **Process note**: this doc was updated in the same pass as every file touched under Phase H — sub-items, the Files table's Status column, and mid-build discoveries (the removed `RecordUsage` path, the `can()` wildcard fix) are all reflected below, the same discipline Phases B–G's "not originally listed as its own row" entries show.
 
+**Phase I (Delivery / Fulfillment) is mostly built** — see its own section below. I-A (types/mock service), I-B (manual fulfillment UI), I-D (POS auto-trigger, written but unreachable until POS exists), and I-E (negative-stock alerting) are done; I-C (delivery note PDF) and I-F (real Inventory swap) are not. Verified: `tsc --noEmit` and `eslint` both clean on every touched file.
+
 ## Key Decisions
 
 1. **State management**: Migrate billing to React Query + in-memory mock services, matching the admin pattern (`tenants.service.ts` / `payments.service.ts`). Zustand's localStorage persistence has already caused a stale-field bug once.
@@ -140,6 +142,150 @@ client** — worth a quick sanity check with them, but built and shipped in the 
 - **Retired, not carried forward**: `retainersApi.recordUsage()`, `RecordUsageInput`, `recordUsageSchema`, and `RetainerUsageDialog` (the free-text, invoice-less usage log) were deleted outright rather than left dead — Key Decision #11 explicitly retires this path in favor of every draw going through `drawForInvoice()`. The underlying `usage: RetainerUsage[]` history array stays; only the manual-entry mechanism is gone.
 - **Build-time fix, not originally scoped**: `can()` (`lib/permissions/index.ts`) didn't honor the dev mock identity's `permissions: ["*"]` — every `can()` check silently returned `false` outside the `admin` realm regardless of the wildcard, which would have made `retainer.approve` unreachable in dev. Added a wildcard check; one line, no new permission concepts.
 
+### Phase I: Delivery / Fulfillment — ✅ I-A/I-B/I-D/I-E done; I-C/I-F not built
+
+The one join point between this module and Inventory that the client directly specified
+but that doesn't exist anywhere in the codebase yet: **inventory should deduct at the
+moment goods actually leave the warehouse — automatically for POS, manually (or via a
+delivery note) for B2B invoices — not at the moment an invoice is created or sent.** See
+`docs/requirements/Client-Requirements-Phase1.md` §5.1 and
+`docs/source/client-qa-inventory-pos-tenant.md` Q12 for the exact client wording.
+
+**Key Decisions (I1–I5):**
+
+1. **Fulfillment is its own entity, not a status flag on Invoice.** An invoice can be
+   partially fulfilled (5 units ordered, 3 shipped today, 2 next week) — that needs a
+   real record of *what* shipped *when*, not a boolean. Extends the "every dollar needs
+   a document" precedent from Adjustments/Retainers to "every stock movement needs a
+   document."
+2. **Lives in its own route folder, `dashboard/fulfillment/`** (`types.ts`,
+   `schemas.ts`, `api/fulfillments.service.ts`, `components/`) — initially built inside
+   `dashboard/invoices/` (triggered from and owned by an Invoice), then moved once
+   Delivery/Fulfillment got a real `/dashboard/fulfillment` list page and its own nav
+   item: at that point it's a sibling route to Invoices, not a sub-feature of it, per
+   Key Decision #4's file-organization rule (every related file inside its own
+   corresponding route folder). `invoice-detail.tsx` (in `dashboard/invoices/`) and
+   `alerts.service.ts` (in `modules/alerts/`) both import across the route boundary to
+   trigger it — the same cross-route-import pattern already used for CRM's
+   `customersApi`, not a new convention.
+3. **Built against the same isolated demo catalog as the Product Picker, not real
+   Inventory.** `product-lookup-seed.ts`'s `stockByWarehouse` already exists exactly
+   for this kind of forward-compat demo — reusing it here keeps this phase consistent
+   with the standing "don't touch Inventory" boundary. `stockAt()`/`productLookupApi`
+   already expose everything needed; this phase adds a `deduct()`-style mutation to
+   that same service.
+4. **POS auto-trigger is written but unreachable until POS exists.** The
+   `autoFulfillPos()` code path gets built now so the "automatic for POS" half of the
+   requirement isn't silently dropped, but has no caller until POS (Phase 3 of the
+   overall project, not this module) lands — dead code by design until then.
+5. **Negative stock is allowed, flagged, never blocking** — a fulfillment that would
+   take a warehouse below 0 still posts, and the resulting line gets
+   `status: "pending-reconciliation"` instead of being rejected, matching the
+   client-confirmed rule (`Backend-Build-Guide.md` §8).
+
+**Data model:**
+
+```ts
+// dashboard/fulfillment/types.ts
+
+type FulfillmentTrigger = "pos-auto" | "manual" | "delivery-note";
+type FulfillmentLineStatus = "fulfilled" | "pending-reconciliation"; // latter = went negative
+
+type FulfillmentLine = {
+  invoiceLineId: string;         // ties back to InvoiceLine.id
+  productId: string;
+  warehouseId: string;
+  quantityFulfilled: number;     // may be less than the invoice line's ordered quantity
+  status: FulfillmentLineStatus;
+};
+
+type Fulfillment = {
+  id: string;
+  number?: string;                // set only when trigger is "delivery-note"; else internal-only
+  invoiceId: string;
+  trigger: FulfillmentTrigger;
+  fulfilledAt: string;
+  fulfilledBy: string;
+  lines: FulfillmentLine[];
+  notes?: string;
+};
+```
+
+`InvoiceLine` already carries `productId?`/`warehouseId?` (added for the Product
+Picker) — a line with neither is free-text and can never be fulfilled, the expected
+default until a tenant starts linking products. An invoice's fulfillment state
+(`"not-applicable" | "unfulfilled" | "partially-fulfilled" | "fulfilled"`) is derived,
+never stored — same pattern as `invoiceDisplayStatus()`.
+
+**Sub-phases:**
+
+- **I-A — Types & mock service** — ✅ Done, now at `dashboard/fulfillment/`:
+  `types.ts` (`Fulfillment`, `FulfillmentLine`, `fulfillableLines()`,
+  `fulfilledQuantity()`, `invoiceFulfillmentStatus()`, `totalOrderedQuantity()`,
+  `totalFulfilledQuantity()`), `schemas.ts` (`fulfillmentFormSchema`/
+  `fulfillmentLineInputSchema` — its own file, not the shared `invoices/schemas.ts`,
+  once it moved), `api/fulfillments.service.ts` (`list(invoiceId?)`, `getNextNumber()`,
+  `create(input)`, `autoFulfillPos()`). `productLookupApi.deduct()` stays in
+  `dashboard/invoices/api/product-lookup.service.ts` — it belongs to the Product Picker's
+  demo catalog, which Fulfillment imports across the route boundary rather than owning.
+- **I-B — Manual fulfillment UI (the actual B2B requirement)** — ✅ Done, at
+  `dashboard/fulfillment/components/`. `canFulfill` added to the invoice detail page
+  (`dashboard/invoices/components/invoice-detail.tsx`) alongside `canSend`/`canPay`/
+  `canCancel` — true whenever the invoice isn't draft/cancelled and has remaining
+  product-linked quantity, independent of payment status. `fulfillment-dialog.tsx`
+  ("Mark Fulfilled" — one editable quantity per product-linked line, defaulting to the
+  full remaining amount, capped from exceeding it) and `invoice-fulfillment-card.tsx`
+  (shipment history, pending-reconciliation badges) are imported into the invoice detail
+  page from there, both only rendered when applicable. Seeded a new demo invoice,
+  **INV-0037** (`dashboard/invoices/mock/seed.ts`), with two product-linked lines so the
+  feature has something to act on without waiting for a tenant to link products via the
+  Product Picker first.
+  **Follow-up, same phase**: the per-invoice action alone made it hard to see fleet-wide
+  progress ("what's remaining to deliver, across everything"), so it got its own list —
+  `fulfillments-list.tsx` (every invoice with at least one product-linked line; columns
+  for customer, `fulfilled / ordered` units, last shipment date, and a status badge;
+  search + status filter via `FilterableTable`, same convention as Retainers/Proposals)
+  rendered at `/dashboard/fulfillment` (`dashboard/fulfillment/page.tsx`), reusing
+  `FulfillmentDialog` directly from a row click rather than duplicating the fulfillment
+  logic. `fulfillment-status-badge.tsx` (unfulfilled/partially-fulfilled/fulfilled,
+  amber/green tones). Added to the sidebar under **Sales → Delivery / Fulfillment**
+  (`nav-items.ts`, `Truck` icon).
+  **Later, same phase**: everything fulfillment-specific was moved out of
+  `dashboard/invoices/` into its own `dashboard/fulfillment/` route folder (types,
+  schemas, service, all four components) once it had a real route/nav item of its own —
+  matching AGENTS.md §14's "every related file lives in its corresponding route folder"
+  now that Fulfillment *is* a route, not a sub-feature of Invoices. Only
+  `invoice-detail.tsx` and `alerts.service.ts` still reach across the route boundary to
+  call into it, same as any other cross-module import in this codebase (e.g. CRM's
+  `customersApi`).
+- **I-C — Delivery note document** — Not built. The dialog has a "Generate a numbered
+  delivery note" checkbox that sets `trigger: "delivery-note"` and gets it a real
+  `DN-####` number, but there's no dedicated print/PDF view yet — reusing
+  `invoice-pdf.tsx`'s rendering approach for that is still open, additive on top of I-B.
+- **I-D — POS auto-fulfillment** — ✅ Written, unreachable until POS exists.
+  `fulfillmentsApi.autoFulfillPos(invoiceId, lines)` calls the same `create()` path with
+  `trigger: "pos-auto"`; no caller exists until the POS module creates invoices
+  (Key Decision I4).
+- **I-E — Negative-stock handling** — ✅ Done. `deduct()` never blocks going below 0;
+  `create()` flags that line `pending-reconciliation` instead of `fulfilled`. Surfaced
+  through the existing Alerts module: `modules/alerts/types.ts` gained a
+  `fulfillment-pending-reconciliation` `AlertType` and optional `relatedInvoiceId`;
+  `alerts.service.ts` scans every fulfillment's lines for the flag and links back to
+  the invoice; `alerts-list.tsx`'s "View retainers" link is now conditional on which
+  kind of alert it is. **Reconciliation workflow itself (who clears the flag, how) is
+  still not specified by the client** — the flag/alert exist, the resolution flow
+  doesn't.
+- **I-F — Real Inventory swap (post-backend)** — Not built (needs a real backend).
+  Once a real Inventory API exists (`Backend-Build-Guide.md` §8), swap
+  `productLookupApi`'s `deduct()`/`stockAt()` for `POST /inventory/stock-movements` —
+  same swap already planned for the Product Picker itself, done together since they
+  share one service file.
+
+**Open questions carried over**: negative-stock reconciliation UX (I-E); whether a
+delivery note needs its own PDF branding pass or reuses the invoice template (I-C
+assumes reuse); serial-number tracking at fulfillment time (out of scope, quantity-only
+per `Backend-Build-Guide.md` §9 open question 4).
+
 ## Files to Create/Change
 
 Paths relative to `src/app/`. Existing billing module lives at `(tenant)/modules/billing/`.
@@ -219,6 +365,21 @@ Paths relative to `src/app/`. Existing billing module lives at `(tenant)/modules
 | `(tenant)/dashboard/invoices/new/page.tsx` | Update | ✅ Done | "Pay from Retainer" offered on partial coverage too — pays what's available as a `"partially-paid"` partial payment; copy distinguishes full vs. partial |
 | `(tenant)/modules/billing/components/record-payment-dialog.tsx` | — | ✅ Already fine | No change needed — a retainer partial payment is just another `Payment` row, same as today |
 | `src/lib/permissions/index.ts` | Update | ✅ Done (unscoped fix) | `can()` now honors `permissions: ["*"]` (dev mock identity) — without it, `retainer.approve` would never resolve `true` outside the `admin` realm |
+| `(tenant)/dashboard/fulfillment/types.ts` | Create | ✅ Done | `Fulfillment`/`FulfillmentLine` types, `fulfillableLines()`, `fulfilledQuantity()`, `invoiceFulfillmentStatus()`, `totalOrderedQuantity()`, `totalFulfilledQuantity()` (Phase I-A; moved here from `dashboard/invoices/fulfillments/` once Fulfillment got its own route) |
+| `(tenant)/dashboard/fulfillment/schemas.ts` | Create | ✅ Done | `fulfillmentFormSchema`/`fulfillmentLineInputSchema` (Phase I-A; moved here out of the shared `dashboard/invoices/schemas.ts`) |
+| `(tenant)/dashboard/fulfillment/api/fulfillments.service.ts` | Create | ✅ Done | `list/getNextNumber/create/autoFulfillPos` (Phase I-A; moved here from `dashboard/invoices/api/`) |
+| `(tenant)/dashboard/invoices/api/product-lookup.service.ts` | Update | ✅ Done | Added `deduct()` — mutates `stockByWarehouse`, reports `wentNegative` (Phase I-A). Stays in `dashboard/invoices/` — it's the Product Picker's demo catalog, imported across the route boundary by Fulfillment, not owned by it |
+| `(tenant)/dashboard/invoices/mock/seed.ts` | Update | ✅ Done | Added `productLine()` helper and a new seeded invoice (INV-0037) with product-linked lines so Fulfillment has something to act on (Phase I-B) |
+| `(tenant)/dashboard/fulfillment/components/fulfillment-dialog.tsx` | Create | ✅ Done | "Mark Fulfilled" dialog — per-line quantity capped at remaining, optional delivery-note toggle (Phase I-B; moved here from `dashboard/invoices/components/`) |
+| `(tenant)/dashboard/fulfillment/components/invoice-fulfillment-card.tsx` | Create | ✅ Done | Shipment history card, pending-reconciliation badges (Phase I-B; moved here from `dashboard/invoices/components/`) |
+| `(tenant)/dashboard/invoices/components/invoice-detail.tsx` | Update | ✅ Done | `canFulfill` condition, "Mark Fulfilled" action button, fulfillment card slot, dialog wiring — imports `FulfillmentDialog`/`InvoiceFulfillmentCard` from `dashboard/fulfillment/` across the route boundary (Phase I-B) |
+| `(tenant)/modules/alerts/types.ts` | Update | ✅ Done | Added `fulfillment-pending-reconciliation` `AlertType`, optional `relatedInvoiceId`, made `relatedRetainerId` optional (Phase I-E) |
+| `(tenant)/modules/alerts/api/alerts.service.ts` | Update | ✅ Done | Scans every fulfillment's lines for `pending-reconciliation` and emits an alert per line — imports `fulfillmentsApi` from `dashboard/fulfillment/api/` (Phase I-E) |
+| `(tenant)/modules/alerts/components/alerts-list.tsx` | Update | ✅ Done | Link target now depends on alert type — invoice link for fulfillment alerts, retainers link otherwise (Phase I-E) |
+| `(tenant)/dashboard/fulfillment/components/fulfillment-status-badge.tsx` | Create | ✅ Done | Unfulfilled/Partially Fulfilled/Fulfilled badge (not in the original I-B wording, added with the list view) |
+| `(tenant)/dashboard/fulfillment/components/fulfillments-list.tsx` | Create | ✅ Done | Fleet-wide fulfillment progress list — every product-linked invoice, `FilterableTable`, reuses `FulfillmentDialog` on row click (not in the original I-B wording, added after the per-invoice-only action proved hard to get an overview from); imports `invoiceApi`/`StatTiles` from `dashboard/invoices/` across the route boundary |
+| `(tenant)/dashboard/fulfillment/page.tsx` | Create | ✅ Done | Route for the above |
+| `(tenant)/components/nav-items.ts` | Update | ✅ Done | Added "Delivery / Fulfillment" under the Sales section, `Truck` icon |
 
 ## Migration Steps
 
@@ -244,6 +405,7 @@ Paths relative to `src/app/`. Existing billing module lives at `(tenant)/modules
 - **Recurring Flow**: `Create Template` → `Generate Now` (manual trigger) → Invoice created with `source: "recurring"`.
 - **Retainer Flow (current, Phase E)**: `Create Retainer` → `Track Remaining Balance`.
 - **Retainer Flow (planned, Phase H)**: `Create Retainer` (funding Invoice, Paid) → `Draw` (invoice-linked, always auto-paid — fully if the balance covers it, partially via `"partially-paid"` if it doesn't) → *(recurring only)* `Generate Top-Up` (manual trigger → Paid invoice, `source: "retainer-topup"`, balance topped up) → *(at expiry)* `Transfer` / `Roll Over` (self-serve) **or** `Forfeit` / `Refund` (permission-gated, Refund → negative invoice via the Adjustments pattern) → visible throughout in the Customer Statement.
+- **Fulfillment Flow (Phase I)**: Invoice sent (product-linked lines, stock untouched) → `Mark Fulfilled` (B2B, manual, any time after send, independent of payment) or automatic at sale-post (POS, not wired yet) → stock deducted per line → invoice's derived fulfillment status moves `unfulfilled` → `partially-fulfilled` → `fulfilled` as shipments accumulate → a line that goes negative is flagged `pending-reconciliation` and surfaces on the Alerts page instead of blocking.
 
 ## Testing Checklist
 
@@ -264,12 +426,19 @@ Paths relative to `src/app/`. Existing billing module lives at `(tenant)/modules
 - [x] **Phase H** — `retainerDisplayStatus()` returns `"expired"` once `expiryDate` has passed, without mutating stored `status` (same never-stored pattern as invoices/proposals).
 - [x] **Phase H** — Retainer funding/top-up/refund activity appears correctly in the Customer Statement — every one of them is a real Invoice/Payment/Adjustment, so no separate wiring was needed (H5).
 - [ ] **Phase H** — Not yet exercised in a running browser (AGENTS.md §7: verify via `tsc`/lint for routine work) — logic verified by reading every code path, not by clicking through the UI. Worth a manual pass before shipping, same caveat as the Dashboard KPIs item above.
+- [x] **Phase I** — `canFulfill` only true for non-draft, non-cancelled invoices with remaining product-linked quantity, independent of payment status (verified in `invoice-detail.tsx`).
+- [x] **Phase I** — Quantity entered in `FulfillmentDialog` is capped at the line's remaining amount (ordered minus already fulfilled across prior fulfillments); submitting over the cap is rejected client-side before the mutation fires (verified in `fulfillment-dialog.tsx`'s pre-submit check).
+- [x] **Phase I** — A fulfillment that takes a warehouse below zero doesn't reject — `productLookupApi.deduct()` still applies the deduction and reports `wentNegative`; the affected line is stored as `pending-reconciliation` and a matching alert appears via `alertsApi.list()` (verified in `fulfillments.service.ts`/`alerts.service.ts`).
+- [x] **Phase I** — `autoFulfillPos()` exists and is callable (unit-level — no UI calls it yet, since POS doesn't exist).
+- [ ] **Phase I** — Not yet exercised in a running browser, same standing caveat as Phase H above.
 
 ## Explicitly Out of Scope
 
 - **Vendors, Inquiries, Leads** — not in this spec; still ComingSoon. Separate future task.
 - **Action-level permissions** (`invoice.create` etc., spec §23) — no full role/action permission *system* (admin-configurable RBAC UI) exists yet, and sub-role RBAC is an unanswered open question (Project-Structure.md §7). Phase H's Forfeit/Refund gating uses the existing `can(me, permission)` primitive with one new permission string (`retainer.approve`) — not a new engine, just one more check of the same caliber already used elsewhere; still no UI to assign/configure who holds it.
-- **POS integration & real Inventory stock movement** — type fields added for forward-compat only (spec §2); neither module exists yet.
+- **POS integration & real Inventory stock movement** — `InvoiceLine.productId`/`warehouseId` are now genuinely used by both the Product Picker and Phase I's Fulfillment, but both still deduct against the isolated demo catalog (`product-lookup-seed.ts`), not real Inventory — Inventory itself hasn't been touched, and POS doesn't exist yet (Phase I-D/I-F).
+- **Delivery note PDF/print view** (Phase I-C) — the dialog can tag a fulfillment as a numbered delivery note, but there's no dedicated document rendering for it yet.
+- **Fulfillment reconciliation workflow** (Phase I-E) — the `pending-reconciliation` flag and its Alerts entry exist; who clears it and how is not specified by the client.
 - **Scheduler/auto-send for Recurring Invoices, including retainer top-ups** — stays manual-trigger ("Generate now"), consistent with the rest of the Recurring Invoices UX; flagged as an open question in existing code/docs.
 - **Overdraw with manual approval** — decided against (Key Decision #10); the hard cap stays permanent, not a togglable exception.
 - **Full Alerts module beyond retainer triggers** — `(tenant)/modules/alerts/` built, but scoped strictly to the two retainer triggers (Phase H4); not a general-purpose alerting system for the rest of the app. Extend `alertsApi.list()` if/when other trigger sources are needed.
@@ -282,11 +451,15 @@ A walkthrough of how each screen actually behaves in real use, written for a non
 reader. Uses one running example — **"Bloom Café Group"** ordering equipment from the tenant.
 
 **Structural note**: a client-facing nav list for this module named 12 items. The built system
-has 9 working screens — Estimates and Proposals are one screen (Key Decision, same concept
+has 11 working screens — Estimates and Proposals are one screen (Key Decision, same concept
 under two names), Credit Notes and Debit Notes are one screen (Key Decision, one `Adjustment`
-type with a `kind` discriminator), and Delivery/Fulfillment doesn't exist anywhere in this
-plan or the codebase. If literal 1:1 nav items are required later, that's a new scoping
-decision, not an oversight here.
+type with a `kind` discriminator), and Delivery/Fulfillment (Phase I above) got its own nav item
+(**Sales → Delivery / Fulfillment**, `/dashboard/fulfillment`) once the client asked to see
+what's remaining/in-progress across every shippable invoice in one place, rather than having to
+open each invoice individually — the *action* of fulfilling still happens from the invoice
+detail page (or from this list, which reuses the same dialog), only the "what's outstanding
+across everything" view needed its own screen. If literal 1:1 nav items are required later
+for the remaining gap, that's a new scoping decision, not an oversight here.
 
 ### 📊 Dashboard
 The homepage. Shows total invoiced this month, outstanding (unpaid), collected, an invoicing
@@ -354,8 +527,19 @@ A prepaid wallet a customer keeps with the tenant.
   Alerts page automatically, so nothing quietly runs out unnoticed.
 
 ### 🚚 Delivery / Fulfillment
-**Not built** — no module for this exists in the system or anywhere in this plan. Would need
-its own scoping as new work if required.
+The join point with Inventory (Phase I), now its own nav item under Sales. The list shows every
+invoice with at least one product-linked line — customer, `fulfilled / ordered` units, last
+shipment date, and a status badge (Unfulfilled/Partially Fulfilled/Fulfilled), filterable by
+status. Goods leaving the warehouse — not invoice creation or payment — is what actually deducts
+stock. Click a row (or the **Mark Fulfilled** button on the invoice detail page itself, same
+dialog either way) and pick how many of each line actually shipped — defaults to everything
+remaining, editable down for a partial shipment — with an option to check "Generate a numbered
+delivery note" for a `DN-####` reference. Fulfilling is available the moment an invoice is sent
+(drafts never reserve stock) and is independent of whether it's been paid. For POS sales the
+equivalent trigger fires automatically the instant the sale posts — written and ready, but
+there's no POS module yet to call it. If a fulfillment would take a warehouse below zero, it
+still goes through (never blocked) but shows up on the Alerts page flagged for reconciliation
+instead of silently succeeding.
 
 ### 📈 Reports
 Three tabs, all reading the same live data as everything above (no separate reporting dataset

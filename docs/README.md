@@ -73,8 +73,11 @@ that discipline is what keeps them trustworthy instead of stale.
   actual code has drifted from the original plan.
 - **[Sales-Invoicing-Implementation-Plan.md](plans/Sales-Invoicing-Implementation-Plan.md)**
   — the tenant portal's Sales & Invoicing suite: Invoices, Proposals, Credit/Debit Notes,
-  Retainers, Recurring, Reports. Phases A–H, all done; includes the full retainer
-  Key-Decisions log resolving the client's open Q&A items.
+  Retainers, Recurring, Reports, and Delivery/Fulfillment. Phases A–H done; includes the
+  full retainer Key-Decisions log resolving the client's open Q&A items. Phase I
+  (Delivery/Fulfillment — the join point with Inventory) is mostly built, against the
+  same isolated demo catalog as the Product Picker; the delivery-note PDF view and the
+  real Inventory swap are still open.
 - **[Inventory-Implementation-Plan.md](plans/Inventory-Implementation-Plan.md)** — the
   tenant portal's Inventory suite: Products, Warehouses, Stock Movement/Transfer, Goods
   Receipt, Adjustments, Batches, Reorder, Valuation. UI-complete against mock data; the

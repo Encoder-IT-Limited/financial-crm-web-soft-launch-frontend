@@ -299,7 +299,9 @@ Inventory, to avoid touching that module mid-build.
 **When building the real backend, delete this mock service and point the same frontend
 component at `GET /inventory/products?warehouseId=`** — the shapes above were designed
 to match what a real Inventory products endpoint should return, specifically for this
-swap to be low-effort.
+swap to be low-effort. The same demo catalog is also what Delivery/Fulfillment
+(`docs/plans/Sales-Invoicing-Implementation-Plan.md` Phase I, built) deducts against via
+`productLookupApi.deduct()` — do both swaps together, they share one service file.
 
 ---
 
@@ -355,8 +357,12 @@ Goods Receipt/PO → Stock Transfer → Adjustments/Reorder/Batches/Valuation �
 4. Serial-number tracking scope — which categories need it isn't specified.
 5. POS hardware models — left blank by the client.
 6. Tax-QR format per jurisdiction — confirm before locking beyond the payment-link default.
-7. Delivery/Fulfillment as a real module — requirement is answered (auto-trigger for
-   POS, manual/delivery-note for B2B) but nothing exists yet on either side of the stack.
+7. Delivery/Fulfillment — frontend is built (`docs/plans/Sales-Invoicing-Implementation-Plan.md`
+   Phase I: manual/delivery-note fulfillment for B2B, POS auto-trigger written but
+   unreachable until POS exists, negative-stock alerting), still against the isolated
+   demo catalog. Backend needs the real `POST /inventory/stock-movements` endpoint this
+   deducts against once built (Phase I-F), plus the delivery-note PDF view (Phase I-C)
+   isn't built on either side yet.
 8. Retainer rules 2–9 in §5.6 — inferred defaults, not directly re-confirmed.
 9. Who holds `retainer.approve` — assumed tenant Owner/Admin, not platform staff.
 10. Branch-level vs. warehouse-level permission interaction — SRS supports both, doesn't

@@ -14,15 +14,16 @@ const SEVERITY_STYLES: Record<Alert["severity"], { icon: typeof AlertTriangle; c
   info: { icon: Info, className: "border-blue-t bg-blue-l text-blue" },
 };
 
-/** Phase H4 scope only — retainer expiry/low-balance alerts, computed live.
- * Not a general-purpose alerting system for the rest of the app; extend
- * `alertsApi.list()` if/when other trigger sources are added. */
+/** Retainer expiry/low-balance (Phase H4) and fulfillment pending-
+ * reconciliation (Phase I-E) alerts, computed live. Not a general-purpose
+ * alerting system for the rest of the app; extend `alertsApi.list()`
+ * if/when other trigger sources are added. */
 export function AlertsList() {
   const { data: alerts = [], isLoading } = useQuery({ queryKey: ["alerts"], queryFn: alertsApi.list });
 
   return (
     <div>
-      <PageHeading title="Alerts" subtitle="Stay on top of retainer contracts nearing expiry or running low" />
+      <PageHeading title="Alerts" subtitle="Stay on top of retainer contracts, invoices, and stock that need a look" />
 
       {isLoading && <div className="p-8 text-center text-[13px] text-text-4">Loading alerts…</div>}
 
@@ -33,6 +34,10 @@ export function AlertsList() {
       <div className="flex flex-col gap-2.5">
         {alerts.map((alert) => {
           const { icon: Icon, className } = SEVERITY_STYLES[alert.severity];
+          const href = alert.relatedInvoiceId
+            ? `/dashboard/invoices/${alert.relatedInvoiceId}`
+            : "/dashboard/retainers";
+          const linkLabel = alert.relatedInvoiceId ? "View invoice" : "View retainers";
           return (
             <Card key={alert.id} className={cn("flex flex-row items-start gap-3 border p-4", className)}>
               <Icon className="mt-0.5 size-4 shrink-0" />
@@ -40,8 +45,8 @@ export function AlertsList() {
                 <div className="text-[13px] font-semibold text-text">{alert.title}</div>
                 <p className="mt-0.5 text-[12px] text-text-2">{alert.message}</p>
               </div>
-              <Link href="/dashboard/retainers" className="shrink-0 text-[11.5px] font-semibold underline-offset-2 hover:underline">
-                View retainers
+              <Link href={href} className="shrink-0 text-[11.5px] font-semibold underline-offset-2 hover:underline">
+                {linkLabel}
               </Link>
             </Card>
           );

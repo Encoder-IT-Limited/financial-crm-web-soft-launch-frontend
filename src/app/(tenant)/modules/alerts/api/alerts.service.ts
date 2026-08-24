@@ -1,6 +1,8 @@
 import { fmtDate, fmtMoney } from "@/lib/format";
 import { daysPast, retainerPercentUsed } from "../../../dashboard/invoices/types";
 import { retainersApi } from "../../../dashboard/invoices/api/retainers.service";
+import { fulfillmentsApi } from "../../../dashboard/fulfillment/api/fulfillments.service";
+import { invoiceApi } from "../../../dashboard/invoices/api/invoices.service";
 import { RETAINER_ALERT_THRESHOLDS, type Alert } from "../types";
 
 /** Simulated network latency for the mock API. */
@@ -52,6 +54,24 @@ export const alertsApi = {
             createdAt: now,
           });
         }
+      }
+    }
+
+    const fulfillments = await fulfillmentsApi.list();
+    const pendingLines = fulfillments.flatMap((f) => f.lines.filter((l) => l.status === "pending-reconciliation").map((l) => ({ f, l })));
+    if (pendingLines.length > 0) {
+      const invoices = await invoiceApi.list();
+      for (const { f, l } of pendingLines) {
+        const invoice = invoices.find((inv) => inv.id === f.invoiceId);
+        alerts.push({
+          id: `alert-fulfillment-${f.id}-${l.invoiceLineId}`,
+          type: "fulfillment-pending-reconciliation",
+          severity: "warning",
+          title: `Stock went negative fulfilling ${invoice?.number ?? f.invoiceId}`,
+          message: `${l.quantityFulfilled} unit(s) were fulfilled without enough stock on hand — reconcile the warehouse count before it's trusted again.`,
+          relatedInvoiceId: f.invoiceId,
+          createdAt: now,
+        });
       }
     }
 

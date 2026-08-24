@@ -31,6 +31,7 @@ import {
   Bell,
   Sparkles,
   Settings,
+  Truck,
 } from "lucide-react";
 import type { SidebarNavSection } from "@/types/nav";
 
@@ -114,6 +115,7 @@ export const tenantNavSections: SidebarNavSection[] = [
         icon: FileText,
         module: "sales",
       },
+
       {
         label: "Proposals",
         href: "/dashboard/proposals",
@@ -130,6 +132,12 @@ export const tenantNavSections: SidebarNavSection[] = [
         label: "Credit & Debit Notes",
         href: "/dashboard/credit-notes",
         icon: FileDiff,
+        module: "sales",
+      },
+      {
+        label: "Delivery / Fulfillment",
+        href: "/dashboard/fulfillment",
+        icon: Truck,
         module: "sales",
       },
     ],

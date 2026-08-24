@@ -4,21 +4,25 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Ban, Download, PencilLine, Printer, Send, UserPlus } from "lucide-react";
+import { ArrowLeft, Ban, Download, PackageCheck, PencilLine, Printer, Send, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { PageHeading } from "@/components/shared/page-heading";
 import { toast } from "@/lib/toast";
 import { fmtDate, fmtDateTime, fmtMoney } from "@/lib/format";
 import { adjustedInvoiceBalance, adjustmentsForInvoice, invoiceBalance, invoiceDisplayStatus } from "../types";
+import { fulfillableLines, fulfilledQuantity } from "../../fulfillment/types";
 import { invoiceApi } from "../api/invoices.service";
 import { adjustmentsApi } from "../api/adjustments.service";
+import { fulfillmentsApi } from "../../fulfillment/api/fulfillments.service";
 import { customersApi } from "../../../modules/crm/api/customers.service";
 import { InvoicePdf } from "./invoice-pdf";
 import { InvoiceStatusBadge } from "./invoice-status-badge";
 import { RecordPaymentDialog } from "./record-payment-dialog";
+import { FulfillmentDialog } from "../../fulfillment/components/fulfillment-dialog";
 import { StatTiles } from "./stat-tiles";
 import { InvoiceAdjustmentsCard } from "./invoice-adjustments-card";
+import { InvoiceFulfillmentCard } from "../../fulfillment/components/invoice-fulfillment-card";
 import { InvoicePaymentHistoryCard } from "./invoice-payment-history-card";
 import { InvoiceHistoryCard } from "./invoice-history-card";
 
@@ -33,8 +37,13 @@ export function InvoiceDetail() {
   });
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
   const { data: adjustments = [] } = useQuery({ queryKey: ["adjustments"], queryFn: adjustmentsApi.list });
+  const { data: fulfillments = [] } = useQuery({
+    queryKey: ["fulfillments", params.invoiceId],
+    queryFn: () => fulfillmentsApi.list(params.invoiceId),
+  });
 
   const [payDialogOpen, setPayDialogOpen] = useState(false);
+  const [fulfillDialogOpen, setFulfillDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -95,6 +104,14 @@ export function InvoiceDetail() {
   const canPay = balance > 0 && (invoice.status === "sent" || invoice.status === "partially-paid");
   const canRemind = invoice.status === "sent" || invoice.status === "partially-paid";
   const canCancel = invoice.status === "draft" || invoice.status === "sent" || invoice.status === "partially-paid";
+  // Fulfillment is independent of payment status (client-confirmed, B2B
+  // delivery often happens on its own schedule) — a draft never reserves
+  // stock, so only sent/partially-paid/paid invoices with a remaining
+  // product-linked quantity can be fulfilled.
+  const canFulfill =
+    invoice.status !== "draft" &&
+    invoice.status !== "cancelled" &&
+    fulfillableLines(invoice).some((l) => l.quantity - fulfilledQuantity(l.id, fulfillments) > 0);
 
   return (
     <div>
@@ -116,6 +133,11 @@ export function InvoiceDetail() {
             {canPay && (
               <Button size="sm" onClick={() => setPayDialogOpen(true)}>
                 <UserPlus /> Record Payment
+              </Button>
+            )}
+            {canFulfill && (
+              <Button variant="outline" size="sm" onClick={() => setFulfillDialogOpen(true)}>
+                <PackageCheck /> Mark Fulfilled
               </Button>
             )}
             {canSend && (
@@ -171,12 +193,15 @@ export function InvoiceDetail() {
 
         <div className="flex flex-col gap-4">
           {invoiceAdjustments.length > 0 && <InvoiceAdjustmentsCard adjustments={invoiceAdjustments} currency={invoice.currency} />}
+          {fulfillments.length > 0 && <InvoiceFulfillmentCard fulfillments={fulfillments} />}
           <InvoicePaymentHistoryCard payments={invoice.payments} currency={invoice.currency} />
           <InvoiceHistoryCard invoice={invoice} customerEmail={customer?.email} />
         </div>
       </div>
 
       <RecordPaymentDialog invoice={canPay ? invoice : null} open={payDialogOpen} onOpenChange={setPayDialogOpen} />
+
+      <FulfillmentDialog invoice={canFulfill ? invoice : null} open={fulfillDialogOpen} onOpenChange={setFulfillDialogOpen} />
 
       <ConfirmDialog
         open={cancelDialogOpen}

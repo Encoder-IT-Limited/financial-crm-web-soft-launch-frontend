@@ -29,6 +29,20 @@ function line(description: string, quantity: number, unitPrice: number, taxRate:
   };
 }
 
+/** Same as line(), but linked to a product/warehouse — makes the line
+ * eligible for Delivery/Fulfillment (Phase I). productId/warehouseId
+ * match product-lookup-seed.ts's demo catalog. */
+function productLine(
+  description: string,
+  quantity: number,
+  unitPrice: number,
+  taxRate: number,
+  productId: string,
+  warehouseId: string
+): InvoiceLine {
+  return { ...line(description, quantity, unitPrice, taxRate), productId, warehouseId };
+}
+
 export const seedInvoices: Invoice[] = [
   {
     id: "inv-0044",
@@ -171,6 +185,30 @@ export const seedInvoices: Invoice[] = [
     notes: "Waiting for final scope sign-off.",
     createdBy: "Salma H.",
     createdAt: day(-6),
+    payments: [],
+  },
+  {
+    id: "inv-0037",
+    number: "INV-0037",
+    customerId: "cust-gulf",
+    issueDate: day(-3),
+    dueDate: day(27),
+    currency: "AED",
+    lines: [
+      productLine("HP Laptop 15 (x3)", 3, 2899, 5, "plu-3", "wh-dxb"),
+      productLine("Dell Monitor 24 (x2)", 2, 749, 5, "plu-4", "wh-dxb"),
+    ],
+    subtotal: 10195,
+    tax: 509.75,
+    discount: 0,
+    total: 10704.75,
+    paidAmount: 0,
+    status: "sent",
+    source: "manual",
+    notes: "B2B order — delivery scheduled separately from invoicing.",
+    createdBy: "Salma H.",
+    createdAt: day(-3),
+    sentAt: day(-3),
     payments: [],
   },
   {

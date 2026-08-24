@@ -21,6 +21,27 @@ export const productLookupApi = {
     await delay(200);
     return PRODUCT_LOOKUP_ITEMS;
   },
+
+  /** Deducts stock at one warehouse for one product — the mutation
+   * Fulfillment (dashboard/invoices/fulfillments/) calls when goods
+   * actually ship. Never blocks on going negative (client-confirmed
+   * rule); the caller flags the line pending-reconciliation instead. */
+  deduct: async ({
+    productId,
+    warehouseId,
+    quantity,
+  }: {
+    productId: string;
+    warehouseId: string;
+    quantity: number;
+  }): Promise<{ wentNegative: boolean }> => {
+    await delay(150);
+    const item = PRODUCT_LOOKUP_ITEMS.find((p) => p.id === productId);
+    if (!item) return { wentNegative: false };
+    const next = (item.stockByWarehouse[warehouseId] ?? 0) - quantity;
+    item.stockByWarehouse[warehouseId] = next;
+    return { wentNegative: next < 0 };
+  },
 };
 
 /** Stock for one product at one warehouse — 0 for an unselected warehouse or
