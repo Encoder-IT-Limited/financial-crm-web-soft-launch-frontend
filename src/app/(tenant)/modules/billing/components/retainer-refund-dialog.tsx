@@ -10,6 +10,7 @@ import { fmtMoney } from "@/lib/format";
 import { retainerRefundSchema } from "../schemas";
 import type { Retainer } from "../types";
 import { retainersApi } from "../api/retainers.service";
+import { billingKeys } from "../query-keys";
 
 /** Approval-gated (Key Decision #9) — only rendered/reachable when the
  * caller has already checked `can(me, "retainer.approve")`. */
@@ -43,9 +44,9 @@ export function RetainerRefundDialog({
           return;
         }
         toast.success(`Refund of ${fmtMoney(retainer.remainingBalance, retainer.currency)} issued as a credit note`);
-        queryClient.invalidateQueries({ queryKey: ["retainers"] });
-        queryClient.invalidateQueries({ queryKey: ["adjustments"] });
-        queryClient.invalidateQueries({ queryKey: ["invoices"] });
+        queryClient.invalidateQueries({ queryKey: billingKeys.retainers() });
+        queryClient.invalidateQueries({ queryKey: billingKeys.adjustments() });
+        queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
         setReason("");
         onOpenChange(false);
       })

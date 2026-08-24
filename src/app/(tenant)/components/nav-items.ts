@@ -25,6 +25,7 @@ import {
   MessageSquareText,
   UserPlus,
   FileDiff,
+  Truck,
   ClipboardList,
   Percent,
   Building2,
@@ -32,6 +33,7 @@ import {
   Bell,
   Sparkles,
   Settings,
+  MonitorSmartphone,
 } from "lucide-react";
 import type { SidebarNavSection } from "@/types/nav";
 
@@ -116,6 +118,12 @@ export const tenantNavSections: SidebarNavSection[] = [
         module: "sales",
       },
       {
+        label: "POS",
+        href: "/dashboard/pos",
+        icon: MonitorSmartphone,
+        module: "sales",
+      },
+      {
         label: "Proposals",
         href: "/dashboard/proposals",
         icon: FileSignature,
@@ -133,6 +141,12 @@ export const tenantNavSections: SidebarNavSection[] = [
         icon: FileDiff,
         module: "sales",
       },
+      {
+        label: "Delivery / Fulfillment",
+        href: "/dashboard/fulfillment",
+        icon: Truck,
+        module: "sales",
+      },
     ],
   },
   {
@@ -142,6 +156,12 @@ export const tenantNavSections: SidebarNavSection[] = [
         label: "Bills",
         href: "/dashboard/bills",
         icon: Receipt,
+        module: "purchasing",
+      },
+      {
+        label: "Purchase Orders",
+        href: "/dashboard/purchase-orders",
+        icon: ClipboardList,
         module: "purchasing",
       },
       {

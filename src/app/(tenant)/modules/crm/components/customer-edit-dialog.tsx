@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { FormDialog } from "@/components/shared/form-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { customerEditSchema, type CustomerEditValues } from "../schemas";
 import { CUSTOMER_STATUSES, type CustomerStatus } from "../types";
 import { customersApi } from "../api/customers.service";
+import { useCustomers } from "../hooks/use-customers";
+import { crmKeys } from "../query-keys";
 import { FormField } from "@/components/shared/form-field";
 
 export function CustomerEditDialog({
@@ -24,10 +26,10 @@ export function CustomerEditDialog({
   // The parent only ever mounts one of these at a time and fully unmounts it
   // (editId -> null) before opening it for a different customer, so a lazy
   // initializer is enough to seed the form — no reset effect needed. The
-  // ["customers"] list is already in the query cache (the list/detail page
+  // customers list is already in the query cache (the list/detail page
   // that opens this dialog fetched it), so this read is instant.
   const queryClient = useQueryClient();
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
+  const { data: customers = [] } = useCustomers();
   const customer = customers.find((c) => c.id === customerId);
 
   const [form, setForm] = useState<CustomerEditValues>(() =>
@@ -60,7 +62,7 @@ export function CustomerEditDialog({
       .update(customerId, result.data)
       .then(() => {
         toast.success(`${result.data.name} updated`);
-        queryClient.invalidateQueries({ queryKey: ["customers"] });
+        queryClient.invalidateQueries({ queryKey: crmKeys.customers() });
         onOpenChange(false);
       })
       .finally(() => setSaving(false));

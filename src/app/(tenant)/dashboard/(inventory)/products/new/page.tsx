@@ -1,5 +1,5 @@
 import { PageHeading } from "@/components/shared/page-heading";
-import { ProductForm } from "../components/product-form";
+import { ProductForm } from "@/app/(tenant)/modules/inventory/components/product-form";
 
 export default function Page() {
   return (

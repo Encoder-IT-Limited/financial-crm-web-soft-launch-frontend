@@ -1,106 +1,121 @@
-import { newId, nextSequence } from "@/lib/format";
+import { apiGet, apiSend } from "@/lib/api/envelope";
 import type { Adjustment, AdjustmentKind, Invoice, NewAdjustmentInput } from "../types";
-import { seedAdjustments, seedCreditNoteSeq, seedDebitNoteSeq } from "../mock/seed-adjustments";
 import { invoiceApi } from "./invoices.service";
 
-/** Simulated network latency for the mock API. */
-const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Credit notes + debit notes — live `/credit-notes` and `/debit-notes`. */
 
-// In-memory mock "database" — module-scoped, resets on page reload. Same
-// pattern as invoiceApi/proposalsApi: React Query is the reactivity layer.
-let adjustments: Adjustment[] = seedAdjustments;
-let creditNoteSeq: number = seedCreditNoteSeq;
-let debitNoteSeq: number = seedDebitNoteSeq;
+type ApiCreditNote = {
+  id: string;
+  customerId: string;
+  invoiceId: string | null;
+  creditNoteNumber: string;
+  amount: number | string;
+  reason: string;
+  status: string;
+  createdAt: string;
+};
 
-function prefix(kind: AdjustmentKind): string {
-  return kind === "credit" ? "CN" : "DN";
+type ApiDebitNote = {
+  id: string;
+  customerId: string;
+  invoiceId: string | null;
+  debitNoteNumber: string;
+  amount: number | string;
+  reason: string;
+  status: string;
+  createdAt: string;
+};
+
+function mapCreditNote(row: ApiCreditNote): Adjustment {
+  return {
+    id: row.id,
+    number: row.creditNoteNumber,
+    kind: "credit",
+    customerId: row.customerId,
+    invoiceId: row.invoiceId ?? undefined,
+    amount: Number(row.amount),
+    reason: row.reason,
+    currency: "AED",
+    status: row.status === "VOID" ? "void" : "issued",
+    createdBy: "System",
+    createdAt: row.createdAt,
+  };
 }
 
-function nextSeq(kind: AdjustmentKind): number {
-  return kind === "credit" ? creditNoteSeq : debitNoteSeq;
+function mapDebitNote(row: ApiDebitNote): Adjustment {
+  return {
+    id: row.id,
+    number: row.debitNoteNumber,
+    kind: "debit",
+    customerId: row.customerId,
+    invoiceId: row.invoiceId ?? undefined,
+    amount: Number(row.amount),
+    reason: row.reason,
+    currency: "AED",
+    status: row.status === "VOID" ? "void" : "issued",
+    createdBy: "System",
+    createdAt: row.createdAt,
+  };
 }
 
 export const adjustmentsApi = {
   list: async (): Promise<Adjustment[]> => {
-    await delay(200);
-    return adjustments;
+    const [credits, debits] = await Promise.all([
+      apiGet<ApiCreditNote[]>("/credit-notes"),
+      apiGet<ApiDebitNote[]>("/debit-notes"),
+    ]);
+    return [...credits.map(mapCreditNote), ...debits.map(mapDebitNote)].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
   },
 
   get: async (id: string): Promise<Adjustment | undefined> => {
-    await delay(150);
-    return adjustments.find((a) => a.id === id);
+    const all = await adjustmentsApi.list();
+    return all.find((a) => a.id === id);
   },
 
-  /** The next auto-assigned number for a kind, e.g. "CN-0003". */
   getNextNumber: async (kind: AdjustmentKind): Promise<string> => {
-    await delay(120);
-    return `${prefix(kind)}-${nextSequence(nextSeq(kind))}`;
+    if (kind === "credit") {
+      const credits = await apiGet<ApiCreditNote[]>("/credit-notes");
+      return `CN-${String(credits.length + 1).padStart(4, "0")}`;
+    }
+    const debits = await apiGet<ApiDebitNote[]>("/debit-notes");
+    return `DN-${String(debits.length + 1).padStart(4, "0")}`;
   },
 
-  /** Notes are recorded and issued in one step — there's no draft stage,
-   *  it's a record of something that already happened (a refund, a
-   *  correction), not a document to be sent and awaited. */
   create: async (input: NewAdjustmentInput): Promise<Adjustment> => {
-    await delay();
-    const number = `${prefix(input.kind)}-${nextSequence(nextSeq(input.kind))}`;
-    const adjustment: Adjustment = {
-      id: newId("adj"),
-      number,
-      kind: input.kind,
+    if (input.kind === "credit") {
+      const row = await apiSend<ApiCreditNote>("post", "/credit-notes", {
+        customerId: input.customerId,
+        invoiceId: input.invoiceId,
+        amount: input.amount,
+        reason: input.reason,
+        linkedReturn: false,
+      });
+      return mapCreditNote(row);
+    }
+
+    const row = await apiSend<ApiDebitNote>("post", "/debit-notes", {
       customerId: input.customerId,
-      invoiceId: input.invoiceId || undefined,
+      invoiceId: input.invoiceId,
       amount: input.amount,
       reason: input.reason,
-      currency: input.currency ?? "AED",
-      status: "issued",
-      createdBy: "Salma H.",
-      createdAt: new Date().toISOString(),
-    };
-    adjustments = [adjustment, ...adjustments];
-    if (input.kind === "credit") creditNoteSeq += 1;
-    else debitNoteSeq += 1;
-    return adjustment;
+    });
+    return mapDebitNote(row);
   },
 
-  void: async (id: string): Promise<void> => {
-    await delay();
-    adjustments = adjustments.map((a) =>
-      a.id === id && a.status === "issued" ? { ...a, status: "void", voidedAt: new Date().toISOString() } : a
-    );
+  void: async (id: string, kind: AdjustmentKind): Promise<void> => {
+    const path = kind === "credit" ? `/credit-notes/${id}/void` : `/debit-notes/${id}/void`;
+    await apiSend("post", path);
   },
 
-  /** A standalone note (no linked invoice) has no document behind it that
-   *  reflects in the books — this creates a draft Invoice for the note's
-   *  amount and retroactively links the note to it: positive-value for a
-   *  Debit Note (something new to collect from the customer), negative-
-   *  value for a Credit Note (money owed back to the customer), so the
-   *  balance-sheet effect shows up as an invoice either way. */
-  convertToInvoice: async (id: string): Promise<Invoice | null> => {
-    await delay();
-    const adjustment = adjustments.find((a) => a.id === id);
-    if (!adjustment || adjustment.invoiceId || adjustment.status !== "issued") return null;
-
-    const issueDate = new Date().toISOString().slice(0, 10);
-    const due = new Date();
-    due.setDate(due.getDate() + 15);
-    const signedAmount = adjustment.kind === "credit" ? -adjustment.amount : adjustment.amount;
-    const label = adjustment.kind === "credit" ? "credit note" : "debit note";
-
-    const invoice = await invoiceApi.create(
-      {
-        customerId: adjustment.customerId,
-        issueDate,
-        dueDate: due.toISOString().slice(0, 10),
-        currency: adjustment.currency,
-        lines: [{ description: `${adjustment.number} — ${adjustment.reason}`, quantity: 1, unitPrice: signedAmount, taxRate: 0 }],
-        notes: `Generated from ${label} ${adjustment.number}`,
-      },
-      "draft",
-      adjustment.kind === "credit" ? "credit-note" : "debit-note"
-    );
-
-    adjustments = adjustments.map((a) => (a.id === id ? { ...a, invoiceId: invoice.id } : a));
-
-    return invoice;
+  convertToInvoice: async (id: string, kind: AdjustmentKind): Promise<Invoice | null> => {
+    const path = kind === "credit" ? `/credit-notes/${id}/convert` : `/debit-notes/${id}/convert`;
+    try {
+      const row = await apiSend<{ id: string }>("post", path);
+      return (await invoiceApi.get(row.id)) ?? null;
+    } catch {
+      return null;
+    }
   },
 };

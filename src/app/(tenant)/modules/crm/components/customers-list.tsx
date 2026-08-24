@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,10 +11,12 @@ import { PageHeading } from "@/components/shared/page-heading";
 import { FilterableTable } from "@/components/shared/filterable-table";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { fmtMoney } from "@/lib/format";
-import { invoiceApi } from "../../billing/api/invoices.service";
+import { useInvoices } from "../../billing/hooks/use-invoices";
 import { invoiceBalance } from "../../billing/types";
 import { AddCustomerDialog } from "../../billing/components/add-customer-dialog";
 import { customersApi } from "../api/customers.service";
+import { useCustomers } from "../hooks/use-customers";
+import { crmKeys } from "../query-keys";
 import { CUSTOMER_STATUSES, type Customer, type CustomerStatus } from "../types";
 import { CustomerStatusBadge } from "./customer-status-badge";
 import { CustomerEditDialog } from "./customer-edit-dialog";
@@ -27,8 +29,8 @@ type Filters = { search: string; status: "all" | CustomerStatus };
 export function CustomersList() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: customers = [], isLoading: loading } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
+  const { data: customers = [], isLoading: loading } = useCustomers();
+  const { data: invoices = [] } = useInvoices();
   const [filters, setFilters] = useState<Filters>({ search: "", status: "all" });
 
   const [addOpen, setAddOpen] = useState(false);
@@ -184,7 +186,7 @@ export function CustomersList() {
           destructive
           onConfirm={async () => {
             await customersApi.remove(deleteCustomer.id);
-            queryClient.invalidateQueries({ queryKey: ["customers"] });
+            queryClient.invalidateQueries({ queryKey: crmKeys.customers() });
           }}
           successMessage={`${deleteCustomer.name} deleted`}
         />

@@ -14,10 +14,13 @@ import { fmtDate, fmtMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toast } from "@/lib/toast";
 import { retainerDisplayStatus, retainerPercentUsed, retainerUsedAmount } from "../types";
-import { customersApi } from "../../crm/api/customers.service";
+import { useCustomers } from "../../crm/hooks/use-customers";
+import { useInvoices } from "../hooks/use-invoices";
+import { useRetainers } from "../hooks/use-retainers";
 import { invoiceApi } from "../api/invoices.service";
 import { retainersApi } from "../api/retainers.service";
 import { recurringApi } from "../api/recurring.service";
+import { billingKeys } from "../query-keys";
 import { RetainerStatusBadge } from "./retainer-status-badge";
 import { RetainerTransferDialog } from "./retainer-transfer-dialog";
 import { RetainerRolloverDialog } from "./retainer-rollover-dialog";
@@ -37,10 +40,10 @@ export function RetainerDetailsDialog({
 }) {
   const queryClient = useQueryClient();
   const { data: me } = useMe();
-  const { data: retainers = [] } = useQuery({ queryKey: ["retainers"], queryFn: retainersApi.list });
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
-  const { data: templates = [] } = useQuery({ queryKey: ["recurring-templates"], queryFn: recurringApi.list });
+  const { data: retainers = [] } = useRetainers();
+  const { data: customers = [] } = useCustomers();
+  const { data: invoices = [] } = useInvoices();
+  const { data: templates = [] } = useQuery({ queryKey: billingKeys.recurring(), queryFn: recurringApi.list });
   const retainer = retainers.find((r) => r.id === retainerId);
 
   const [closeOpen, setCloseOpen] = useState(false);
@@ -67,7 +70,7 @@ export function RetainerDetailsDialog({
 
   async function toggleStatus() {
     await retainersApi.setStatus(retainer!.id, retainer!.status === "active" ? "paused" : "active");
-    queryClient.invalidateQueries({ queryKey: ["retainers"] });
+    queryClient.invalidateQueries({ queryKey: billingKeys.retainers() });
   }
 
   async function generateTopUpNow() {
@@ -77,7 +80,7 @@ export function RetainerDetailsDialog({
       const invoice = await recurringApi.generate(topUpTemplate.id);
       if (invoice) {
         toast.success(`${invoice.number} generated and applied — balance topped up`);
-        queryClient.invalidateQueries({ queryKey: ["retainers"] });
+        queryClient.invalidateQueries({ queryKey: billingKeys.retainers() });
         queryClient.invalidateQueries({ queryKey: ["recurring-templates"] });
         queryClient.invalidateQueries({ queryKey: ["invoices"] });
       } else {
@@ -246,7 +249,7 @@ export function RetainerDetailsDialog({
         destructive
         onConfirm={async () => {
           await retainersApi.setStatus(retainer.id, "closed");
-          queryClient.invalidateQueries({ queryKey: ["retainers"] });
+          queryClient.invalidateQueries({ queryKey: billingKeys.retainers() });
         }}
         successMessage={`${retainer.number} closed`}
       />
@@ -266,7 +269,7 @@ export function RetainerDetailsDialog({
             destructive
             onConfirm={async () => {
               await retainersApi.forfeit(retainer.id);
-              queryClient.invalidateQueries({ queryKey: ["retainers"] });
+              queryClient.invalidateQueries({ queryKey: billingKeys.retainers() });
             }}
             successMessage={`${retainer.number} forfeited`}
           />

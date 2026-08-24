@@ -14,6 +14,7 @@ import { fmtDate, fmtDateTime, fmtMoney, fmtQty } from "@/lib/format";
 import { proposalDisplayStatus } from "../../../modules/billing/types";
 import { proposalsApi } from "../../../modules/billing/api/proposals.service";
 import { customersApi } from "../../../modules/crm/api/customers.service";
+import { billingKeys } from "../../../modules/billing/query-keys";
 import { ProposalStatusBadge } from "../../../modules/billing/components/proposal-status-badge";
 import { StatTiles } from "../../../modules/billing/components/stat-tiles";
 
@@ -23,7 +24,7 @@ export default function ProposalDetailPage() {
   const queryClient = useQueryClient();
 
   const { data: proposal, isLoading: proposalLoading } = useQuery({
-    queryKey: ["proposal", params.proposalId],
+    queryKey: billingKeys.proposal(params.proposalId),
     queryFn: () => proposalsApi.get(params.proposalId),
   });
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
@@ -47,8 +48,8 @@ export default function ProposalDetailPage() {
   }
 
   function invalidate() {
-    queryClient.invalidateQueries({ queryKey: ["proposal", proposal!.id] });
-    queryClient.invalidateQueries({ queryKey: ["proposals"] });
+    queryClient.invalidateQueries({ queryKey: billingKeys.proposal(proposal!.id) });
+    queryClient.invalidateQueries({ queryKey: billingKeys.proposals() });
   }
 
   const status = proposalDisplayStatus(proposal);
@@ -75,7 +76,7 @@ export default function ProposalDetailPage() {
     setBusy("convert");
     const invoice = await proposalsApi.convertToInvoice(proposal.id);
     invalidate();
-    queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
     setBusy(null);
     if (invoice) {
       toast.success(`${proposal.number} converted to ${invoice.number}`);

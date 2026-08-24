@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { authService } from "@/lib/auth/auth.service";
@@ -23,6 +24,7 @@ export function LoginForm() {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   function setField<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -45,6 +47,7 @@ export function LoginForm() {
     setSubmitting(true);
     try {
       const me = await authService.login(result.data);
+      queryClient.setQueryData(["me"], me);
       router.push(me.realm === "admin" ? "/admin" : "/dashboard");
     } catch (error) {
       setFormError(error instanceof ApiError ? error.message : "Login failed. Try again.");

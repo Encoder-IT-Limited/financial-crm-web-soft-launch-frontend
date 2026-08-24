@@ -1,11 +1,22 @@
+import { pageMetadata } from "@/lib/seo";
 import { PricingCalculator } from "./components/pricing-calculator";
 import { ComparisonTable } from "./components/comparison-table";
 import { PricingFaq } from "./components/pricing-faq";
+import { PricingJsonLd } from "./components/pricing-json-ld";
 import { FinalCtaBanner } from "../components/final-cta-banner";
+import { PLANS } from "../components/plans-data";
+
+export const metadata = pageMetadata({
+  title: "Pricing",
+  description:
+    "Transparent AED pricing for Starter, Growth, and Enterprise plans. 14-day free trial, no hidden fees — compare modules and seats.",
+  path: "/pricing",
+});
 
 export default function PricingPage() {
   return (
     <>
+      <PricingJsonLd />
       <main className="relative overflow-hidden px-5 pt-16 pb-20 sm:px-8 sm:pt-24">
         <div
           aria-hidden
@@ -21,6 +32,16 @@ export default function PricingPage() {
             Cancel anytime.
           </p>
         </div>
+
+        {/* Server-rendered plan summary for crawlers; calculator hydrates below. */}
+        <ul className="sr-only">
+          {PLANS.map((plan) => (
+            <li key={plan.id}>
+              {plan.name}: AED {plan.priceMonthly}/month or AED {plan.priceYearly}/year ·{" "}
+              {plan.baseSeats} seats included · {plan.modules.join(", ")}
+            </li>
+          ))}
+        </ul>
 
         <div className="relative mt-12">
           <PricingCalculator />

@@ -1,126 +1,120 @@
-import type { Tenant } from "../types";
+import { apiGet, apiSend } from "@/lib/api/envelope";
+import type { TenantStatus } from "@/components/shared/status-badge";
 import type { TenantEditValues } from "../schemas";
-import { seedTenants } from "../mock/seed";
-import { auditApi } from "../../audit/api/audit.service";
+import type { BillingCycle, Tenant, TenantUser, TenantUserRole } from "../types";
 
-/** Simulated network latency for the mock API. */
-const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
+type ApiTenantUser = { id: string; name: string; email: string; role: string };
 
-const RETENTION_DAYS = 60; // default; Settings §3.5 will make this configurable
+type ApiTenant = {
+  id: string;
+  name: string;
+  legalName: string | null;
+  email: string;
+  phone: string | null;
+  address: string | null;
+  planId: string | null;
+  status: string;
+  billingCycle: string;
+  extraSeatsPurchased: number;
+  createdAt: string;
+  renewalDate: string | null;
+  pendingDeletionAt?: string | null;
+  users?: ApiTenantUser[];
+  seats?: { used: number; total: number };
+};
 
-// In-memory mock "database" — module-scoped, resets on page reload. Replaces
-// the old Zustand store; React Query (useQuery/invalidateQueries) is now the
-// reactivity layer, this is just the data these functions read/write.
-let tenants: Tenant[] = seedTenants;
+function mapRole(role: string): TenantUserRole {
+  switch (role.toUpperCase()) {
+    case "OWNER":
+      return "owner";
+    case "ADMIN":
+      return "admin";
+    case "SALES_CASHIER":
+      return "pos-cashier";
+    case "VIEWER":
+      return "read-only-auditor";
+    default:
+      return "staff";
+  }
+}
 
-/**
- * Mock API service layer for All Clients. Every function returns a Promise
- * so the UI consumes it exactly like the real REST API (apiGet/apiSend
- * pattern in Basic-Setup.md §6) — swap the bodies for real calls later
- * without touching any component.
- */
+function mapTenant(row: ApiTenant): Tenant {
+  const users: TenantUser[] = (row.users ?? []).map((u) => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: mapRole(u.role),
+  }));
+
+  return {
+    id: row.id,
+    name: row.name,
+    legalName: row.legalName ?? row.name,
+    email: row.email,
+    phone: row.phone ?? "",
+    address: row.address ?? "",
+    planId: row.planId ?? "",
+    status: row.status as TenantStatus,
+    billingCycle: (row.billingCycle === "yearly" ? "yearly" : "monthly") as BillingCycle,
+    extraSeatsPurchased: row.extraSeatsPurchased ?? 0,
+    createdAt: row.createdAt,
+    renewalDate: row.renewalDate ?? row.createdAt,
+    pendingDeletionAt: row.pendingDeletionAt ?? undefined,
+    users,
+  };
+}
+
+export const RETENTION_DAYS = 60;
+
 export const tenantsApi = {
-  list: async (): Promise<Tenant[]> => {
-    await delay(250);
-    return tenants;
-  },
+  list: async (): Promise<Tenant[]> => (await apiGet<ApiTenant[]>("/admin/tenants")).map(mapTenant),
 
   get: async (id: string): Promise<Tenant | undefined> => {
-    await delay(200);
-    return tenants.find((tenant) => tenant.id === id);
+    try {
+      return mapTenant(await apiGet<ApiTenant>(`/admin/tenants/${id}`));
+    } catch {
+      return undefined;
+    }
   },
 
   suspend: async (id: string): Promise<void> => {
-    await delay();
-    const tenant = tenants.find((t) => t.id === id);
-    if (!tenant) return;
-    tenants = tenants.map((t) => (t.id === id ? { ...t, status: "read-only" } : t));
-    await auditApi.logEntry({
-      tenantId: tenant.id,
-      tenantName: tenant.name,
-      module: "Tenants",
-      entity: "Tenant",
-      entityLabel: tenant.name,
-      action: "suspend",
-      oldValues: { status: tenant.status },
-      newValues: { status: "read-only" },
-    });
+    await apiSend("post", `/admin/tenants/${id}/suspend`);
   },
 
   reactivate: async (id: string): Promise<void> => {
-    await delay();
-    const tenant = tenants.find((t) => t.id === id);
-    if (!tenant) return;
-    tenants = tenants.map((t) => (t.id === id ? { ...t, status: "active", pendingDeletionAt: undefined } : t));
-    await auditApi.logEntry({
-      tenantId: tenant.id,
-      tenantName: tenant.name,
-      module: "Tenants",
-      entity: "Tenant",
-      entityLabel: tenant.name,
-      action: "reactivate",
-      oldValues: { status: tenant.status },
-      newValues: { status: "active" },
-    });
+    await apiSend("post", `/admin/tenants/${id}/reactivate`);
   },
 
   addSeats: async (id: string, count: number): Promise<void> => {
-    await delay();
-    const tenant = tenants.find((t) => t.id === id);
-    if (!tenant || count <= 0) return;
-    const nextExtra = tenant.extraSeatsPurchased + count;
-    tenants = tenants.map((t) => (t.id === id ? { ...t, extraSeatsPurchased: nextExtra } : t));
-    await auditApi.logEntry({
-      tenantId: tenant.id,
-      tenantName: tenant.name,
-      module: "Tenants",
-      entity: "Tenant",
-      entityLabel: tenant.name,
-      action: "update",
-      oldValues: { extraSeatsPurchased: tenant.extraSeatsPurchased },
-      newValues: { extraSeatsPurchased: nextExtra },
-    });
+    await apiSend("post", `/admin/tenants/${id}/seats`, { count });
   },
 
   update: async (id: string, input: TenantEditValues): Promise<void> => {
-    await delay();
-    const tenant = tenants.find((t) => t.id === id);
-    if (!tenant) return;
-    // Editing status directly here (vs. the guarded Suspend/Reactivate flow)
-    // still needs to keep the pending-deletion retention countdown correct.
-    const pendingDeletionAt =
-      input.status === "pending-deletion"
-        ? (tenant.pendingDeletionAt ?? new Date(Date.now() + RETENTION_DAYS * 86_400_000).toISOString())
-        : undefined;
-    tenants = tenants.map((t) => (t.id === id ? { ...t, ...input, pendingDeletionAt } : t));
-    await auditApi.logEntry({
-      tenantId: tenant.id,
-      tenantName: input.name,
-      module: "Tenants",
-      entity: "Tenant",
-      entityLabel: input.name,
-      action: "update",
-      oldValues: { name: tenant.name, planId: tenant.planId, status: tenant.status, billingCycle: tenant.billingCycle },
-      newValues: input,
+    const current = await tenantsApi.get(id);
+    await apiSend("patch", `/admin/tenants/${id}`, {
+      name: input.name,
+      legalName: input.legalName,
+      email: input.email,
+      phone: input.phone,
+      address: input.address,
+      planId: input.planId || undefined,
+      billingCycle: input.billingCycle,
     });
+
+    if (current && input.extraSeatsPurchased > current.extraSeatsPurchased) {
+      await tenantsApi.addSeats(id, input.extraSeatsPurchased - current.extraSeatsPurchased);
+    }
+
+    if (current && input.status !== current.status) {
+      if (input.status === "read-only") await tenantsApi.suspend(id);
+      else if (input.status === "active") await tenantsApi.reactivate(id);
+      else if (input.status === "pending-deletion") {
+        await apiSend("post", `/admin/tenants/${id}/pending-deletion`);
+      }
+    }
   },
 
   delete: async (id: string): Promise<void> => {
-    await delay();
-    const tenant = tenants.find((t) => t.id === id);
-    if (!tenant) return;
-    tenants = tenants.filter((t) => t.id !== id);
-    await auditApi.logEntry({
-      tenantId: tenant.id,
-      tenantName: tenant.name,
-      module: "Tenants",
-      entity: "Tenant",
-      entityLabel: tenant.name,
-      action: "delete",
-      oldValues: { status: tenant.status },
-      newValues: null,
-    });
+    await apiSend("post", `/admin/tenants/${id}/pending-deletion`);
   },
 };
-
-export { RETENTION_DAYS };

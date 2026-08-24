@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { FormDialog } from "@/components/shared/form-dialog";
 import { FormField } from "@/components/shared/form-field";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,10 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { retainerFormSchema, type RetainerFormValues } from "../schemas";
 import type { Currency, RetainerBillingPeriod } from "../types";
-import { customersApi } from "../../crm/api/customers.service";
 import { retainersApi } from "../api/retainers.service";
+import { useRetainers } from "../hooks/use-retainers";
+import { useCustomers } from "../../crm/hooks/use-customers";
+import { billingKeys } from "../query-keys";
 
 const BILLING_PERIODS: RetainerBillingPeriod[] = ["monthly", "quarterly", "yearly"];
 
@@ -29,8 +31,8 @@ export function RetainerFormDialog({
   // instance), so a lazy initializer is enough to seed the form — same
   // pattern as CustomerEditDialog/TenantEditDialog, no reset effect needed.
   const queryClient = useQueryClient();
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
-  const { data: retainers = [] } = useQuery({ queryKey: ["retainers"], queryFn: retainersApi.list });
+  const { data: customers = [] } = useCustomers();
+  const { data: retainers = [] } = useRetainers();
   const retainer = retainerId ? retainers.find((r) => r.id === retainerId) : undefined;
   const editing = !!retainerId;
 
@@ -73,7 +75,7 @@ export function RetainerFormDialog({
     action
       .then(() => {
         toast.success(editing ? "Retainer updated" : "Retainer created");
-        queryClient.invalidateQueries({ queryKey: ["retainers"] });
+        queryClient.invalidateQueries({ queryKey: billingKeys.retainers() });
         onOpenChange(false);
       })
       .finally(() => setSaving(false));

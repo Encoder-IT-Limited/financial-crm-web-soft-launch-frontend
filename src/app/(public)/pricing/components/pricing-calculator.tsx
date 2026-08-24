@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePublicPlans } from "@/app/(public)/modules/plans/hooks/use-public-plans";
 import { PLANS } from "../../components/plans-data";
 import { TierCard } from "./tier-card";
 import { incrementalModules, type BillingPeriod } from "./pricing-utils";
@@ -15,6 +16,8 @@ const BILLING_OPTIONS: { key: BillingPeriod; label: string }[] = [
 const MIN_SEATS = 1;
 
 export function PricingCalculator() {
+  const { data: livePlans } = usePublicPlans();
+  const plans = livePlans?.length ? livePlans : PLANS;
   const [seats, setSeats] = useState(10);
   const [billing, setBilling] = useState<BillingPeriod>("monthly");
 
@@ -82,14 +85,14 @@ export function PricingCalculator() {
       </div>
 
       <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-5 sm:grid-cols-3">
-        {PLANS.map((plan, index) => (
+        {plans.map((plan, index) => (
           <TierCard
             key={plan.id}
             plan={plan}
             seats={seats}
             billing={billing}
-            incrementalModuleKeys={incrementalModules(PLANS, index)}
-            previousPlanName={index > 0 ? PLANS[index - 1].name : undefined}
+            incrementalModuleKeys={incrementalModules(plans, index)}
+            previousPlanName={index > 0 ? plans[index - 1].name : undefined}
           />
         ))}
       </div>

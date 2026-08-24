@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { invoiceBalance, type Invoice, PAYMENT_METHOD_LABELS, round2, type PaymentMethod } from "../types";
 import { recordPaymentSchema } from "../schemas";
 import { invoiceApi } from "../api/invoices.service";
+import { billingKeys } from "../query-keys";
 import { FormField } from "./form-field";
 
 
@@ -80,8 +81,8 @@ export function RecordPaymentDialog({
       })
       .then(() => {
         toast.success(amount >= balance - 0.005 ? `Invoice ${invoice.number} marked as paid` : `Payment of ${fmtMoney(amount)} recorded`);
-        queryClient.invalidateQueries({ queryKey: ["invoices"] });
-        queryClient.invalidateQueries({ queryKey: ["invoice", invoice.id] });
+        queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
+        queryClient.invalidateQueries({ queryKey: billingKeys.invoice(invoice.id) });
         onOpenChange(false);
         onRecorded?.();
       })

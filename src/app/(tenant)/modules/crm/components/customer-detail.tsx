@@ -13,19 +13,23 @@ import { PageHeading } from "@/components/shared/page-heading";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { SimpleTable } from "@/components/shared/simple-table";
 import { fmtDate, fmtMoney } from "@/lib/format";
-import { invoiceApi } from "../../billing/api/invoices.service";
 import { proposalsApi } from "../../billing/api/proposals.service";
 import { retainersApi } from "../../billing/api/retainers.service";
+import { adjustmentsApi } from "../../billing/api/adjustments.service";
+import { billingKeys } from "../../billing/query-keys";
+import { useInvoices } from "../../billing/hooks/use-invoices";
 import {
   invoiceBalance,
   invoiceDisplayStatus,
   PAYMENT_METHOD_LABELS,
   proposalDisplayStatus,
   retainerDisplayStatus,
+  type Adjustment,
   type Invoice,
   type Proposal,
   type Retainer,
 } from "../../billing/types";
+import { AdjustmentStatusBadge } from "../../billing/components/adjustment-status-badge";
 import { InvoiceStatusBadge } from "../../billing/components/invoice-status-badge";
 import { ProposalStatusBadge } from "../../billing/components/proposal-status-badge";
 import { RetainerStatusBadge } from "../../billing/components/retainer-status-badge";
@@ -33,6 +37,7 @@ import { RetainerDetailsDialog } from "../../billing/components/retainer-details
 import { RetainerFormDialog } from "../../billing/components/retainer-form-dialog";
 import { StatTiles } from "../../billing/components/stat-tiles";
 import { customersApi } from "../api/customers.service";
+import { crmKeys } from "../query-keys";
 import { CustomerStatusBadge } from "./customer-status-badge";
 import { CustomerEditDialog } from "./customer-edit-dialog";
 
@@ -45,12 +50,13 @@ export function CustomerDetail() {
   const queryClient = useQueryClient();
 
   const { data: customer, isLoading: customerLoading } = useQuery({
-    queryKey: ["customer", params.customerId],
+    queryKey: crmKeys.customer(params.customerId),
     queryFn: () => customersApi.get(params.customerId),
   });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
-  const { data: proposals = [] } = useQuery({ queryKey: ["proposals"], queryFn: proposalsApi.list });
-  const { data: retainers = [] } = useQuery({ queryKey: ["retainers"], queryFn: retainersApi.list });
+  const { data: invoices = [] } = useInvoices();
+  const { data: proposals = [] } = useQuery({ queryKey: billingKeys.proposals(), queryFn: proposalsApi.list });
+  const { data: retainers = [] } = useQuery({ queryKey: billingKeys.retainers(), queryFn: retainersApi.list });
+  const { data: adjustments = [] } = useQuery({ queryKey: billingKeys.adjustments(), queryFn: adjustmentsApi.list });
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -94,6 +100,34 @@ export function CustomerDetail() {
     () => proposals.filter((p) => p.customerId === params.customerId),
     [proposals, params.customerId]
   );
+
+  const customerNotes = useMemo(
+    () => adjustments.filter((a) => a.customerId === params.customerId && a.kind === "credit"),
+    [adjustments, params.customerId],
+  );
+
+  const noteColumns: AnyColumnDef<Adjustment>[] = [
+    { accessorKey: "number", header: "Number", cell: ({ row }) => <span className="font-bold">{row.original.number}</span> },
+    {
+      id: "amount",
+      accessorFn: (a: Adjustment) => a.amount,
+      header: "Amount",
+      cell: ({ row }) => fmtMoney(row.original.amount, row.original.currency),
+    },
+    { accessorKey: "reason", header: "Reason" },
+    {
+      id: "status",
+      accessorFn: (a: Adjustment) => a.status,
+      header: "Status",
+      cell: ({ row }) => <AdjustmentStatusBadge status={row.original.status} />,
+    },
+    {
+      id: "date",
+      accessorFn: (a: Adjustment) => a.createdAt,
+      header: "Date",
+      cell: ({ row }) => fmtDate(row.original.createdAt),
+    },
+  ];
 
   const invoiceColumns: AnyColumnDef<Invoice>[] = [
     {
@@ -261,7 +295,7 @@ export function CustomerDetail() {
         </TabsContent>
 
         <TabsContent value="credit-notes" className="mt-4">
-          <ComingSoonPanel text="Credit and debit notes will appear here once that module is built." />
+          <SimpleTable columns={noteColumns} data={customerNotes} emptyState="No credit notes for this customer yet." />
         </TabsContent>
       </Tabs>
 
@@ -276,7 +310,7 @@ export function CustomerDetail() {
         destructive
         onConfirm={async () => {
           await customersApi.remove(customer.id);
-          queryClient.invalidateQueries({ queryKey: ["customers"] });
+          queryClient.invalidateQueries({ queryKey: crmKeys.customers() });
           router.replace("/dashboard/customers");
         }}
         successMessage={`${customer.name} deleted`}
@@ -305,15 +339,6 @@ function OverviewField({ label, value }: { label: string; value: string }) {
     <div>
       <div className="text-[10.5px] font-bold uppercase tracking-wide text-text-4">{label}</div>
       <div className="mt-0.5 text-[13px] text-text">{value || "—"}</div>
-    </div>
-  );
-}
-
-function ComingSoonPanel({ text }: { text: string }) {
-  return (
-    <div className="flex min-h-[160px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border text-center">
-      <p className="text-[13px] font-semibold text-text-3">Coming soon</p>
-      <p className="max-w-xs text-[12px] text-text-4">{text}</p>
     </div>
   );
 }

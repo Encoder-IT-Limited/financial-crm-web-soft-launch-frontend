@@ -1,47 +1,34 @@
-import { newId } from "@/lib/format";
-import type { AuditLogEntry } from "../types";
-import { seedAuditLog } from "../mock/seed";
-
-/** Simulated network latency for the mock API. */
-const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
+import { apiGet, apiSend } from "@/lib/api/envelope";
+import type { AuditAction, AuditLogEntry } from "../types";
 
 type NewAuditLogInput = Omit<AuditLogEntry, "id" | "timestamp" | "userName" | "userEmail" | "ipAddress">;
 
-// In-memory mock "database" — module-scoped, resets on page reload. Replaces
-// the old Zustand store; React Query (useQuery/invalidateQueries) is now the
-// reactivity layer, this is just the data these functions read/write.
-let entries: AuditLogEntry[] = seedAuditLog;
+function toEntry(row: AuditLogEntry): AuditLogEntry {
+  return {
+    ...row,
+    action: row.action as AuditAction,
+    tenantId: row.tenantId ?? null,
+    tenantName: row.tenantName ?? null,
+    oldValues: row.oldValues ?? null,
+    newValues: row.newValues ?? null,
+    ipAddress: row.ipAddress ?? "",
+  };
+}
 
-/**
- * Mock API service layer for the platform Audit Log. Returns Promises so the
- * UI consumes it exactly like the real REST API (apiGet pattern in
- * Basic-Setup.md §6) — swap the body for a real call later without touching
- * any component.
- */
 export const auditApi = {
-  list: async (): Promise<AuditLogEntry[]> => {
-    await delay();
-    return entries;
-  },
+  list: async (): Promise<AuditLogEntry[]> => (await apiGet<AuditLogEntry[]>("/admin/audit")).map(toEntry),
 
-  listForTenant: async (tenantId: string): Promise<AuditLogEntry[]> => {
-    await delay(200);
-    return entries.filter((entry) => entry.tenantId === tenantId);
-  },
+  listForTenant: async (tenantId: string): Promise<AuditLogEntry[]> =>
+    (await apiGet<AuditLogEntry[]>("/admin/audit", { params: { tenantId } })).map(toEntry),
 
-  /** Appends an entry as the current (mock) Super Admin session. Other
-   * services (Tenants, Plans, Payments) call this when they mutate data so
-   * the Audit Log stays the single trail across the platform. */
-  logEntry: async (input: NewAuditLogInput): Promise<AuditLogEntry> => {
-    const entry: AuditLogEntry = {
-      id: newId("audit"),
-      timestamp: new Date().toISOString(),
-      userName: "MRM Super Admin",
-      userEmail: "admin@mrm.io",
-      ipAddress: "10.20.4.11",
-      ...input,
-    };
-    entries = [entry, ...entries];
-    return entry;
-  },
+  /** Backend writes audit rows on mutations — kept as a no-op so call sites
+   * that still invoke it after local UI actions don't break. */
+  logEntry: async (input: NewAuditLogInput): Promise<AuditLogEntry> => ({
+    id: "local",
+    timestamp: new Date().toISOString(),
+    userName: "",
+    userEmail: "",
+    ipAddress: "",
+    ...input,
+  }),
 };

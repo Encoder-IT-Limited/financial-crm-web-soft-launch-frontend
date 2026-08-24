@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { customersApi } from "../../crm/api/customers.service";
 import { invoiceApi } from "../api/invoices.service";
 import { adjustmentsApi } from "../api/adjustments.service";
+import { billingKeys } from "../query-keys";
 import { invoiceBalance, invoiceDisplayStatus, PAYMENT_METHOD_LABELS, type Invoice, type InvoiceDisplayStatus } from "../types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -232,7 +233,7 @@ type StatementRow = {
 function CustomerStatement() {
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
   const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
-  const { data: adjustments = [] } = useQuery({ queryKey: ["adjustments"], queryFn: adjustmentsApi.list });
+  const { data: adjustments = [] } = useQuery({ queryKey: billingKeys.adjustments(), queryFn: adjustmentsApi.list });
   const [customerId, setCustomerId] = useState("");
 
   const customer = customers.find((c) => c.id === customerId);

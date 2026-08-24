@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { TenantSettingsPage } from "@/app/(tenant)/modules/settings/components/tenant-settings-page";
 
 export default function Page() {
-  return <ComingSoon title="Settings" subtitle="Configure your organization" />;
+  return <TenantSettingsPage />;
 }

@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { BillsPage } from "@/app/(tenant)/modules/procurement/components/bills-page";
 
 export default function Page() {
-  return <ComingSoon title="Bills" subtitle="Track vendor bills and payables" />;
+  return <BillsPage />;
 }

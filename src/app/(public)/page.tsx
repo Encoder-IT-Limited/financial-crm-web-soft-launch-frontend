@@ -1,8 +1,17 @@
 import Link from "next/link";
 import { ArrowRight, Sparkles, Percent, FileCheck2, X, Check } from "lucide-react";
+import { pageMetadata } from "@/lib/seo";
 import { ModuleShowcaseCard } from "./components/module-showcase-card";
 import { MODULES } from "./components/modules-data";
 import { FinalCtaBanner } from "./components/final-cta-banner";
+import { HomeJsonLd } from "./components/home-json-ld";
+
+export const metadata = pageMetadata({
+  title: "Accounting, inventory & CRM in one place",
+  description:
+    "Run accounting, invoicing, inventory, banking, and CRM in one UAE-ready platform — 14-day free trial, no credit card required.",
+  path: "/",
+});
 
 const PAIN_POINTS = [
   "Spreadsheets for expenses, a separate app for invoicing",
@@ -19,6 +28,7 @@ const RELIEF_POINTS = [
 export default function LandingPage() {
   return (
     <>
+      <HomeJsonLd />
       {/* Hero */}
       <main className="relative flex min-h-[90vh] flex-col justify-center overflow-hidden px-5 pt-16 pb-24 sm:px-8 sm:pt-24">
         {/* Ambient gradient glow */}

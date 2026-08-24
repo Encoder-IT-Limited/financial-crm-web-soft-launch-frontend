@@ -10,6 +10,7 @@ import { fmtMoney } from "@/lib/format";
 import { retainerTransferSchema } from "../schemas";
 import type { Retainer } from "../types";
 import { retainersApi } from "../api/retainers.service";
+import { billingKeys } from "../query-keys";
 
 export function RetainerTransferDialog({
   open,
@@ -44,7 +45,7 @@ export function RetainerTransferDialog({
           return;
         }
         toast.success(`${fmtMoney(retainer.remainingBalance, retainer.currency)} transferred out of ${retainer.number}`);
-        queryClient.invalidateQueries({ queryKey: ["retainers"] });
+        queryClient.invalidateQueries({ queryKey: billingKeys.retainers() });
         setToRetainerId("");
         onOpenChange(false);
       })

@@ -1,20 +1,19 @@
 import { fmtDate, fmtMoney } from "@/lib/format";
 import { daysPast, retainerPercentUsed } from "../../billing/types";
+import { invoiceApi } from "../../billing/api/invoices.service";
 import { retainersApi } from "../../billing/api/retainers.service";
 import { RETAINER_ALERT_THRESHOLDS, type Alert } from "../types";
 
-/** Simulated network latency for the mock API. */
-const delay = (ms = 200) => new Promise((resolve) => setTimeout(resolve, ms));
-
 /**
- * Mock API — computes alerts fresh from live retainer data every call
- * (no stored alerts table). Scope is deliberately limited to the two
- * retainer triggers from Phase H4; not a general alerting system.
+ * Computes alerts from live data (no stored alerts table).
  */
 export const alertsApi = {
   list: async (): Promise<Alert[]> => {
-    await delay();
-    const retainers = await retainersApi.list();
+    const [retainers, pendingLines, invoices] = await Promise.all([
+      retainersApi.list(),
+      invoiceApi.listPendingReconciliation(),
+      invoiceApi.list(),
+    ]);
     const now = new Date().toISOString();
     const alerts: Alert[] = [];
 
@@ -53,6 +52,22 @@ export const alertsApi = {
           });
         }
       }
+    }
+
+    for (const line of pendingLines) {
+      const invoice = invoices.find((inv) => inv.id === line.invoiceId);
+      if (!invoice) continue;
+      const item = invoice.lines.find((l) => l.id === line.invoiceLineId);
+      alerts.push({
+        id: `alert-reconcile-${line.id}`,
+        type: "fulfillment-pending-reconciliation",
+        severity: "warning",
+        title: `${invoice.number} — stock needs reconciliation`,
+        message: `${item?.description ?? "Line item"} shipped ${line.quantityFulfilled} unit(s) below zero stock — review and reconcile.`,
+        relatedInvoiceId: invoice.id,
+        relatedFulfillmentLineId: line.id,
+        createdAt: now,
+      });
     }
 
     return alerts;

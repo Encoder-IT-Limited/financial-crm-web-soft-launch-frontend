@@ -1,4 +1,4 @@
-import { ReorderPage } from "./components/reorder-page";
+import { ReorderPage } from "@/app/(tenant)/modules/inventory/components/reorder-page";
 
 export default function Page() {
   return <ReorderPage />;

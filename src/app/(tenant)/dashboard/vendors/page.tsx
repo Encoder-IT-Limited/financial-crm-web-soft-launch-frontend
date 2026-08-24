@@ -1,5 +1,5 @@
-import { ComingSoon } from "@/components/shared/coming-soon";
+import { SuppliersPage } from "@/app/(tenant)/modules/procurement/components/suppliers-page";
 
 export default function Page() {
-  return <ComingSoon title="Vendors" subtitle="Manage your vendor directory" />;
+  return <SuppliersPage />;
 }

@@ -1,4 +1,4 @@
-import { StockMovementsPage } from "./components/stock-movements-page";
+import { StockMovementsPage } from "@/app/(tenant)/modules/inventory/components/stock-movements-page";
 
 export default function Page() {
   return <StockMovementsPage />;

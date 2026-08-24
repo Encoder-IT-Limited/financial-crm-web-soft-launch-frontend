@@ -10,9 +10,10 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toast } from "@/lib/toast";
 import { fmtDateTime, fmtMoney } from "@/lib/format";
-import { customersApi } from "../../crm/api/customers.service";
-import { invoiceApi } from "../api/invoices.service";
+import { useCustomers } from "../../crm/hooks/use-customers";
+import { useInvoices } from "../hooks/use-invoices";
 import { adjustmentsApi } from "../api/adjustments.service";
+import { billingKeys } from "../query-keys";
 import { AdjustmentStatusBadge } from "./adjustment-status-badge";
 
 export function AdjustmentDetailsDialog({
@@ -26,9 +27,9 @@ export function AdjustmentDetailsDialog({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: adjustments = [] } = useQuery({ queryKey: ["adjustments"], queryFn: adjustmentsApi.list });
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
+  const { data: adjustments = [] } = useQuery({ queryKey: billingKeys.adjustments(), queryFn: adjustmentsApi.list });
+  const { data: customers = [] } = useCustomers();
+  const { data: invoices = [] } = useInvoices();
   const adjustment = adjustments.find((a) => a.id === adjustmentId);
 
   const [voidOpen, setVoidOpen] = useState(false);
@@ -43,9 +44,9 @@ export function AdjustmentDetailsDialog({
 
   async function convertToInvoice() {
     setConverting(true);
-    const created = await adjustmentsApi.convertToInvoice(adjustment!.id);
-    queryClient.invalidateQueries({ queryKey: ["adjustments"] });
-    queryClient.invalidateQueries({ queryKey: ["invoices"] });
+    const created = await adjustmentsApi.convertToInvoice(adjustment!.id, adjustment!.kind);
+    queryClient.invalidateQueries({ queryKey: billingKeys.adjustments() });
+    queryClient.invalidateQueries({ queryKey: billingKeys.invoices() });
     setConverting(false);
     if (created) {
       toast.success(`${adjustment!.number} converted to ${created.number}`);
@@ -121,8 +122,8 @@ export function AdjustmentDetailsDialog({
         confirmLabel="Void note"
         destructive
         onConfirm={async () => {
-          await adjustmentsApi.void(adjustment.id);
-          queryClient.invalidateQueries({ queryKey: ["adjustments"] });
+          await adjustmentsApi.void(adjustment.id, adjustment.kind);
+          queryClient.invalidateQueries({ queryKey: billingKeys.adjustments() });
         }}
         successMessage={`${adjustment.number} voided`}
       />

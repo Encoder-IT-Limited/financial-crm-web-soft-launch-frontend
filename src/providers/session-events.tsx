@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { onUnauthorized } from "@/lib/api/session";
+import { rememberTenantSubdomain } from "@/lib/api/tenant-context";
 import { toast } from "@/lib/toast";
 
 /** Subscribes to the global 401 interceptor: clears the query cache and
@@ -15,6 +16,7 @@ export function SessionEvents() {
 
   useEffect(() => {
     const unsubscribe = onUnauthorized(() => {
+      rememberTenantSubdomain(undefined);
       queryClient.clear();
       toast.error("Your session has expired. Please sign in again.");
       router.replace("/login");

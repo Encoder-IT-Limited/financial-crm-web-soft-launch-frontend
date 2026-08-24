@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { customerSchema, type CustomerValues } from "../../crm/schemas";
 import type { Customer } from "../../crm/types";
 import { customersApi } from "../../crm/api/customers.service";
+import { crmKeys } from "../../crm/query-keys";
 import { FormField } from "./form-field";
 
 type Props = {
@@ -44,7 +45,7 @@ export function AddCustomerDialog({ open, onOpenChange, onCreated }: Props) {
       .create(result.data)
       .then((customer) => {
         toast.success(`${customer.name} added to CRM`);
-        queryClient.invalidateQueries({ queryKey: ["customers"] });
+        queryClient.invalidateQueries({ queryKey: crmKeys.customers() });
         setForm({ name: "", email: "", phone: "", address: "", trn: "" });
         setErrors({});
         onOpenChange(false);
