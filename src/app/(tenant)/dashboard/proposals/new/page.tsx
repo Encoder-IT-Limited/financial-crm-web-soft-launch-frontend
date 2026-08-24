@@ -13,13 +13,13 @@ import { PageHeading } from "@/components/shared/page-heading";
 import { FormField } from "@/components/shared/form-field";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { proposalFormSchema } from "../../../modules/billing/schemas";
-import { computeTotals, type Currency, type Proposal } from "../../../modules/billing/types";
-import { proposalsApi } from "../../../modules/billing/api/proposals.service";
+import { proposalFormSchema } from "../../invoices/schemas";
+import { computeTotals, type Currency, type Proposal } from "../../invoices/types";
+import { proposalsApi } from "../../invoices/api/proposals.service";
 import { customersApi } from "../../../modules/crm/api/customers.service";
-import { LineItemsEditor, emptyLines, type LineDraft } from "../../../modules/billing/components/line-items-editor";
-import { AddCustomerDialog } from "../../../modules/billing/components/add-customer-dialog";
-import { InvoiceSummaryCard } from "../../../modules/billing/components/invoice-summary-card";
+import { LineItemsEditor, emptyLines, type LineDraft } from "../../invoices/components/line-items-editor";
+import { AddCustomerDialog } from "../../invoices/components/add-customer-dialog";
+import { InvoiceSummaryCard } from "../../invoices/components/invoice-summary-card";
 
 export default function NewProposalPage() {
   return (

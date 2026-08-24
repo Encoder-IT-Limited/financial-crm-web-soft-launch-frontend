@@ -1,6 +1,6 @@
 import { fmtDate, fmtMoney } from "@/lib/format";
-import { daysPast, retainerPercentUsed } from "../../billing/types";
-import { retainersApi } from "../../billing/api/retainers.service";
+import { daysPast, retainerPercentUsed } from "../../../dashboard/invoices/types";
+import { retainersApi } from "../../../dashboard/invoices/api/retainers.service";
 import { RETAINER_ALERT_THRESHOLDS, type Alert } from "../types";
 
 /** Simulated network latency for the mock API. */

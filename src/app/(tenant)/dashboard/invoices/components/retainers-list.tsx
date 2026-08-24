@@ -10,7 +10,7 @@ import { PageHeading } from "@/components/shared/page-heading";
 import { FilterableTable } from "@/components/shared/filterable-table";
 import { StatTiles } from "./stat-tiles";
 import { fmtMoney } from "@/lib/format";
-import { customersApi } from "../../crm/api/customers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { retainerDisplayStatus, retainerPercentUsed, type Retainer, type RetainerDisplayStatus } from "../types";
 import { retainersApi } from "../api/retainers.service";
 import { RetainerStatusBadge } from "./retainer-status-badge";

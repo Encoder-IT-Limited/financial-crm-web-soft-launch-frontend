@@ -15,7 +15,7 @@ import { InvoiceStatusBadge } from "./invoice-status-badge";
 import { fmtDate, fmtMoney } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
 import { cn } from "@/lib/utils";
-import { customersApi } from "../../crm/api/customers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { invoiceApi } from "../api/invoices.service";
 import { adjustmentsApi } from "../api/adjustments.service";
 import { invoiceBalance, invoiceDisplayStatus, PAYMENT_METHOD_LABELS, type Invoice, type InvoiceDisplayStatus } from "../types";

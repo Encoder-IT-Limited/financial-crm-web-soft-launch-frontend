@@ -11,7 +11,7 @@ import { PageHeading } from "@/components/shared/page-heading";
 import { FilterableTable } from "@/components/shared/filterable-table";
 import { StatTiles } from "./stat-tiles";
 import { fmtDate, fmtMoney } from "@/lib/format";
-import { customersApi } from "../../crm/api/customers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { proposalDisplayStatus, type Proposal, type ProposalDisplayStatus } from "../types";
 import { proposalsApi } from "../api/proposals.service";
 import { PROPOSAL_STATUS_CONFIG, ProposalStatusBadge } from "./proposal-status-badge";

@@ -7,9 +7,9 @@
 
 /** Re-exported from the CRM module — Customer & currency vocabulary are
  *  owned there so CRM/Sales/POS never duplicate them. */
-import type { Currency } from "../crm/types";
-export type { Currency, Customer } from "../crm/types";
-export { CURRENCIES } from "../crm/types";
+import type { Currency } from "../../modules/crm/types";
+export type { Currency, Customer } from "../../modules/crm/types";
+export { CURRENCIES } from "../../modules/crm/types";
 import { pct } from "@/lib/format";
 
 export type InvoiceStatus = "draft" | "sent" | "partially-paid" | "paid" | "cancelled";

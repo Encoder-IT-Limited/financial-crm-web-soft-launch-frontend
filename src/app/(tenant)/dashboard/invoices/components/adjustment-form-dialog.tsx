@@ -10,7 +10,7 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { adjustmentFormSchema } from "../schemas";
 import type { AdjustmentKind } from "../types";
-import { customersApi } from "../../crm/api/customers.service";
+import { customersApi } from "../../../modules/crm/api/customers.service";
 import { invoiceApi } from "../api/invoices.service";
 import { adjustmentsApi } from "../api/adjustments.service";
 
