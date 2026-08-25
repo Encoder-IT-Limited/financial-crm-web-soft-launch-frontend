@@ -91,7 +91,7 @@ export function WarehouseForm() {
           </Select>
         </FormField>
         <div className="mt-2 flex justify-end gap-2 border-t border-border pt-4">
-          <Button variant="outline" render={<Link href="/dashboard/warehouses" />}>
+          <Button variant="outline" render={<Link href="/dashboard/warehouses" />} nativeButton={false}>
             Cancel
           </Button>
           <Button type="submit" disabled={createWarehouse.isPending}>

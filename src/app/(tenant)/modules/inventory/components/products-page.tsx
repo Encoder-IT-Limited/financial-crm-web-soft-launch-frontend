@@ -186,6 +186,7 @@ export function ProductsPage() {
             size="icon-sm"
             aria-label={`View ${row.original.name}`}
             render={<Link href={`/dashboard/products/${row.original.id}`} />}
+            nativeButton={false}
           >
             <Eye />
           </Button>
@@ -229,7 +230,7 @@ export function ProductsPage() {
               <Download data-icon="inline-start" />
               Export
             </Button>
-            <Button render={<Link href="/dashboard/products/new" />}>
+            <Button render={<Link href="/dashboard/products/new" />} nativeButton={false}>
               <Plus data-icon="inline-start" />
               Add Product
             </Button>

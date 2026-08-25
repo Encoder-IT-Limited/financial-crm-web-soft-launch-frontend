@@ -28,11 +28,24 @@ function resolveRealm(host: string): Realm {
 export function proxy(request: NextRequest) {
   const host = request.headers.get("host") ?? "";
   const { pathname } = request.nextUrl;
-  const isLocalDev = host.startsWith("localhost") || host.startsWith("127.0.0.1");
-  // Without NEXT_PUBLIC_ROOT_DOMAIN (e.g. a Vercel demo on *.vercel.app),
-  // there's no real subdomain routing to enforce — treat it like localhost.
-  const isUnroutedHost = isLocalDev || !ROOT_DOMAIN;
-  const realm = resolveRealm(host);
+  const hostname = host.split(":")[0];
+  const isIpv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname);
+  const isShareTunnel =
+    hostname.endsWith(".trycloudflare.com") ||
+    hostname.endsWith(".loca.lt") ||
+    hostname.endsWith(".ngrok-free.dev") ||
+    hostname.endsWith(".ngrok-free.app") ||
+    hostname.endsWith(".ngrok.app") ||
+    hostname.endsWith(".ngrok.io");
+  const isLocalDev =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0" ||
+    isIpv4 ||
+    isShareTunnel;
+  // Soft-launch / tunnel / LAN: no real subdomain routing — path decides realm.
+  const isUnroutedHost = isLocalDev || !ROOT_DOMAIN || ROOT_DOMAIN === "localhost";
+  const realm = isUnroutedHost ? "public" : resolveRealm(host);
 
   // Realm guard: a host may only render its own portal's paths. Skipped
   // entirely when there's no real subdomain routing to enforce.

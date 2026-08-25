@@ -13,7 +13,7 @@ import type {
   WarehouseStatus,
 } from "../types";
 
-type ApiProduct = {
+export type ApiProduct = {
   id: string;
   sku: string;
   barcode: string | null;

@@ -8,7 +8,31 @@ export const http = axios.create({
   withCredentials: true,
 });
 
-if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
+function isDevStyleHost(host: string): boolean {
+  if (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host === "0.0.0.0" ||
+    host === "[::1]"
+  ) {
+    return true;
+  }
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return true;
+  // Cloudflare / ngrok / localtunnel share hosts
+  if (
+    host.endsWith(".trycloudflare.com") ||
+    host.endsWith(".loca.lt") ||
+    host.endsWith(".ngrok-free.dev") ||
+    host.endsWith(".ngrok-free.app") ||
+    host.endsWith(".ngrok.app") ||
+    host.endsWith(".ngrok.io")
+  ) {
+    return true;
+  }
+  return false;
+}
+
+if (typeof window !== "undefined") {
   http.interceptors.request.use((config) => {
     const host = window.location.hostname;
     const url = config.url ?? "";
@@ -21,12 +45,16 @@ if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
     if (skipTenantHeader) return config;
 
     let subdomain: string | null = null;
-    if (host === "localhost" || host === "127.0.0.1") {
-      subdomain = readDevTenantSubdomain();
+    const devTenant = readDevTenantSubdomain() ?? process.env.NEXT_PUBLIC_DEV_TENANT_SUBDOMAIN ?? "demo";
+
+    if (isDevStyleHost(host)) {
+      subdomain = devTenant;
     } else {
       const fromHost = host.split(".")[0];
       if (fromHost && fromHost !== "www" && fromHost !== "admin") subdomain = fromHost;
     }
+
+    if (!subdomain) subdomain = devTenant;
 
     if (subdomain) {
       config.headers = config.headers ?? {};

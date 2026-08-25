@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 import { authService } from "@/lib/auth/auth.service";
 import { ApiError } from "@/lib/api/errors";
+import { rememberTenantSubdomain } from "@/lib/api/tenant-context";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -25,6 +26,12 @@ export function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    // Soft-launch default tenant for tenant-owner login.
+    // Super Admin (admin@mrm.local) still works — platform login runs first.
+    rememberTenantSubdomain(process.env.NEXT_PUBLIC_DEV_TENANT_SUBDOMAIN || "demo");
+  }, []);
 
   function setField<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -46,6 +53,7 @@ export function LoginForm() {
     setFormError(null);
     setSubmitting(true);
     try {
+      rememberTenantSubdomain(process.env.NEXT_PUBLIC_DEV_TENANT_SUBDOMAIN || "demo");
       const me = await authService.login(result.data);
       queryClient.setQueryData(["me"], me);
       router.push(me.realm === "admin" ? "/admin" : "/dashboard");

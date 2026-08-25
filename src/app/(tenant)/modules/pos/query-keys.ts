@@ -4,4 +4,5 @@ export const posKeys = {
   sessions: () => [...posKeys.all, "sessions"] as const,
   sales: () => [...posKeys.all, "sales"] as const,
   sale: (id: string) => [...posKeys.sales(), id] as const,
+  discountRules: () => [...posKeys.all, "discount-rules"] as const,
 };

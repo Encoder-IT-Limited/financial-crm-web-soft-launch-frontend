@@ -87,7 +87,7 @@ export function WarehousesPage() {
             <Button variant="outline" onClick={() => setReceiveOpen(true)}>
               Receive stock
             </Button>
-            <Button render={<Link href="/dashboard/warehouses/new" />}>
+            <Button render={<Link href="/dashboard/warehouses/new" />} nativeButton={false}>
               <Plus data-icon="inline-start" />
               Add Warehouse
             </Button>

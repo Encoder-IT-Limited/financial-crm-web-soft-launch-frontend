@@ -203,7 +203,7 @@ export function ProductForm() {
         </div>
 
         <div className="mt-2 flex justify-end gap-2 border-t border-border pt-4">
-          <Button variant="outline" render={<Link href="/dashboard/products" />}>
+          <Button variant="outline" render={<Link href="/dashboard/products" />} nativeButton={false}>
             Cancel
           </Button>
           <Button type="submit" disabled={createProduct.isPending}>
