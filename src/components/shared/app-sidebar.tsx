@@ -52,7 +52,16 @@ export function AppSidebar({ brand, sections, me, style }: AppSidebarProps) {
               <SidebarGroupContent>
                 <SidebarMenu>
                   {items.map((item) => {
-                    const isRoot = item.href === "/dashboard" || item.href === "/admin";
+                    // A nav item whose own href is a literal prefix of a sibling
+                    // item's href (e.g. "Register" at /dashboard/pos vs. "Sales"
+                    // at /dashboard/pos/sales) must never prefix-match — otherwise
+                    // it stays highlighted on every sibling page. Same reasoning
+                    // as the portal-root special case, generalized instead of
+                    // hardcoded per path.
+                    const isRoot =
+                      item.href === "/dashboard" ||
+                      item.href === "/admin" ||
+                      items.some((other) => other !== item && other.href.startsWith(`${item.href}/`));
                     const active =
                       pathname === item.href ||
                       (!isRoot && pathname.startsWith(`${item.href}/`));

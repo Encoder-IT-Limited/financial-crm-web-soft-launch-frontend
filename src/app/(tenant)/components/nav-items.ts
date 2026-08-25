@@ -32,6 +32,9 @@ import {
   Sparkles,
   Settings,
   Truck,
+  Store,
+  History,
+  Monitor,
 } from "lucide-react";
 import type { SidebarNavSection } from "@/types/nav";
 
@@ -139,6 +142,35 @@ export const tenantNavSections: SidebarNavSection[] = [
         href: "/dashboard/fulfillment",
         icon: Truck,
         module: "sales",
+      },
+    ],
+  },
+  {
+    label: "POS",
+    items: [
+      {
+        label: "Terminals",
+        href: "/dashboard/pos/terminals",
+        icon: Monitor,
+        module: "pos",
+      },
+      {
+        label: "Register",
+        href: "/dashboard/pos",
+        icon: Store,
+        module: "pos",
+      },
+      {
+        label: "Sales",
+        href: "/dashboard/pos/sales",
+        icon: Receipt,
+        module: "pos",
+      },
+      {
+        label: "Sessions",
+        href: "/dashboard/pos/sessions",
+        icon: History,
+        module: "pos",
       },
     ],
   },

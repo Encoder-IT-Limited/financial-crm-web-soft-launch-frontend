@@ -301,16 +301,207 @@ component at `GET /inventory/products?warehouseId=`** — the shapes above were 
 to match what a real Inventory products endpoint should return, specifically for this
 swap to be low-effort. The same demo catalog is also what Delivery/Fulfillment
 (`docs/plans/Sales-Invoicing-Implementation-Plan.md` Phase I, built) deducts against via
-`productLookupApi.deduct()` — do both swaps together, they share one service file.
+`productLookupApi.deduct()` — and now POS too, indirectly: every POS checkout calls
+`fulfillmentsApi.autoFulfillPos()` (§7.2), which calls the same `deduct()`. Three
+consumers, one service file — do all three swaps together when the real Inventory API
+exists.
 
 ---
 
-## 7. POS — not built at all yet, frontend or backend
+## 7. POS
 
-Nothing exists. Full requirements are in `docs/requirements/Client-Requirements-Phase1.md`
-§4 (register↔warehouse binding, offline mode, sync-conflict handling, cash sessions,
-split payments, refund/return/exchange, manager PIN, separate POS numbering). Sequenced
-last since it depends on Sales & Inventory already being connected.
+Source: `src/app/(tenant)/dashboard/pos/`
+(`docs/plans/POS-Implementation-Plan.md` has the full frontend build notes — component
+breakdown, flow diagram, decision log; this section is the backend contract for it).
+**Frontend is built as a web-only demo** — start shift → sell → checkout → receipt → end
+shift, plus refunds and terminal admin. **Offline mode, real hardware, and native apps
+are explicitly not built** (§7.4/§7.5 below) — the demo simulates them (a receipt
+preview instead of a real print job, a text input instead of a real scanner feed).
+Requirements for all of it are in `docs/requirements/Client-Requirements-Phase1.md` §4.
+
+### 7.1 Entities
+
+```ts
+// A terminal is admin config — not a hardware-enrollment record. accessCode
+// gates who can start a shift on it (§7.2), separate from the manager-
+// approval PIN used for discount overrides/refunds (§7.3).
+type PosTerminal = {
+  id; name; code;              // code shown on receipts
+  warehouseId: string;         // every sale through this terminal deducts from here — client-confirmed (4.1)
+  accessCode: string;          // demo: plain string, client-side compare — needs a real hash+server check (§7.6)
+  status: "active" | "inactive";
+};
+
+// One open→close shift on a terminal.
+type PosSession = {
+  id; terminalId; openedBy: string; openedAt: string; openingCash: number;
+  closedAt?; closingCashCounted?; expectedCash?; variance?;
+  status: "open" | "closed";
+};
+
+// Cart is client-only while shopping; becomes PosSale.lines on checkout.
+type CartLine = { productId; name; sku; unitPrice; quantity; taxRate; discountAmount? };
+type PosPayment = { method: "cash" | "card" | "mobile-payment"; amount: number };
+
+type PosSale = {
+  id; number: string;           // POS-000001 — own sequence, separate from INV- (client-confirmed, 4.7)
+  sessionId; terminalId;
+  warehouseId: string;          // denormalized from the terminal at sale time
+  customerId?; lines: CartLine[]; payments: PosPayment[];
+  subtotal; discount; tax; total;
+  status: "completed" | "partially-refunded" | "refunded";
+  fulfillmentId?: string;       // set once stock deduction runs — see 7.2
+  createdBy: string;            // = the session's openedBy
+  createdAt: string;
+};
+
+type PosRefund = {
+  id; saleId;
+  lines: { productId; quantity; condition: "sellable" | "damaged" }[];
+  amount; reason; approvedBy: string;   // manager-PIN gate, client-confirmed (4.4)
+  createdAt: string;
+};
+```
+
+### 7.2 Endpoints and the sale/stock transaction
+
+Terminals (admin): `GET/POST /pos/terminals`, `GET/PATCH /pos/terminals/:id`,
+`POST /pos/terminals/:id/status`.
+
+Sessions: `GET /pos/sessions`, `GET /pos/sessions/:id`,
+`GET /pos/terminals/:id/open-session` (the frontend's `getOpenForTerminal` — **must be
+enforced server-side that a terminal can only have one open session at a time**,
+client-confirmed one-drawer-one-owner rule, 4.4), `POST /pos/sessions` (open, validates
+`accessCode` server-side — see §7.6), `POST /pos/sessions/:id/close`.
+
+Sales: `GET /pos/sales`, `GET /pos/sales/:id`, `GET /pos/sales/next-number`,
+`POST /pos/sales` (checkout), `POST /pos/sales/:id/refund`.
+
+**Checkout must be one atomic transaction**, not two separate calls the frontend happens
+to sequence:
+
+1. Validate the session is open and belongs to the terminal in the request.
+2. Assign the next `POS-######` number — **use a real sequence/lock, not read-then-increment**;
+   the mock frontend's in-memory counter has an obvious race condition under concurrent
+   checkouts that a real backend must not repeat.
+3. Deduct stock at the terminal's warehouse for every line — same mutation Delivery/
+   Fulfillment's `POST /inventory/stock-movements` uses (§6, `trigger: "pos-auto"`).
+   **Never blocks on insufficient stock** — post it anyway and flag
+   `pending-reconciliation`, exactly like the B2B fulfillment path (§8's negative-stock
+   rule). This is what `fulfillmentsApi.autoFulfillPos()` does client-side today; it's
+   this endpoint's first real caller.
+4. Persist the `PosSale` row, `createdBy` set from the session's `openedBy` server-side
+   — **never trust a client-supplied cashier name.**
+5. If any step fails, the whole checkout rolls back — a half-deducted, unsaved sale is
+   the one outcome that must never happen.
+
+**Refund** (`POST /pos/sales/:id/refund`): requires manager approval server-side (§7.3,
+not just a client PIN prompt). Sellable lines restock (reverse of step 3 above); damaged
+lines are recorded but don't restock — no real "quarantine" stock status exists in
+Inventory yet (§8's `Product`/`StockAdjustment` don't have one either); adding it means
+extending Inventory, out of this section's scope without that separate decision.
+
+**Close session** (`POST /pos/sessions/:id/close`): `expectedCash` must be **computed
+server-side** from the session's actual sales/refunds — never accept it from the client.
+Formula: `openingCash + Σ(cash payments on sales in this session) − Σ(refund amounts
+against those sales)`. The frontend's mock assumes every refund was paid back in cash;
+a real build should track each refund's own payment method instead and net only the
+cash ones.
+
+### 7.3 Manager-approval gate
+
+Client-confirmed (4.4): **manager PIN/approval required for POS discounts, voids, and
+refunds.** The frontend demo (`ManagerPinDialog`) accepts any 4-digit string — this is
+explicitly a placeholder, not a design to replicate. Real backend needs:
+
+- A real permission check (`POS.ApproveDiscount` / `POS.ApproveRefund`-style, matching
+  the module/action permission pairs already used elsewhere, SRS §11.14) tied to an
+  actual manager account, not a shared PIN typed into the cashier's own screen.
+- The approving user's real identity recorded as `approvedBy` — not a literal string
+  like `"Manager (PIN)"` the way the demo does it.
+
+### 7.4 Offline mode — client-confirmed requirements, not built
+
+None of this exists in the frontend demo (web-only, always-online). Requirements, per
+`docs/source/client-qa-inventory-pos-tenant.md` Q16–Q18 and
+`Client-Requirements-Phase1.md` §4.2/§4.3:
+
+- **Allowed offline**: sales (the core operation), basic customer lookup/creation,
+  standard pre-configured discounts (percentage/fixed rules already synced to the
+  device).
+- **Online-only**: refunds, manager-override discounts — higher fraud/error risk,
+  safer once the register has live data to verify against.
+- **Stock can't be verified offline — the sale still proceeds anyway.** Blocking a sale
+  over a connectivity issue is worse than an occasional oversell reconciled afterward.
+- **Sync-conflict rule**: "sync in timestamp order, allow negative stock temporarily" —
+  when multiple offline terminals sell the same low-stock item, accept *every*
+  transaction as a valid sale (never reject a completed customer sale after the fact),
+  let stock go negative if oversold, and surface an alert to the Inventory Manager to
+  reconcile. The system never programmatically "undoes" a completed sale.
+- **Failed sync**: automatic retry with exponential backoff first, escalating to a
+  manual-resolution queue only after repeated failures, surfaced to an admin with the
+  full transaction payload — nothing silently lost.
+- **Offline transaction shape** (SRS §11.5/§22.4): offline transaction ID, device ID,
+  terminal ID, timestamp, local sequence number, transaction payload, sync status.
+  **Server prevents duplicate creation via an idempotency key on sync** — the offline
+  transaction ID doubles as that key.
+
+Implementation shape this implies, not yet built anywhere:
+
+- A local queue on the terminal device (IndexedDB/service worker in a browser-based
+  build, or native local storage in a packaged app) holding unsynced `PosSale`/
+  `PosRefund`-shaped records with the offline-transaction fields above.
+- `POST /pos/sales/sync` — batch endpoint accepting an array of queued transactions,
+  each keyed by its offline transaction ID; returns per-item accept/reject/duplicate
+  status so the device can clear its queue incrementally.
+- The checkout transaction in §7.2 step 3 (stock deduction) is exactly where the
+  negative-stock-allowed rule already documented for Fulfillment/Inventory (§6, §8)
+  does double duty here — the same "never block, flag instead" behavior is what makes
+  the offline-sync conflict rule safe to implement without new stock-side rules.
+
+### 7.5 Hardware integration — not built, and deliberately web-first
+
+The frontend demo simulates every physical device (a receipt *preview* dialog instead
+of a real print job, a plain text input instead of a real scanner feed). Per the
+proposal (`MRM_Project_Proposal_v2.pdf` §4), Windows is explicitly excluded as a POS
+platform and the scope is Web + Android + iOS — so hardware choices should favor
+network/Bluetooth-capable devices over USB-only ones a browser can't reach directly:
+
+- **Barcode scanner**: most handheld scanners already act as a keyboard (HID) — they
+  "type" the barcode into whatever's focused, which is exactly what
+  `product-search-panel.tsx`'s search input already handles with zero extra code. No
+  backend work needed for this class of scanner. A camera-based/native scanning API
+  would be a frontend addition (e.g. the Barcode Detection API or a native app camera),
+  not a backend concern.
+- **Receipt printer**: prefer network (IP) or Bluetooth ESC/POS printers over USB-only
+  — a backend/edge service can send print jobs to a network printer's IP directly;
+  Bluetooth printers need a native/PWA bridge on the device itself. `receipt-dialog.tsx`
+  already renders the printable content; only the "send it to a real printer" transport
+  is missing.
+- **Cash drawer**: typically triggered by the receipt printer's kick-out cable (opens
+  automatically on print) rather than its own separate integration — so this usually
+  falls out of the printer choice above, not a separate hardware contract.
+- **Card reader**: use a cloud-connected smart terminal (Stripe Terminal or equivalent)
+  that talks to the payment processor directly over WiFi/Bluetooth — the app only ever
+  handles a payment-intent reference, never raw card data, which keeps PCI scope off
+  this codebase entirely. This is additive to `payment-dialog.tsx`'s existing `card`
+  payment method, not a redesign of it.
+
+**Exact models for all of the above are still unconfirmed by the client** — carried
+over as open question in §9. Confirm hardware choices *before* committing to a specific
+vendor SDK, since the network/Bluetooth-vs-USB distinction changes which integration
+path is even viable.
+
+### 7.6 Other server-side rules currently only client-side
+
+- **Terminal `accessCode`** is compared as a plain string client-side in the demo —
+  needs a real server-side check (hashed at rest, verified server-side, ideally rate-
+  limited) once this isn't a demo.
+- **One open session per terminal** — enforced by a `find()` in the mock service;
+  needs a real unique-constraint-or-equivalent server-side (e.g. a partial unique index
+  on `terminal_id` where `status = 'open'`) to survive concurrent requests.
+- **Numbering** — see §7.2 step 2; same "don't repeat the mock's race condition" note
+  applies to `POS-######` as to every other numbered document in this codebase.
 
 ---
 
@@ -355,15 +546,28 @@ Goods Receipt/PO → Stock Transfer → Adjustments/Reorder/Batches/Valuation �
 2. Two-vs-three "realm" architecture — open per `Project-Structure.md` §7.
 3. Negative-stock reconciliation *workflow* (the state itself is decided, §8).
 4. Serial-number tracking scope — which categories need it isn't specified.
-5. POS hardware models — left blank by the client.
+5. POS hardware models — left blank by the client; see §7.5 for the web-first
+   recommendation this leads to regardless of the exact answer.
 6. Tax-QR format per jurisdiction — confirm before locking beyond the payment-link default.
 7. Delivery/Fulfillment — frontend is built (`docs/plans/Sales-Invoicing-Implementation-Plan.md`
-   Phase I: manual/delivery-note fulfillment for B2B, POS auto-trigger written but
-   unreachable until POS exists, negative-stock alerting), still against the isolated
-   demo catalog. Backend needs the real `POST /inventory/stock-movements` endpoint this
-   deducts against once built (Phase I-F), plus the delivery-note PDF view (Phase I-C)
-   isn't built on either side yet.
+   Phase I: manual/delivery-note fulfillment for B2B, negative-stock alerting) and POS
+   now exists too, so its `autoFulfillPos()` caller (§7.2 step 3) is reachable — the
+   demo checkout genuinely calls it. Still against the isolated demo catalog either way.
+   Backend needs the real `POST /inventory/stock-movements` endpoint both deduct against
+   once built (Phase I-F/§7.2), plus the delivery-note PDF view (Phase I-C) isn't built
+   on either side yet.
 8. Retainer rules 2–9 in §5.6 — inferred defaults, not directly re-confirmed.
 9. Who holds `retainer.approve` — assumed tenant Owner/Admin, not platform staff.
 10. Branch-level vs. warehouse-level permission interaction — SRS supports both, doesn't
     specify how they combine.
+11. POS offline-sync conflict handling (§7.4) is client-confirmed at the policy level
+    ("accept every transaction, allow negative stock, alert to reconcile") but no one has
+    confirmed the actual reconciliation UX — same open item already flagged for Inventory
+    (#3 above); POS inherits it rather than duplicating a separate answer.
+12. Whether POS terminals need real device/hardware "enrollment" beyond the admin-created
+    `PosTerminal` config record once offline mode is actually built — today's `accessCode`
+    is a login credential, not a device certificate, and offline sync may need the latter
+    too (SRS's `device_identifier` field, currently unused — §7.1/§7.4).
+13. Who's allowed to hold `POS.ApproveDiscount`/`POS.ApproveRefund`-style permissions
+    (§7.3) — assumed a tenant's own manager/admin, same open question as
+    `retainer.approve` (#9), not yet asked of the client specifically for POS.

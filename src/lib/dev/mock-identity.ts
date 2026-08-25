@@ -35,6 +35,10 @@ export function mockIdentity(realm: "admin" | "tenant"): Me {
         "crm",
         "reports",
         "ai-assistant",
+        // "pos" added for the POS demo (dev-nafis-pos-demo-0.1) — POS is Phase 3
+        // scope and wasn't in this list before; a real tenant's activeModules
+        // would depend on its plan, not this dev bypass.
+        "pos",
       ],
     },
   };

@@ -82,6 +82,10 @@ that discipline is what keeps them trustworthy instead of stale.
   tenant portal's Inventory suite: Products, Warehouses, Stock Movement/Transfer, Goods
   Receipt, Adjustments, Batches, Reorder, Valuation. UI-complete against mock data; the
   real API layer is Phase B.
+- **[POS-Implementation-Plan.md](plans/POS-Implementation-Plan.md)** — a web-based POS
+  register (demo/R&D pass, `dev-nafis-pos-demo-0.1`): sessions, sale/checkout, refunds,
+  registers admin. Built; offline mode, real hardware, and native apps are explicitly
+  out of scope for this pass.
 
 ## `backend/`
 
