@@ -1,5 +1,5 @@
-import { PosRegisterPage } from "@/app/(tenant)/modules/pos/components/pos-register-page";
+import { RegisterScreen } from "./components/register-screen";
 
 export default function Page() {
-  return <PosRegisterPage />;
+  return <RegisterScreen />;
 }
