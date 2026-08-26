@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/table";
 import { PageHeading } from "@/components/shared/page-heading";
 import { TablePagination } from "@/components/shared/table-pagination";
-import { fmtMoney } from "@/lib/format";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import type { Product, ProductStatus } from "../types";
@@ -135,9 +134,26 @@ export function ProductsPage() {
         ),
       },
       {
+        accessorKey: "sku",
+        header: "SKU",
+        cell: ({ row }) => <span className="tabular-nums text-[12.5px] text-text-2">{row.original.sku}</span>,
+      },
+      {
         accessorKey: "category",
         header: "Category",
         cell: ({ row }) => <Badge tone="neutral">{row.original.category}</Badge>,
+      },
+      {
+        id: "subcategory",
+        header: "Subcategory",
+        cell: ({ row }) => (
+          <span className="text-[12.5px] text-text-3">{row.original.subcategory || "—"}</span>
+        ),
+      },
+      {
+        accessorKey: "unit",
+        header: "Unit",
+        cell: ({ row }) => <span className="text-[12.5px] text-text-2">{row.original.unit}</span>,
       },
       {
         accessorKey: "stock",
@@ -162,11 +178,14 @@ export function ProductsPage() {
         },
       },
       {
-        accessorKey: "price",
-        header: "Price",
-        cell: ({ row }) => (
-          <span className="text-[12.5px] font-semibold tabular-nums">{fmtMoney(row.original.price)}</span>
-        ),
+        accessorKey: "minimumStock",
+        header: "Min",
+        cell: ({ row }) => <span className="tabular-nums text-[12.5px]">{row.original.minimumStock}</span>,
+      },
+      {
+        accessorKey: "maximumStock",
+        header: "Max",
+        cell: ({ row }) => <span className="tabular-nums text-[12.5px]">{row.original.maximumStock}</span>,
       },
       {
         accessorKey: "status",

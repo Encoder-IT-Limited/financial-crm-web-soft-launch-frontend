@@ -1,4 +1,4 @@
-import { apiGet, apiSend } from "@/lib/api/envelope";
+import { apiGet, apiGetPage, apiSend } from "@/lib/api/envelope";
 import type {
   InventoryCategory,
   InventoryUnit,
@@ -9,6 +9,7 @@ import type {
   StockMovement,
   StockTransfer,
   StockTransferStatus,
+  TransferListParams,
   Warehouse,
   WarehouseStatus,
 } from "../types";
@@ -21,6 +22,7 @@ export type ApiProduct = {
   description: string | null;
   categoryId: string | null;
   categoryName: string | null;
+  subcategoryName?: string | null;
   unitId: string | null;
   unitName: string | null;
   unitSymbol: string | null;
@@ -28,6 +30,7 @@ export type ApiProduct = {
   sellingPrice: number;
   taxRate: number;
   minimumStock: number;
+  maximumStock?: number;
   reorderLevel: number;
   trackBatch: boolean;
   status: string;
@@ -41,6 +44,28 @@ type ApiWarehouse = {
   code: string;
   address: string | null;
   status: string;
+  productCount?: number;
+  totalOnHand?: number;
+};
+
+type ApiTransfer = {
+  id: string;
+  fromWarehouseId: string;
+  toWarehouseId: string;
+  fromWarehouseName?: string | null;
+  toWarehouseName?: string | null;
+  status: string;
+  createdBy?: string;
+  createdAt: string;
+  itemCount?: number;
+  items: Array<{
+    id: string;
+    productId: string;
+    quantity: unknown;
+    unitCost?: unknown;
+    productName?: string | null;
+    productSku?: string | null;
+  }>;
 };
 
 export type CreateProductInput = {
@@ -54,6 +79,7 @@ export type CreateProductInput = {
   sellingPrice: number;
   taxRate: number;
   minimumStock: number;
+  maximumStock?: number;
   reorderLevel: number;
   trackBatch: boolean;
   status: "ACTIVE" | "INACTIVE";
@@ -67,6 +93,8 @@ export type CreateWarehouseInput = {
   address?: string;
   status: "ACTIVE" | "INACTIVE";
 };
+
+export type UpdateWarehouseInput = Partial<CreateWarehouseInput>;
 
 export type ReceiveStockInput = {
   productId: string;
@@ -100,11 +128,13 @@ export function mapProduct(row: ApiProduct): Product {
     name: row.name,
     sku: row.sku,
     category: row.categoryName ?? "Uncategorized",
+    subcategory: row.subcategoryName ?? undefined,
     unit: row.unitSymbol ?? row.unitName ?? "pcs",
     stock: Number(row.onHand ?? 0),
     price: Number(row.sellingPrice ?? 0),
     costPrice: Number(row.costPrice ?? 0),
     minimumStock: Number(row.minimumStock ?? 0),
+    maximumStock: Number(row.maximumStock ?? 0),
     reorderLevel: Number(row.reorderLevel ?? 0),
     status: mapProductStatus(row.status),
     barcode: row.barcode ?? undefined,
@@ -124,12 +154,36 @@ export function mapWarehouse(row: ApiWarehouse): Warehouse {
     code: row.code,
     address: row.address ?? "",
     status,
+    productCount: Number(row.productCount ?? 0),
+    totalOnHand: Number(row.totalOnHand ?? 0),
+  };
+}
+
+function mapTransfer(r: ApiTransfer): StockTransfer {
+  return {
+    id: r.id,
+    fromWarehouseId: r.fromWarehouseId,
+    toWarehouseId: r.toWarehouseId,
+    fromWarehouseName: r.fromWarehouseName,
+    toWarehouseName: r.toWarehouseName,
+    status: r.status as StockTransferStatus,
+    createdBy: r.createdBy,
+    createdAt: r.createdAt,
+    itemCount: r.itemCount ?? r.items.length,
+    items: r.items.map((i) => ({
+      id: i.id,
+      productId: i.productId,
+      quantity: Number(i.quantity),
+      unitCost: i.unitCost != null ? Number(i.unitCost) : undefined,
+      productName: i.productName,
+      productSku: i.productSku,
+    })),
   };
 }
 
 export const inventoryApi = {
   listCategories: () => apiGet<InventoryCategory[]>("/inventory/categories"),
-  createCategory: (input: { name: string }) =>
+  createCategory: (input: { name: string; parentId?: string }) =>
     apiSend<InventoryCategory>("post", "/inventory/categories", input),
 
   listUnits: () => apiGet<InventoryUnit[]>("/inventory/units"),
@@ -142,11 +196,16 @@ export const inventoryApi = {
     mapProduct(await apiSend<ApiProduct>("post", "/inventory/products", input)),
   updateProduct: async (id: string, input: UpdateProductInput) =>
     mapProduct(await apiSend<ApiProduct>("patch", `/inventory/products/${id}`, input)),
+  deleteProduct: (id: string) => apiSend<{ id: string; deleted: boolean }>("delete", `/inventory/products/${id}`),
 
   listWarehouses: async () => (await apiGet<ApiWarehouse[]>("/inventory/warehouses")).map(mapWarehouse),
   getWarehouse: async (id: string) => mapWarehouse(await apiGet<ApiWarehouse>(`/inventory/warehouses/${id}`)),
   createWarehouse: (input: CreateWarehouseInput) =>
     apiSend<ApiWarehouse>("post", "/inventory/warehouses", input).then(mapWarehouse),
+  updateWarehouse: (id: string, input: UpdateWarehouseInput) =>
+    apiSend<ApiWarehouse>("patch", `/inventory/warehouses/${id}`, input).then(mapWarehouse),
+  deleteWarehouse: (id: string) =>
+    apiSend<{ id: string; deleted: boolean }>("delete", `/inventory/warehouses/${id}`),
 
   listStock: async () => {
     const rows = await apiGet<Array<{ productId: string; warehouseId: string; quantity: unknown; averageCost: unknown }>>(
@@ -224,33 +283,15 @@ export const inventoryApi = {
   }) => apiSend("post", "/inventory/stock/issue", input),
   adjustStock: (input: AdjustStockInput) => apiSend("post", "/inventory/stock/adjust", input),
 
-  listTransfers: async () => {
-    const rows = await apiGet<
-      Array<{
-        id: string;
-        fromWarehouseId: string;
-        toWarehouseId: string;
-        status: string;
-        createdAt: string;
-        items: Array<{ id: string; productId: string; quantity: unknown; unitCost?: unknown }>;
-      }>
-    >("/inventory/transfers");
-    return rows.map(
-      (r): StockTransfer => ({
-        id: r.id,
-        fromWarehouseId: r.fromWarehouseId,
-        toWarehouseId: r.toWarehouseId,
-        status: r.status as StockTransferStatus,
-        createdAt: r.createdAt,
-        items: r.items.map((i) => ({
-          id: i.id,
-          productId: i.productId,
-          quantity: Number(i.quantity),
-          unitCost: i.unitCost != null ? Number(i.unitCost) : undefined,
-        })),
-      }),
-    );
+  listTransfers: async (params?: TransferListParams) => {
+    if (!params || Object.keys(params).length === 0) {
+      const rows = await apiGet<ApiTransfer[]>("/inventory/transfers");
+      return { items: rows.map(mapTransfer), total: rows.length, page: 1, pageSize: rows.length };
+    }
+    const page = await apiGetPage<ApiTransfer>("/inventory/transfers", params as Record<string, unknown>);
+    return { ...page, items: page.items.map(mapTransfer) };
   },
+  getTransfer: async (id: string) => mapTransfer(await apiGet<ApiTransfer>(`/inventory/transfers/${id}`)),
   createTransfer: (input: CreateTransferInput) => apiSend("post", "/inventory/transfers", input),
   approveTransfer: (id: string) => apiSend("post", `/inventory/transfers/${id}/approve`),
   dispatchTransfer: (id: string) => apiSend("post", `/inventory/transfers/${id}/dispatch`),

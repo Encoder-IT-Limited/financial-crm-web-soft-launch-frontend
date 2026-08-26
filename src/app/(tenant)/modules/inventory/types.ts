@@ -6,11 +6,13 @@ export type Product = {
   name: string;
   sku: string;
   category: string;
+  subcategory?: string;
   unit: string;
   stock: number;
   price: number;
   costPrice: number;
   minimumStock: number;
+  maximumStock: number;
   reorderLevel: number;
   status: ProductStatus;
   barcode?: string;
@@ -28,6 +30,8 @@ export type Warehouse = {
   code: string;
   address: string;
   status: WarehouseStatus;
+  productCount: number;
+  totalOnHand: number;
 };
 
 export type InventoryCategory = { id: string; name: string; parentId: string | null };
@@ -57,15 +61,32 @@ export type StockTransferItem = {
   productId: string;
   quantity: number;
   unitCost?: number;
+  productName?: string | null;
+  productSku?: string | null;
 };
 
 export type StockTransfer = {
   id: string;
   fromWarehouseId: string;
   toWarehouseId: string;
+  fromWarehouseName?: string | null;
+  toWarehouseName?: string | null;
   status: StockTransferStatus;
   items: StockTransferItem[];
+  itemCount?: number;
+  createdBy?: string;
   createdAt: string;
+};
+
+export type TransferListParams = {
+  sourceWarehouse?: string;
+  destinationWarehouse?: string;
+  status?: StockTransferStatus;
+  dateFrom?: string;
+  dateTo?: string;
+  search?: string;
+  page?: number;
+  pageSize?: number;
 };
 
 export type InventoryBatch = {

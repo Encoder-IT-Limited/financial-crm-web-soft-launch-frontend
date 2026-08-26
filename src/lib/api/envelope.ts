@@ -46,7 +46,19 @@ export async function apiGetPage<T>(
   url: string,
   params?: Record<string, unknown>
 ): Promise<Page<T>> {
-  return apiGet<Page<T>>(url, { params });
+  try {
+    const res = await http.get<Envelope<T[]>>(url, { params });
+    if (!res.data.success) throw new ApiError(200, res.data.error);
+    const meta = res.data.meta ?? {};
+    return {
+      items: res.data.data,
+      total: Number(meta.total ?? res.data.data.length),
+      page: Number(meta.page ?? 1),
+      pageSize: Number(meta.pageSize ?? res.data.data.length),
+    };
+  } catch (error) {
+    throw toApiError(error);
+  }
 }
 
 export async function apiSend<T>(

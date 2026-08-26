@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,23 +23,42 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { FormDialog } from "@/components/shared/form-dialog";
 import { FormField } from "@/components/shared/form-field";
 import { PageHeading } from "@/components/shared/page-heading";
 import { ApiError } from "@/lib/api/errors";
 import { toast } from "@/lib/toast";
-import { useProducts, useReceiveStock, useWarehouses } from "../hooks/use-inventory";
+import type { Warehouse } from "../types";
+import {
+  useDeleteWarehouse,
+  useProducts,
+  useReceiveStock,
+  useUpdateWarehouse,
+  useWarehouses,
+} from "../hooks/use-inventory";
 
 export function WarehousesPage() {
   const { data: items = [], isLoading } = useWarehouses();
   const { data: products = [] } = useProducts();
   const receiveStock = useReceiveStock();
+  const updateWarehouse = useUpdateWarehouse();
+  const deleteWarehouse = useDeleteWarehouse();
+
   const [search, setSearch] = useState("");
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [warehouseId, setWarehouseId] = useState("");
   const [productId, setProductId] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unitCost, setUnitCost] = useState("");
+
+  const [detail, setDetail] = useState<Warehouse | null>(null);
+  const [edit, setEdit] = useState<Warehouse | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Warehouse | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editCode, setEditCode] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editStatus, setEditStatus] = useState<"active" | "inactive">("active");
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -52,6 +71,14 @@ export function WarehousesPage() {
     setProductId("");
     setQuantity("");
     setUnitCost("");
+  }
+
+  function openEdit(w: Warehouse) {
+    setEdit(w);
+    setEditName(w.name);
+    setEditCode(w.code);
+    setEditAddress(w.address);
+    setEditStatus(w.status);
   }
 
   async function handleReceive() {
@@ -74,6 +101,29 @@ export function WarehousesPage() {
       setReceiveOpen(false);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Receive failed");
+    }
+  }
+
+  async function handleEdit() {
+    if (!edit) return;
+    if (!editName.trim() || !editCode.trim()) {
+      toast.error("Name and code are required");
+      return;
+    }
+    try {
+      await updateWarehouse.mutateAsync({
+        id: edit.id,
+        input: {
+          name: editName.trim(),
+          code: editCode.trim(),
+          address: editAddress.trim() || undefined,
+          status: editStatus === "inactive" ? "INACTIVE" : "ACTIVE",
+        },
+      });
+      toast.success("Warehouse updated");
+      setEdit(null);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Update failed");
     }
   }
 
@@ -114,8 +164,11 @@ export function WarehousesPage() {
                 <TableRow className="bg-surface-subtle hover:bg-surface-subtle">
                   <TableHead>Name</TableHead>
                   <TableHead>Code</TableHead>
-                  <TableHead>Address</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Products</TableHead>
+                  <TableHead>On hand</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -124,10 +177,25 @@ export function WarehousesPage() {
                     <TableCell className="font-semibold">{w.name}</TableCell>
                     <TableCell className="tabular-nums text-text-2">{w.code}</TableCell>
                     <TableCell className="text-text-3">{w.address || "—"}</TableCell>
+                    <TableCell className="tabular-nums">{w.productCount}</TableCell>
+                    <TableCell className="tabular-nums">{w.totalOnHand}</TableCell>
                     <TableCell>
                       <Badge tone={w.status === "active" ? "green" : "neutral"}>
                         {w.status === "active" ? "Active" : "Inactive"}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="icon-sm" aria-label="View" onClick={() => setDetail(w)}>
+                          <Eye />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" aria-label="Edit" onClick={() => openEdit(w)}>
+                          <Pencil />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" aria-label="Delete" onClick={() => setDeleteTarget(w)}>
+                          <Trash2 />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -191,6 +259,92 @@ export function WarehousesPage() {
           <Input type="number" min={0} step="any" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} className="h-9" />
         </FormField>
       </FormDialog>
+
+      <FormDialog
+        open={!!detail}
+        onOpenChange={(next) => {
+          if (!next) setDetail(null);
+        }}
+        title={detail?.name ?? "Warehouse"}
+        description="Warehouse details"
+        onSubmit={() => setDetail(null)}
+        submitLabel="Close"
+      >
+        {detail && (
+          <>
+            <DetailLine label="Code" value={detail.code} />
+            <DetailLine label="Location" value={detail.address || "—"} />
+            <DetailLine label="Status" value={detail.status} />
+            <DetailLine label="Products with stock" value={String(detail.productCount)} />
+            <DetailLine label="Total on hand" value={String(detail.totalOnHand)} />
+          </>
+        )}
+      </FormDialog>
+
+      <FormDialog
+        open={!!edit}
+        onOpenChange={(next) => {
+          if (!next) setEdit(null);
+        }}
+        title="Edit warehouse"
+        onSubmit={handleEdit}
+        submitLabel="Save"
+        submitting={updateWarehouse.isPending}
+      >
+        <FormField label="Name">
+          <Input value={editName} onChange={(e) => setEditName(e.target.value)} className="h-9" />
+        </FormField>
+        <FormField label="Code">
+          <Input value={editCode} onChange={(e) => setEditCode(e.target.value)} className="h-9" />
+        </FormField>
+        <FormField label="Location">
+          <Input value={editAddress} onChange={(e) => setEditAddress(e.target.value)} className="h-9" />
+        </FormField>
+        <FormField label="Status">
+          <Select value={editStatus} onValueChange={(v) => setEditStatus((v as "active" | "inactive") ?? "active")}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </FormField>
+      </FormDialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(next) => {
+          if (!next) setDeleteTarget(null);
+        }}
+        title="Delete warehouse?"
+        description="Only empty warehouses with no stock history can be deleted. Otherwise set status to Inactive."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={async () => {
+          if (!deleteTarget) return;
+          try {
+            await deleteWarehouse.mutateAsync(deleteTarget.id);
+            toast.success("Warehouse deleted");
+          } catch (err) {
+            if (err instanceof ApiError) {
+              toast.error(err.message);
+              return;
+            }
+            throw err;
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+function DetailLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-border py-2 text-[12.5px] last:border-0">
+      <span className="text-text-3">{label}</span>
+      <span className="font-medium text-text">{value}</span>
     </div>
   );
 }

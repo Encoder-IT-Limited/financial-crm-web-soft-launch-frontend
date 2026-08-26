@@ -2,13 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { ApiError } from "@/lib/api/errors";
 import { fmtMoney } from "@/lib/format";
-import { useProduct } from "../hooks/use-inventory";
+import { toast } from "@/lib/toast";
+import { useDeleteProduct, useProduct, useUpdateProduct } from "../hooks/use-inventory";
 import { ProductEditDialog } from "./product-edit-dialog";
 import { ProductThumbnail, STOCK_TONE_LABEL, getStockTone } from "./product-thumbnail";
 
@@ -22,8 +26,12 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 }
 
 export function ProductDetailsPage({ productId }: { productId: string }) {
+  const router = useRouter();
   const { data: product, isLoading, isError } = useProduct(productId);
+  const deleteProduct = useDeleteProduct();
+  const updateProduct = useUpdateProduct();
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -70,6 +78,10 @@ export function ProductDetailsPage({ productId }: { productId: string }) {
             <Pencil data-icon="inline-start" />
             Edit
           </Button>
+          <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}>
+            <Trash2 data-icon="inline-start" />
+            Delete
+          </Button>
         </div>
       </div>
 
@@ -87,15 +99,17 @@ export function ProductDetailsPage({ productId }: { productId: string }) {
           <div className="mt-1 text-lg font-extrabold">{product.minimumStock}</div>
         </Card>
         <Card className="gap-0 p-4">
-          <div className="text-[11.5px] text-text-3">Reorder level</div>
-          <div className="mt-1 text-lg font-extrabold">{product.reorderLevel}</div>
+          <div className="text-[11.5px] text-text-3">Maximum stock</div>
+          <div className="mt-1 text-lg font-extrabold">{product.maximumStock}</div>
         </Card>
       </div>
 
       <Card className="mt-5 max-w-xl gap-0 p-5">
         <DetailRow label="Category" value={product.category} />
+        <DetailRow label="Subcategory" value={product.subcategory || "—"} />
         <DetailRow label="Unit" value={product.unit} />
         <DetailRow label="Cost price" value={fmtMoney(product.costPrice)} />
+        <DetailRow label="Reorder level" value={product.reorderLevel} />
         <DetailRow label="Tax rate" value={`${product.taxRate ?? 0}%`} />
         <DetailRow label="Barcode" value={product.barcode || "—"} />
         <DetailRow label="Batch tracking" value={product.trackBatch ? "Yes" : "No"} />
@@ -103,6 +117,31 @@ export function ProductDetailsPage({ productId }: { productId: string }) {
       </Card>
 
       <ProductEditDialog product={product} open={editOpen} onOpenChange={setEditOpen} />
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Delete product?"
+        description="This permanently removes the product if it has no stock history. Otherwise deactivate it instead."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={async () => {
+          try {
+            await deleteProduct.mutateAsync(product.id);
+            toast.success("Product deleted");
+            router.push("/dashboard/products");
+          } catch (err) {
+            if (err instanceof ApiError && err.code === "PRODUCT_IN_USE") {
+              await updateProduct.mutateAsync({
+                id: product.id,
+                input: { status: "INACTIVE" },
+              });
+              toast.success("Product has history — deactivated instead");
+              return;
+            }
+            throw err;
+          }
+        }}
+      />
     </div>
   );
 }

@@ -14,6 +14,7 @@ export const createProductSchema = z.object({
   sellingPrice: z.preprocess(toNumber, z.number().nonnegative()),
   taxRate: z.preprocess(toNumber, z.number().min(0).max(100)),
   minimumStock: z.preprocess(toNumber, z.number().nonnegative()),
+  maximumStock: z.preprocess(toNumber, z.number().nonnegative()),
   reorderLevel: z.preprocess(toNumber, z.number().nonnegative()),
   trackBatch: z.boolean(),
   status: z.enum(["active", "inactive"]),
