@@ -34,38 +34,47 @@ export function PublicFooter() {
         aria-hidden
         className="pointer-events-none absolute top-[-180px] left-1/2 h-[360px] w-[600px] -translate-x-1/2 rounded-full bg-blue/15 blur-[120px]"
       />
+      <div className="max-w-6xl mx-auto">
+        <div className="relative mx-auto grid  gap-10 sm:grid-cols-[1.3fr_1fr_1fr]">
+          <div className="flex flex-col gap-3">
+            <Link href="/" className="flex items-center gap-2.5">
+              <PlatformLogo
+                logoUrl={PLATFORM_SETTINGS.general.logoUrl}
+                platformName={PLATFORM_SETTINGS.general.platformName}
+                size="size-8"
+                className="text-sm"
+              />
+              <span className="text-sm font-bold text-white">
+                {PLATFORM_SETTINGS.general.platformName}
+              </span>
+            </Link>
+            <p className="max-w-[220px] text-[12.5px] text-white/50">
+              {PLATFORM_SETTINGS.general.tagline}
+            </p>
+          </div>
 
-      <div className="relative mx-auto grid max-w-5xl gap-10 sm:grid-cols-[1.3fr_1fr_1fr]">
-        <div className="flex flex-col gap-3">
-          <Link href="/" className="flex items-center gap-2.5">
-            <PlatformLogo
-              logoUrl={PLATFORM_SETTINGS.general.logoUrl}
-              platformName={PLATFORM_SETTINGS.general.platformName}
-              size="size-8"
-              className="text-sm"
-            />
-            <span className="text-sm font-bold text-white">{PLATFORM_SETTINGS.general.platformName}</span>
-          </Link>
-          <p className="max-w-[220px] text-[12.5px] text-white/50">{PLATFORM_SETTINGS.general.tagline}</p>
+          <div className="flex flex-col gap-3.5">
+            <span className="text-[11px] font-bold tracking-wide text-white/35 uppercase">
+              Product
+            </span>
+            {PRODUCT_LINKS.map((link) => (
+              <FooterLink key={link.href} {...link} />
+            ))}
+          </div>
+
+          <div className="flex flex-col gap-3.5">
+            <span className="text-[11px] font-bold tracking-wide text-white/35 uppercase">
+              Legal
+            </span>
+            {LEGAL_LINKS.map((link) => (
+              <FooterLink key={link.href} {...link} />
+            ))}
+          </div>
         </div>
-
-        <div className="flex flex-col gap-3.5">
-          <span className="text-[11px] font-bold tracking-wide text-white/35 uppercase">Product</span>
-          {PRODUCT_LINKS.map((link) => (
-            <FooterLink key={link.href} {...link} />
-          ))}
+        <div className="relative mt-12  border-t border-white/10 pt-6 text-[12px] text-white/40">
+          © {new Date().getFullYear()} {PLATFORM_SETTINGS.general.platformName}.
+          All rights reserved.
         </div>
-
-        <div className="flex flex-col gap-3.5">
-          <span className="text-[11px] font-bold tracking-wide text-white/35 uppercase">Legal</span>
-          {LEGAL_LINKS.map((link) => (
-            <FooterLink key={link.href} {...link} />
-          ))}
-        </div>
-      </div>
-
-      <div className="relative mx-auto mt-12 max-w-5xl border-t border-white/10 pt-6 text-[12px] text-white/40">
-        © {new Date().getFullYear()} {PLATFORM_SETTINGS.general.platformName}. All rights reserved.
       </div>
     </footer>
   );
