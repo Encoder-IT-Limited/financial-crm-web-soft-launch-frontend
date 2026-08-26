@@ -57,7 +57,12 @@ export function PosSetupSheet({
       return;
     }
     try {
-      await createTerminal.mutateAsync({ name: name.trim() || "Terminal", code: code.trim() || "POS-01", warehouseId });
+      await createTerminal.mutateAsync({
+        name: name.trim() || "Terminal",
+        code: code.trim() || "POS-01",
+        warehouseId,
+        accessCode: "1111",
+      });
       toast.success("Register created");
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Could not create register");

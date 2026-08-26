@@ -60,9 +60,9 @@ export function RefundDialog({
     return sum + saleLine.unitPrice * l.quantity * (1 + saleLine.taxRate / 100);
   }, 0);
 
-  function submit(approvedBy: string) {
+  function submit(managerPin: string) {
     posSalesApi
-      .refund({ saleId: sale.id, lines: selectedLines, reason, approvedBy })
+      .refund({ saleId: sale.id, lines: selectedLines, reason, approvedBy: "Manager", managerPin })
       .then(() => {
         toast.success(`Refund of ${fmtMoney(amount)} recorded`);
         queryClient.invalidateQueries({ queryKey: ["pos-sale", sale.id] });
@@ -70,6 +70,9 @@ export function RefundDialog({
         queryClient.invalidateQueries({ queryKey: ["pos-sales"] });
         queryClient.invalidateQueries({ queryKey: ["pos-products"] });
         onOpenChange(false);
+      })
+      .catch((err: unknown) => {
+        toast.error(err instanceof Error ? err.message : "Refund failed");
       });
   }
 

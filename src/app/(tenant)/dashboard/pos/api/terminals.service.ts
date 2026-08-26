@@ -1,39 +1,35 @@
-import { newId } from "@/lib/format";
+import { apiGet, apiSend } from "@/lib/api/envelope";
 import type { NewPosTerminalInput, PosTerminal } from "../types";
-import { seedTerminals } from "../mock/seed";
-
-/** Simulated network latency for the mock API. */
-const delay = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms));
-
-// In-memory mock "database" — module-scoped, resets on page reload. Same
-// pattern as every other mock service in this codebase.
-let terminals: PosTerminal[] = seedTerminals;
+import {
+  mapTerminal,
+  toApiTerminalCreate,
+  toApiTerminalUpdate,
+  type ApiPosTerminal,
+} from "./mappers";
 
 export const posTerminalsApi = {
   list: async (): Promise<PosTerminal[]> => {
-    await delay(200);
-    return terminals;
+    const rows = await apiGet<ApiPosTerminal[]>("/pos/terminals");
+    return rows.map(mapTerminal);
   },
 
   get: async (id: string): Promise<PosTerminal | undefined> => {
-    await delay(150);
-    return terminals.find((t) => t.id === id);
+    const rows = await posTerminalsApi.list();
+    return rows.find((t) => t.id === id);
   },
 
   create: async (input: NewPosTerminalInput): Promise<PosTerminal> => {
-    await delay();
-    const terminal: PosTerminal = { id: newId("term"), ...input, status: "active" };
-    terminals = [terminal, ...terminals];
-    return terminal;
+    const row = await apiSend<ApiPosTerminal>("post", "/pos/terminals", toApiTerminalCreate(input));
+    return mapTerminal(row);
   },
 
   update: async (id: string, input: NewPosTerminalInput): Promise<void> => {
-    await delay();
-    terminals = terminals.map((t) => (t.id === id ? { ...t, ...input } : t));
+    await apiSend("patch", `/pos/terminals/${id}`, toApiTerminalUpdate(input));
   },
 
   setStatus: async (id: string, status: PosTerminal["status"]): Promise<void> => {
-    await delay();
-    terminals = terminals.map((t) => (t.id === id ? { ...t, status } : t));
+    await apiSend("patch", `/pos/terminals/${id}`, {
+      status: status === "active" ? "ACTIVE" : "INACTIVE",
+    });
   },
 };

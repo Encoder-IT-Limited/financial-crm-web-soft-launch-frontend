@@ -15,10 +15,8 @@ import { cn } from "@/lib/utils";
 import { isValidManagerPin } from "../schemas";
 
 /** Reusable gate for the "risky" POS actions the client flagged as
- * needing approval — discount overrides, voids, refunds. Demo-only:
- * any 4-digit PIN passes, there's no real manager account hierarchy
- * yet in the mock identity layer (see POS-Implementation-Plan.md
- * Key Decision #5). */
+ * needing approval — discount overrides, voids, refunds. The raw PIN is
+ * sent to the backend for bcrypt verification against the manager's PIN. */
 export function ManagerPinDialog({
   open,
   onOpenChange,
@@ -30,7 +28,7 @@ export function ManagerPinDialog({
   onOpenChange: (open: boolean) => void;
   title?: string;
   description?: string;
-  onApproved: (approvedBy: string) => void;
+  onApproved: (pin: string) => void;
 }) {
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | undefined>();
@@ -45,7 +43,7 @@ export function ManagerPinDialog({
       setError("Enter a 4-digit PIN");
       return;
     }
-    onApproved("Manager (PIN)");
+    onApproved(pin);
     onOpenChange(false);
   }
 

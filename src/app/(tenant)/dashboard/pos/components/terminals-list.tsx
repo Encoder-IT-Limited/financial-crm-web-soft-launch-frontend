@@ -11,7 +11,7 @@ import { FilterableTable } from "@/components/shared/filterable-table";
 import { toast } from "@/lib/toast";
 import type { PosTerminal } from "../types";
 import { posTerminalsApi } from "../api/terminals.service";
-import { PRODUCT_LOOKUP_WAREHOUSES } from "../../invoices/mock/product-lookup-seed";
+import { inventoryApi } from "@/app/(tenant)/modules/inventory/api/inventory.service";
 import { TerminalFormDialog } from "./terminal-form-dialog";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,11 +23,12 @@ type AnyColumnDef<TData> = ColumnDef<TData, any>;
 export function TerminalsList() {
   const queryClient = useQueryClient();
   const { data: terminals = [], isLoading } = useQuery({ queryKey: ["pos-terminals"], queryFn: posTerminalsApi.list });
+  const { data: warehouses = [] } = useQuery({ queryKey: ["pos-warehouses"], queryFn: inventoryApi.listWarehouses });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<PosTerminal | null>(null);
 
-  const warehouseName = (id: string) => PRODUCT_LOOKUP_WAREHOUSES.find((w) => w.id === id)?.name ?? id;
+  const warehouseName = (id: string) => warehouses.find((w) => w.id === id)?.name ?? id;
 
   function toggleStatus(terminal: PosTerminal) {
     const next = terminal.status === "active" ? "inactive" : "active";

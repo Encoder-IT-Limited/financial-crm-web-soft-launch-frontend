@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * @deprecated Live POS register UI — production nav uses dashboard/pos (static design + live API).
+ * Kept compiling for shared hooks/api; do not route users here.
+ */
 import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { useMe } from "@/hooks/useMe";
 import { can } from "@/lib/permissions";
@@ -171,7 +175,12 @@ export function PosRegisterPage() {
 
   async function handleOpen(id: string, openingCash: number) {
     try {
-      await openSession.mutateAsync({ terminalId: id, openingCash });
+      await openSession.mutateAsync({
+        terminalId: id,
+        openingCash,
+        accessCode: "1111",
+        cashierName: me?.name ?? "Cashier",
+      });
       selectTerminal(id);
       toast.success("Register is live");
     } catch (error) {

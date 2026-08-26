@@ -1,120 +1,125 @@
-import { newId, nextSequence } from "@/lib/format";
+import { apiGet, apiSend } from "@/lib/api/envelope";
+import { inventoryApi } from "@/app/(tenant)/modules/inventory/api/inventory.service";
 import type { NewPosSaleInput, NewRefundInput, PosRefund, PosSale } from "../types";
-import { computeCartTotals, round2 } from "../types";
-import { seedSales, seedSaleSeq } from "../mock/seed";
-import { fulfillmentsApi } from "../../fulfillment/api/fulfillments.service";
-import { productLookupApi } from "../../invoices/api/product-lookup.service";
+import {
+  mapReturns,
+  mapSale,
+  toApiCreateSale,
+  toApiRefund,
+  type ApiPosSale,
+} from "./mappers";
+import { posSessionsApi } from "./sessions.service";
 
-/** Simulated network latency for the mock API. */
-const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
+async function productMetaMap() {
+  const products = await inventoryApi.listProducts();
+  return new Map(
+    products.map((p) => [
+      p.id,
+      { name: p.name, sku: p.sku, taxRate: p.taxRate ?? 5 },
+    ]),
+  );
+}
 
-let sales: PosSale[] = seedSales;
-let saleSeq: number = seedSaleSeq;
-let refunds: PosRefund[] = [];
+async function hydrateSale(row: ApiPosSale): Promise<PosSale> {
+  const meta = await productMetaMap();
+  let terminalId = "";
+  let createdBy = "Cashier";
+  if (row.posSessionId) {
+    try {
+      const sessions = await posSessionsApi.list();
+      const session = sessions.find((s) => s.id === row.posSessionId);
+      if (session) {
+        terminalId = session.terminalId;
+        createdBy = session.openedBy;
+      }
+    } catch {
+      // list may fail on permission — leave defaults
+    }
+  }
+  // Prefer payments from getSale; list may omit them
+  let full = row;
+  if (!row.payments) {
+    full = await apiGet<ApiPosSale>(`/pos/sales/${row.id}`);
+  }
+  return mapSale(full, { terminalId, productMeta: meta, createdBy });
+}
 
 export const posSalesApi = {
   list: async (): Promise<PosSale[]> => {
-    await delay(250);
-    return sales;
+    const rows = await apiGet<ApiPosSale[]>("/pos/sales");
+    const meta = await productMetaMap();
+    const sessions = await posSessionsApi.list().catch(() => []);
+    const sessionById = new Map(sessions.map((s) => [s.id, s]));
+    return rows.map((row) => {
+      const session = row.posSessionId ? sessionById.get(row.posSessionId) : undefined;
+      return mapSale(row, {
+        terminalId: session?.terminalId,
+        productMeta: meta,
+        createdBy: session?.openedBy,
+      });
+    });
   },
 
   get: async (id: string): Promise<PosSale | undefined> => {
-    await delay(150);
-    return sales.find((s) => s.id === id);
+    try {
+      const row = await apiGet<ApiPosSale>(`/pos/sales/${id}`);
+      return hydrateSale(row);
+    } catch {
+      return undefined;
+    }
   },
 
   listRefunds: async (saleId?: string): Promise<PosRefund[]> => {
-    await delay(150);
-    return saleId ? refunds.filter((r) => r.saleId === saleId) : refunds;
-  },
-
-  /** The next auto-assigned sale number, e.g. "POS-000001" — its own
-   * sequence, separate from INV- (client-confirmed, 4.7). */
-  getNextNumber: async (): Promise<string> => {
-    await delay(100);
-    return `POS-${nextSequence(saleSeq, 6)}`;
-  },
-
-  /** Checkout — the sale is created and stock deducts in the same
-   * action, no separate confirm step, mirroring how a real register
-   * works (goods leave the moment the sale completes, per the
-   * Fulfillment "automatic for POS" rule). */
-  create: async (input: NewPosSaleInput): Promise<PosSale> => {
-    await delay();
-    const totals = computeCartTotals(input.lines, input.cartDiscount);
-    const number = `POS-${nextSequence(saleSeq, 6)}`;
-    const id = newId("sale");
-
-    const fulfillment = await fulfillmentsApi.autoFulfillPos(
-      id,
-      input.lines.map((l, i) => ({
-        invoiceLineId: `${id}-ln-${i}`,
-        productId: l.productId,
-        warehouseId: input.warehouseId,
-        quantityFulfilled: l.quantity,
-      }))
-    );
-
-    const sale: PosSale = {
-      id,
-      number,
-      sessionId: input.sessionId,
-      terminalId: input.terminalId,
-      warehouseId: input.warehouseId,
-      customerId: input.customerId,
-      lines: input.lines,
-      payments: input.payments,
-      subtotal: totals.subtotal,
-      discount: totals.discount,
-      tax: totals.tax,
-      total: totals.total,
-      status: "completed",
-      fulfillmentId: fulfillment.id,
-      createdBy: input.createdBy,
-      createdAt: new Date().toISOString(),
-    };
-    sales = [sale, ...sales];
-    saleSeq += 1;
-    return sale;
-  },
-
-  /** Refund/return — always manager-PIN-gated by the caller before this
-   * runs (client-confirmed rule). Sellable lines restock immediately
-   * (reverses the original deduction); damaged lines are flagged only —
-   * no real "quarantine" stock status exists in Inventory yet, so
-   * nothing moves for those beyond recording the refund itself. */
-  refund: async (input: NewRefundInput): Promise<PosRefund> => {
-    await delay();
-    const sale = sales.find((s) => s.id === input.saleId);
-    if (!sale) throw new Error("Sale not found");
-
-    let amount = 0;
-    for (const line of input.lines) {
-      if (line.quantity <= 0) continue;
-      const saleLine = sale.lines.find((l) => l.productId === line.productId);
-      if (!saleLine) continue;
-      amount += round2(saleLine.unitPrice * line.quantity * (1 + saleLine.taxRate / 100));
-      if (line.condition === "sellable") {
-        await productLookupApi.deduct({ productId: line.productId, warehouseId: sale.warehouseId, quantity: -line.quantity });
+    if (saleId) {
+      const row = await apiGet<ApiPosSale>(`/pos/sales/${saleId}`);
+      return mapReturns(saleId, row.returns);
+    }
+    const sales = await apiGet<ApiPosSale[]>("/pos/sales");
+    const all: PosRefund[] = [];
+    for (const sale of sales) {
+      if (sale.returns?.length) {
+        all.push(...mapReturns(sale.id, sale.returns));
+      } else {
+        const full = await apiGet<ApiPosSale>(`/pos/sales/${sale.id}`);
+        all.push(...mapReturns(sale.id, full.returns));
       }
     }
-
-    const refund: PosRefund = {
-      id: newId("ref"),
-      saleId: input.saleId,
-      lines: input.lines,
-      amount: round2(amount),
-      reason: input.reason,
-      approvedBy: input.approvedBy,
-      createdAt: new Date().toISOString(),
-    };
-    refunds = [refund, ...refunds];
-
-    const totalRefunded = refunds.filter((r) => r.saleId === input.saleId).reduce((sum, r) => sum + r.amount, 0);
-    sales = sales.map((s) =>
-      s.id === input.saleId ? { ...s, status: totalRefunded >= s.total - 0.005 ? "refunded" : "partially-refunded" } : s
-    );
-
-    return refund;
+    return all;
   },
+
+  getNextNumber: async (): Promise<string> => {
+    const row = await apiGet<{ number: string }>("/pos/sales/next-number");
+    return row.number;
+  },
+
+  create: async (input: NewPosSaleInput & { managerPin?: string }): Promise<PosSale> => {
+    const payload = toApiCreateSale(input, input.managerPin);
+    const row = await apiSend<ApiPosSale>("post", "/pos/sales", payload);
+    return hydrateSale(row);
+  },
+
+  refund: async (input: NewRefundInput & { managerPin: string }): Promise<PosRefund> => {
+    const sale = await posSalesApi.get(input.saleId);
+    if (!sale) throw new Error("Sale not found");
+    const body = toApiRefund(input, sale, input.managerPin);
+    const result = await apiSend<{ sale: ApiPosSale; saleReturn?: ApiSaleReturnLike }>(
+      "post",
+      `/pos/sales/${input.saleId}/refund`,
+      body,
+    );
+    const returns = mapReturns(input.saleId, result.sale.returns);
+    if (returns[0]) return returns[0];
+    // Fallback if returns not included on nested sale
+    const refreshed = await apiGet<ApiPosSale>(`/pos/sales/${input.saleId}`);
+    return mapReturns(input.saleId, refreshed.returns)[0]!;
+  },
+};
+
+type ApiSaleReturnLike = {
+  id: string;
+  refundAmount: number | string;
+  reason?: string | null;
+  approvedBy?: string | null;
+  createdAt: string;
+  items: { productId: string; quantity: number | string; unitPrice: number | string; condition: string }[];
 };

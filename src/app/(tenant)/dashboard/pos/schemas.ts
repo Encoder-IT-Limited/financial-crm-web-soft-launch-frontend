@@ -3,8 +3,13 @@ import { z } from "zod";
 export const terminalFormSchema = z.object({
   name: z.string().trim().min(2, "Name is required"),
   code: z.string().trim().min(2, "Code is required").max(12, "Code too long"),
-  warehouseId: z.string().min(1, "Select a warehouse"),
+  warehouseId: z.string().uuid("Select a warehouse"),
   accessCode: z.string().trim().min(4, "Access code must be at least 4 characters"),
+});
+
+/** Edit: access code optional (blank = keep existing). */
+export const terminalEditFormSchema = terminalFormSchema.extend({
+  accessCode: z.string().trim().min(4, "Access code must be at least 4 characters").or(z.literal("")),
 });
 
 export type TerminalFormValues = z.infer<typeof terminalFormSchema>;
@@ -59,8 +64,7 @@ export const refundFormSchema = z.object({
 
 export type RefundFormValues = z.infer<typeof refundFormSchema>;
 
-/** Demo-only gate, not real auth — any 4-digit PIN passes. Flagged
- * explicitly per POS-Implementation-Plan.md Key Decision #5. */
+/** Demo-compatible gate — PIN is verified by the backend. */
 export function isValidManagerPin(pin: string): boolean {
-  return /^\d{4}$/.test(pin);
+  return /^\d{4,8}$/.test(pin);
 }
