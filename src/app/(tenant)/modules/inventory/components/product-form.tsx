@@ -165,10 +165,10 @@ export function ProductForm() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <FormField label="Cost Price (AED)" error={errors.costPrice}>
+          <FormField label="Cost Price" error={errors.costPrice}>
             <Input type="number" min={0} step="0.01" className={inputClass} value={values.costPrice} onChange={(e) => setField("costPrice", e.target.value)} />
           </FormField>
-          <FormField label="Selling Price (AED)" error={errors.sellingPrice}>
+          <FormField label="Selling Price" error={errors.sellingPrice}>
             <Input type="number" min={0} step="0.01" className={inputClass} value={values.sellingPrice} onChange={(e) => setField("sellingPrice", e.target.value)} />
           </FormField>
           <FormField label="Tax Rate (%)" error={errors.taxRate}>

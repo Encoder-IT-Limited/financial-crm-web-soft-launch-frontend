@@ -8,10 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { fmtMoney } from "@/lib/format";
+import { useTenantCurrency } from "@/lib/use-tenant-currency";
 import { recurringTemplateSchema } from "../schemas";
 import { FREQUENCY_LABELS, RECURRENCE_FREQUENCIES, type RecurringTemplate } from "../recurring/types";
 import { useCustomers } from "../../crm/hooks/use-customers";
 import { FormField } from "./form-field";
+import { CurrencySelect } from "./currency-select";
+import { Switch } from "@/components/ui/switch";
 import type { Currency } from "../types";
 
 function defaultNextDate(): string {
@@ -27,6 +30,7 @@ export type RecurringTemplateValues = {
   amount: number;
   frequency: RecurringTemplate["frequency"];
   nextInvoiceDate: string;
+  autoSend?: boolean;
 };
 
 type RecurringTemplateDialogProps = {
@@ -39,13 +43,15 @@ type RecurringTemplateDialogProps = {
 
 export function RecurringTemplateDialog({ open, onOpenChange, editing, onSave }: RecurringTemplateDialogProps) {
   const { data: customers = [] } = useCustomers();
+  const tenantCurrency = useTenantCurrency();
 
   const [customerId, setCustomerId] = useState(editing?.customerId ?? "");
   const [description, setDescription] = useState(editing?.description ?? "");
-  const [currency, setCurrency] = useState<Currency>(editing?.currency ?? "AED");
+  const [currency, setCurrency] = useState<Currency>(editing?.currency ?? tenantCurrency);
   const [amount, setAmount] = useState(editing ? String(editing.amount) : "");
   const [frequency, setFrequency] = useState<RecurringTemplate["frequency"]>(editing?.frequency ?? "monthly");
   const [nextInvoiceDate, setNextInvoiceDate] = useState(editing?.nextInvoiceDate ?? defaultNextDate());
+  const [autoSend, setAutoSend] = useState(editing?.autoSend ?? false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -57,6 +63,7 @@ export function RecurringTemplateDialog({ open, onOpenChange, editing, onSave }:
       amount,
       frequency,
       nextInvoiceDate,
+      autoSend,
     });
     if (!parsed.success) {
       const mapped: Record<string, string> = {};
@@ -131,18 +138,7 @@ export function RecurringTemplateDialog({ open, onOpenChange, editing, onSave }:
               />
             </FormField>
             <FormField label="Currency">
-              <Select value={currency} onValueChange={(v) => setCurrency((v ?? "AED") as Currency)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(["AED", "USD", "EUR", "GBP", "SAR"] as Currency[]).map((code) => (
-                    <SelectItem key={code} value={code}>
-                      {code}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <CurrencySelect value={currency} onChange={setCurrency} />
             </FormField>
           </div>
 
@@ -171,6 +167,16 @@ export function RecurringTemplateDialog({ open, onOpenChange, editing, onSave }:
               />
             </FormField>
           </div>
+
+          <label className="flex items-start gap-2.5 rounded-lg border border-border px-3 py-2.5">
+            <Switch checked={autoSend} onCheckedChange={(checked) => setAutoSend(checked === true)} className="mt-0.5" />
+            <span>
+              <span className="block text-[13px] font-semibold text-text">Auto-send generated invoices</span>
+              <span className="text-[11.5px] text-text-3">
+                Email the invoice to the customer as soon as a cycle generates it, instead of leaving it as a draft.
+              </span>
+            </span>
+          </label>
 
           {amount && Number(amount) > 0 && (
             <div className="rounded-lg bg-surface-subtle px-3 py-2 text-[11.5px] text-text-3">

@@ -132,7 +132,7 @@ export function RetainerDetailsDialog({
           </div>
 
           {retainer.status === "closed" && retainer.dispositionReason && (
-            <div className="rounded-lg border border-border bg-surface-subtle p-3 text-[12px] text-text-2">
+            <div className="rounded-lg border border-border bg-surface-subtle p-3 text-[12.5px] text-text-2">
               {retainer.dispositionReason === "transferred" && "Balance transferred to another retainer."}
               {retainer.dispositionReason === "rolled-over" && "Rolled over into a new contract."}
               {retainer.dispositionReason === "forfeited" && "Remaining balance forfeited."}
@@ -155,7 +155,7 @@ export function RetainerDetailsDialog({
               </div>
               {topUpTemplate ? (
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-[11.5px] text-text-3">Next: {fmtDate(topUpTemplate.nextInvoiceDate)}</span>
+                  <span className="text-[11px] text-text-3">Next: {fmtDate(topUpTemplate.nextInvoiceDate)}</span>
                   <Button
                     variant="outline"
                     size="xs"
@@ -178,7 +178,7 @@ export function RetainerDetailsDialog({
           <div>
             <div className="mb-1.5 text-[11px] font-semibold text-text-2">Usage history</div>
             {retainer.usage.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border py-6 text-center text-[12px] text-text-4">
+              <div className="rounded-lg border border-dashed border-border py-6 text-center text-[12.5px] text-text-4">
                 No usage recorded yet.
               </div>
             ) : (

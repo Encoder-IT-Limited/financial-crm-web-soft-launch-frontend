@@ -1,19 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FormDialog } from "@/components/shared/form-dialog";
 import { FormField } from "@/components/shared/form-field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/lib/toast";
+import { ApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils";
+import { useTenantCurrency } from "@/lib/use-tenant-currency";
 import { retainerFormSchema, type RetainerFormValues } from "../schemas";
-import type { Currency, RetainerBillingPeriod } from "../types";
+import type { RetainerBillingPeriod } from "../types";
 import { retainersApi } from "../api/retainers.service";
 import { useRetainers } from "../hooks/use-retainers";
 import { useCustomers } from "../../crm/hooks/use-customers";
 import { billingKeys } from "../query-keys";
+import { CurrencySelect } from "./currency-select";
 
 const BILLING_PERIODS: RetainerBillingPeriod[] = ["monthly", "quarterly", "yearly"];
 
@@ -35,6 +38,7 @@ export function RetainerFormDialog({
   const { data: retainers = [] } = useRetainers();
   const retainer = retainerId ? retainers.find((r) => r.id === retainerId) : undefined;
   const editing = !!retainerId;
+  const tenantCurrency = useTenantCurrency();
 
   const [form, setForm] = useState<RetainerFormValues>(() =>
     retainer
@@ -53,7 +57,7 @@ export function RetainerFormDialog({
           contractAmount: 0,
           billingPeriod: "monthly",
           billingModel: "one-time",
-          currency: "AED",
+          currency: tenantCurrency,
           startDate: new Date().toISOString().slice(0, 10),
           expiryDate: "",
           notes: "",
@@ -61,6 +65,10 @@ export function RetainerFormDialog({
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!editing) setForm((current) => ({ ...current, currency: tenantCurrency }));
+  }, [tenantCurrency, editing]);
 
   if (editing && !retainer) return null;
 
@@ -78,6 +86,7 @@ export function RetainerFormDialog({
         queryClient.invalidateQueries({ queryKey: billingKeys.retainers() });
         onOpenChange(false);
       })
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : "Could not save retainer"))
       .finally(() => setSaving(false));
   }
 
@@ -107,7 +116,7 @@ export function RetainerFormDialog({
       </FormField>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <FormField label="Contract amount (AED)" error={errors.contractAmount}>
+        <FormField label={`Contract amount (${form.currency})`} error={errors.contractAmount}>
           <Input
             type="number"
             min={0}
@@ -153,18 +162,11 @@ export function RetainerFormDialog({
 
       <div className="grid gap-3 sm:grid-cols-2">
         <FormField label="Currency">
-          <Select value={form.currency} onValueChange={(v) => setForm({ ...form, currency: (v ?? "AED") as Currency })}>
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(["AED", "USD", "EUR", "GBP", "SAR"] as Currency[]).map((code) => (
-                <SelectItem key={code} value={code}>
-                  {code}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <CurrencySelect
+            value={form.currency}
+            onChange={(currency) => setForm({ ...form, currency })}
+            invalid={!!errors.currency}
+          />
         </FormField>
         <FormField label="Start date" error={errors.startDate}>
           <Input

@@ -6,20 +6,34 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fmtMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { computeTotals } from "../types";
+import { computeTotals, type Currency } from "../types";
+import { ProductPicker, WarehousePicker } from "./product-picker";
+import type { ProductLookupItem } from "@/app/(tenant)/dashboard/invoices/api/product-lookup.service";
+
+export type LineMode = "product" | "service";
 
 export type LineDraft = {
   id: string;
   description: string;
-  quantity: string; // string-typed so the inputs stay freely editable while typing
+  quantity: string;
   unitPrice: string;
   taxRate: string;
+  mode?: LineMode;
+  productId?: string;
+  warehouseId?: string;
 };
 
 export type LineErrors = Record<string, string>;
 
 export function newLine(): LineDraft {
-  return { id: crypto.randomUUID(), description: "", quantity: "1", unitPrice: "", taxRate: "5" };
+  return {
+    id: crypto.randomUUID(),
+    description: "",
+    quantity: "1",
+    unitPrice: "",
+    taxRate: "5",
+    mode: "service",
+  };
 }
 
 export function emptyLines(): LineDraft[] {
@@ -32,7 +46,7 @@ export function lineTotals(lines: LineDraft[]) {
       quantity: Number(l.quantity) || 0,
       unitPrice: Number(l.unitPrice) || 0,
       taxRate: Number(l.taxRate) || 0,
-    }))
+    })),
   );
 }
 
@@ -40,10 +54,12 @@ export function LineItemsEditor({
   lines,
   onChange,
   errors,
+  currency,
 }: {
   lines: LineDraft[];
   onChange: (lines: LineDraft[]) => void;
   errors?: LineErrors;
+  currency?: Currency;
 }) {
   const totals = lineTotals(lines);
 
@@ -55,13 +71,28 @@ export function LineItemsEditor({
     onChange(lines.length > 1 ? lines.filter((line) => line.id !== id) : lines);
   }
 
+  function applyProduct(id: string, product: ProductLookupItem | null) {
+    if (!product) {
+      update(id, { productId: undefined, mode: "service" });
+      return;
+    }
+    const line = lines.find((l) => l.id === id);
+    update(id, {
+      mode: "product",
+      productId: product.id,
+      description: product.name,
+      unitPrice: String(product.price),
+      taxRate: String(product.taxRate ?? line?.taxRate ?? "5"),
+    });
+  }
+
   return (
     <div>
       <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-surface-subtle text-left text-[10.5px] font-bold text-text-4">
-              <th className="px-2 py-2 font-bold sm:px-3">Description</th>
+              <th className="px-2 py-2 font-bold sm:px-3">Item</th>
               <th className="w-16 px-1 py-2 font-bold sm:px-2">Qty</th>
               <th className="w-28 px-1 py-2 font-bold sm:px-2">Unit price</th>
               <th className="w-20 px-1 py-2 font-bold sm:px-2">VAT</th>
@@ -74,20 +105,55 @@ export function LineItemsEditor({
               const qty = Number(line.quantity) || 0;
               const price = Number(line.unitPrice) || 0;
               const total = qty * price;
+              const mode = line.mode ?? (line.productId ? "product" : "service");
               return (
-                <tr key={line.id} className="border-t border-border">
+                <tr key={line.id} className="border-t border-border align-top">
                   <td className="px-2 py-1.5 sm:px-3">
-                    <Input
-                      value={line.description}
-                      onChange={(e) => update(line.id, { description: e.target.value })}
-                      placeholder="Description of goods / service"
-                      aria-label="Description"
-                      aria-invalid={!!errors?.[`${line.id}-description`]}
-                      className={cn(errors?.[`${line.id}-description`] && "border-red")}
-                    />
-                    {errors?.[`${line.id}-description`] && (
-                      <p className="mt-0.5 text-[10.5px] text-red">{errors[`${line.id}-description`]}</p>
-                    )}
+                    <div className="flex flex-col gap-1.5">
+                      <Select
+                        value={mode}
+                        onValueChange={(v) => {
+                          const next = (v ?? "service") as LineMode;
+                          update(line.id, {
+                            mode: next,
+                            productId: next === "service" ? undefined : line.productId,
+                          });
+                        }}
+                      >
+                        <SelectTrigger size="sm" className="w-full max-w-[11rem]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="service">Service / custom</SelectItem>
+                          <SelectItem value="product">Product</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {mode === "product" && (
+                        <div className="grid gap-1.5 sm:grid-cols-2">
+                          <ProductPicker
+                            productId={line.productId}
+                            warehouseId={line.warehouseId}
+                            onPick={(product) => applyProduct(line.id, product)}
+                            invalid={!!errors?.[`${line.id}-productId`]}
+                          />
+                          <WarehousePicker
+                            value={line.warehouseId}
+                            onChange={(warehouseId) => update(line.id, { warehouseId })}
+                          />
+                        </div>
+                      )}
+                      <Input
+                        value={line.description}
+                        onChange={(e) => update(line.id, { description: e.target.value })}
+                        placeholder="Description of goods / service"
+                        aria-label="Description"
+                        aria-invalid={!!errors?.[`${line.id}-description`]}
+                        className={cn(errors?.[`${line.id}-description`] && "border-red")}
+                      />
+                      {errors?.[`${line.id}-description`] && (
+                        <p className="text-[10.5px] text-red">{errors[`${line.id}-description`]}</p>
+                      )}
+                    </div>
                   </td>
                   <td className="px-1 py-1.5 sm:px-2">
                     <Input
@@ -125,7 +191,7 @@ export function LineItemsEditor({
                     </Select>
                   </td>
                   <td className="px-1 py-1.5 text-right text-[13px] font-semibold text-text sm:px-3">
-                    {fmtMoney(total)}
+                    {fmtMoney(total, currency)}
                   </td>
                   <td className="px-1 py-1.5 sm:px-2">
                     <Button
@@ -153,15 +219,15 @@ export function LineItemsEditor({
         <div className="flex flex-col items-end gap-1">
           <div className="flex w-full justify-between gap-10 text-[13px] sm:w-auto">
             <span className="text-text-3">Subtotal</span>
-            <span className="font-medium text-text">{fmtMoney(totals.subtotal)}</span>
+            <span className="font-medium text-text">{fmtMoney(totals.subtotal, currency)}</span>
           </div>
           <div className="flex w-full justify-between gap-10 text-[13px] sm:w-auto">
             <span className="text-text-3">VAT</span>
-            <span className="font-medium text-text">{fmtMoney(totals.tax)}</span>
+            <span className="font-medium text-text">{fmtMoney(totals.tax, currency)}</span>
           </div>
           <div className="flex w-full justify-between gap-10 border-t-2 border-text pt-1.5 text-[15px] font-bold sm:w-auto">
             <span>Total</span>
-            <span className="text-blue">{fmtMoney(totals.total)}</span>
+            <span className="text-blue">{fmtMoney(totals.total, currency)}</span>
           </div>
         </div>
       </div>

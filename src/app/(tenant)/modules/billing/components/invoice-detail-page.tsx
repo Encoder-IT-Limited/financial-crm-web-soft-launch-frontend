@@ -6,13 +6,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Ban, Download, PackageCheck, PencilLine, Printer, Send, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { PageHeading } from "@/components/shared/page-heading";
 import { toast } from "@/lib/toast";
 import { ApiError } from "@/lib/api/errors";
 import { fmtDate, fmtDateTime, fmtMoney } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import {
   adjustedInvoiceBalance,
   adjustmentsForInvoice,
@@ -20,7 +18,6 @@ import {
   invoiceBalance,
   invoiceDisplayStatus,
   invoiceFulfillmentStatus,
-  PAYMENT_METHOD_LABELS,
   remainingFulfillQuantity,
 } from "../types";
 import { invoiceApi } from "../api/invoices.service";
@@ -30,11 +27,13 @@ import { useCustomers } from "../../crm/hooks/use-customers";
 import { billingKeys } from "../query-keys";
 import { InvoicePdf } from "./invoice-pdf";
 import { InvoiceStatusBadge } from "./invoice-status-badge";
-import { AdjustmentStatusBadge } from "./adjustment-status-badge";
 import { RecordPaymentDialog } from "./record-payment-dialog";
 import { StatTiles } from "./stat-tiles";
 import { FulfillmentDialog } from "./fulfillment-dialog";
 import { InvoiceFulfillmentCard } from "./invoice-fulfillment-card";
+import { InvoiceAdjustmentsCard } from "./invoice-adjustments-card";
+import { InvoicePaymentHistoryCard } from "./invoice-payment-history-card";
+import { InvoiceHistoryCard } from "./invoice-history-card";
 
 export function InvoiceDetailPage() {
   const params = useParams<{ invoiceId: string }>();
@@ -197,10 +196,10 @@ export function InvoiceDetailPage() {
       <div className="mb-4 flex items-center gap-2">
         <InvoiceStatusBadge status={status} />
         {fulfillmentStatus !== "not-applicable" && (
-          <span className="text-[11.5px] capitalize text-text-3">{fulfillmentStatus.replace(/-/g, " ")}</span>
+          <span className="text-[11px] capitalize text-text-3">{fulfillmentStatus.replace(/-/g, " ")}</span>
         )}
         {invoice.lastReminderAt && status === "overdue" && (
-          <span className="text-[11.5px] text-text-3">Last reminder {fmtDateTime(invoice.lastReminderAt)}</span>
+          <span className="text-[11px] text-text-3">Last reminder {fmtDateTime(invoice.lastReminderAt)}</span>
         )}
       </div>
 
@@ -227,64 +226,12 @@ export function InvoiceDetailPage() {
           <InvoiceFulfillmentCard invoice={invoice} />
 
           {invoiceAdjustments.length > 0 && (
-            <Card className="gap-0 p-0">
-              <div className="border-b border-border px-5 py-3 text-sm font-bold text-text">Adjustments</div>
-              <div className="flex flex-col divide-y divide-border">
-                {invoiceAdjustments.map((adj) => (
-                  <div key={adj.id} className="flex items-start justify-between gap-3 px-5 py-3.5">
-                    <div>
-                      <div className="flex items-center gap-1.5 text-[13px] font-semibold text-text">
-                        {adj.number}
-                        <AdjustmentStatusBadge status={adj.status} />
-                      </div>
-                      <div className="mt-0.5 text-[11px] text-text-3">{adj.reason}</div>
-                    </div>
-                    <span className={cn("shrink-0 text-[13px] font-semibold", adj.kind === "credit" ? "text-green" : "text-amber")}>
-                      {adj.kind === "credit" ? "−" : "+"}
-                      {fmtMoney(adj.amount, invoice.currency)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Card>
+            <InvoiceAdjustmentsCard adjustments={invoiceAdjustments} currency={invoice.currency} />
           )}
 
-          <Card className="gap-0 p-0">
-            <div className="border-b border-border px-5 py-3 text-sm font-bold text-text">
-              Payment history
-            </div>
-            {invoice.payments.length === 0 ? (
-              <div className="px-5 py-6 text-center text-[12px] text-text-4">No payments recorded yet.</div>
-            ) : (
-              <div className="flex flex-col divide-y divide-border">
-                {invoice.payments.map((payment) => (
-                  <div key={payment.id} className="flex items-start justify-between gap-3 px-5 py-3.5">
-                    <div>
-                      <div className="text-[13px] font-semibold text-text">{fmtMoney(payment.amount, invoice.currency)}</div>
-                      <div className="mt-0.5 text-[11px] text-text-3">
-                        {PAYMENT_METHOD_LABELS[payment.method]}
-                        {payment.reference ? ` · ${payment.reference}` : ""}
-                      </div>
-                    </div>
-                    <span className="text-[11.5px] text-text-4">{fmtDate(payment.date)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Card>
+          <InvoicePaymentHistoryCard payments={invoice.payments} currency={invoice.currency} />
 
-          <Card className="gap-0 p-0">
-            <div className="border-b border-border px-5 py-3 text-sm font-bold text-text">History</div>
-            <div className="flex flex-col divide-y divide-border">
-              <HistoryRow label="Invoice created" when={invoice.createdAt} />
-              {invoice.sentAt && <HistoryRow label={`Sent to ${customer?.email ?? "customer"}`} when={invoice.sentAt} />}
-              {invoice.fulfilledAt && <HistoryRow label="Fully fulfilled" when={invoice.fulfilledAt} />}
-              {invoice.payments.map((payment) => (
-                <HistoryRow key={payment.id} label={`Payment of ${fmtMoney(payment.amount, invoice.currency)}`} when={payment.date} />
-              ))}
-              {invoice.cancelledAt && <HistoryRow label="Invoice cancelled" when={invoice.cancelledAt} />}
-            </div>
-          </Card>
+          <InvoiceHistoryCard invoice={invoice} customer={customer} />
         </div>
       </div>
 
@@ -320,11 +267,3 @@ export function InvoiceDetailPage() {
   );
 }
 
-function HistoryRow({ label, when }: { label: string; when: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 px-5 py-3">
-      <span className="text-[12.5px] text-text-2">{label}</span>
-      <span className="text-[11px] text-text-4">{fmtDateTime(when)}</span>
-    </div>
-  );
-}

@@ -41,6 +41,7 @@ export type RecurringTemplate = {
   retainerId?: string; // set when kind is "retainer-topup"
   lastInvoiceId?: string; // most recent generated invoice
   lastGeneratedAt?: string; // ISO
+  autoSend?: boolean;
   createdAt: string;
 };
 
@@ -53,6 +54,7 @@ export type NewRecurringTemplateInput = {
   nextInvoiceDate: string;
   kind?: RecurringTemplateKind;
   retainerId?: string;
+  autoSend?: boolean;
 };
 
 /** Advance a date by one cycle of the given frequency (longer cycles keep

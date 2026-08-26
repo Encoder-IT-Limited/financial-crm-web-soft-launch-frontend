@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { fmtMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { ProductLookupItem } from "../../invoices/mock/product-lookup-seed";
+import type { ProductLookupItem } from "../mock/product-lookup-seed";
 
 export function ProductTile({
   product,

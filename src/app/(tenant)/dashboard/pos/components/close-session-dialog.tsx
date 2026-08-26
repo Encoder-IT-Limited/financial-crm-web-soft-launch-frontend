@@ -19,7 +19,7 @@ import { closeSessionSchema } from "../schemas";
 import { expectedCashForSession, round2, type PosSession } from "../types";
 import { posSessionsApi } from "../api/sessions.service";
 import { posSalesApi } from "../api/sales.service";
-import { FormField } from "../../invoices/components/form-field";
+import { FormField } from "../../../modules/billing/components/form-field";
 
 export function CloseSessionDialog({
   session,

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/lib/toast";
+import { ApiError } from "@/lib/api/errors";
 import { fmtMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { invoiceBalance, type Invoice, PAYMENT_METHOD_LABELS, round2, type PaymentMethod } from "../types";
@@ -86,6 +87,7 @@ export function RecordPaymentDialog({
         onOpenChange(false);
         onRecorded?.();
       })
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : "Could not record payment"))
       .finally(() => setSaving(false));
   }
 

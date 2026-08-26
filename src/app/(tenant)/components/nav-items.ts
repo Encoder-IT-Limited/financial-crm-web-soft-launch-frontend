@@ -120,12 +120,12 @@ export const tenantNavSections: SidebarNavSection[] = [
         icon: FileText,
         module: "sales",
       },
-      {
-        label: "POS",
-        href: "/dashboard/pos",
-        icon: MonitorSmartphone,
-        module: "sales",
-      },
+      // {
+      //   label: "POS",
+      //   href: "/dashboard/pos",
+      //   icon: MonitorSmartphone,
+      //   module: "sales",
+      // },
       {
         label: "Proposals",
         href: "/dashboard/proposals",

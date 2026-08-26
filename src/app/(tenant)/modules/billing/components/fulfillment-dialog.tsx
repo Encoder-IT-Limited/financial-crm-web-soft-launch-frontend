@@ -117,7 +117,7 @@ export function FulfillmentDialog({
       </FormField>
 
       {lineQtys.length === 0 ? (
-        <p className="text-[12px] text-text-4">All product lines are fully fulfilled.</p>
+        <p className="text-[12.5px] text-text-4">All product lines are fully fulfilled.</p>
       ) : (
         <div className="flex flex-col gap-2">
           <div className="text-[11px] font-bold uppercase tracking-wide text-text-4">Quantities to ship</div>

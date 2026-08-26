@@ -286,7 +286,7 @@ export type NewProposalInput = {
   expiryDate: string;
   currency?: Currency;
   discountPercent?: number;
-  lines: { description: string; quantity: number; unitPrice: number; taxRate: number }[];
+  lines: { description: string; quantity: number; unitPrice: number; taxRate: number; productId?: string }[];
   notes?: string;
 };
 
@@ -320,6 +320,8 @@ export type Adjustment = {
   createdBy: string;
   createdAt: string;
   voidedAt?: string;
+  linkedReturn?: boolean;
+  refundAmount?: number;
 };
 
 export type NewAdjustmentInput = {
@@ -329,6 +331,9 @@ export type NewAdjustmentInput = {
   amount: number;
   reason: string;
   currency?: Currency;
+  linkedReturn?: boolean;
+  warehouseId?: string;
+  returnItems?: { productId: string; quantity: number }[];
 };
 
 /** Issued adjustments linked to a given invoice — voided ones don't count. */

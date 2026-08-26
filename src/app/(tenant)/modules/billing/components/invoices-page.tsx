@@ -5,31 +5,22 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  type Column,
   type ColumnDef,
+  type PaginationState,
   type RowSelectionState,
   type SortingState,
-  flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, ArrowUpDown, BellRing, Download, Eye, FileText, Plus, Search } from "lucide-react";
+import { Download, Eye, FileText, Plus } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeading } from "@/components/shared/page-heading";
+import { TablePagination } from "@/components/shared/table-pagination";
 import { toast } from "@/lib/toast";
 import { downloadCsv } from "@/lib/csv";
 import { fmtDate, fmtMoney } from "@/lib/format";
@@ -39,7 +30,6 @@ import {
   invoiceDisplayStatus,
   isInvoiceOverdue,
   type Invoice,
-  type InvoiceDisplayStatus,
 } from "../types";
 import { invoiceApi } from "../api/invoices.service";
 import { downloadInvoicePdf } from "../lib/invoice-print";
@@ -50,26 +40,26 @@ import { InvoiceStatusBadge } from "./invoice-status-badge";
 import { StatTiles } from "./stat-tiles";
 import { InvoicePreviewDialog } from "./invoice-preview-dialog";
 import { RecurringTemplatesPanel } from "./recurring-templates-panel";
+import { InvoicesBulkBar, InvoicesToolbar, type InvoiceFilters } from "./invoices-toolbar";
+import { InvoicesTable, SortableHeader } from "./invoices-table";
+import { InvoicesMobileList } from "./invoices-mobile-list";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyColumnDef<TData> = ColumnDef<TData, any>;
 
-type Filters = {
-  search: string;
-  status: "all" | InvoiceDisplayStatus;
-  customer: string;
-};
+type Filters = InvoiceFilters;
 
 export function InvoicesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: invoices = [] } = useInvoices();
+  const { data: invoices = [], isLoading: invoicesLoading, isError: invoicesError } = useInvoices();
   const { data: customers = [] } = useCustomers();
   const { data: org } = useQuery({ queryKey: ["org-profile"], queryFn: invoiceApi.getOrgProfile, staleTime: Infinity });
   const [filters, setFilters] = useState<Filters>({ search: "", status: "all", customer: "all" });
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
   const [sendingReminders, setSendingReminders] = useState(false);
 
   const customerName = (id: string) => customers.find((c) => c.id === id)?.name ?? "—";
@@ -161,7 +151,7 @@ export function InvoicesPage() {
           const balance = invoiceBalance(row.original);
           return (
             <span className={cn("text-right text-[13px] font-semibold", balance > 0 ? "text-amber" : "text-text-3")}>
-              {fmtMoney(balance)}
+              {fmtMoney(balance, row.original.currency)}
             </span>
           );
         },
@@ -224,13 +214,15 @@ export function InvoicesPage() {
   const table = useReactTable({
     data: filtered,
     columns,
-    state: { sorting, rowSelection },
+    state: { sorting, rowSelection, pagination },
     onSortingChange: setSorting,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: setPagination,
     getRowId: (inv) => inv.id,
     enableRowSelection: true,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
   const stats = useMemo(() => {
@@ -325,175 +317,40 @@ export function InvoicesPage() {
           />
 
           <Card className="mt-4 gap-0 p-0">
-        <div className="flex flex-wrap items-center gap-2 border-b border-border p-3">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-text-4" />
-            <Input
-              value={filters.search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-              placeholder="Search invoices..."
-              className="w-full pl-8 sm:w-60"
+            <InvoicesToolbar
+              filters={filters}
+              onFiltersChange={(next) => {
+                setFilters(next);
+                setPagination((p) => ({ ...p, pageIndex: 0 }));
+              }}
+              customers={customers}
+              filteredCount={filtered.length}
+              totalCount={invoices.length}
             />
-          </div>
-          <Select
-            value={filters.status}
-            onValueChange={(status) => setFilters({ ...filters, status: (status ?? "all") as Filters["status"] })}
-          >
-            <SelectTrigger size="sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All status</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="sent">Sent</SelectItem>
-              <SelectItem value="partially-paid">Partially Paid</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="overdue">Overdue</SelectItem>
-              <SelectItem value="cancelled">Cancelled</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={filters.customer}
-            onValueChange={(customer) => setFilters({ ...filters, customer: customer ?? "all" })}
-          >
-            <SelectTrigger size="sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All customers</SelectItem>
-              {customers.map((customer) => (
-                <SelectItem key={customer.id} value={customer.id}>
-                  {customer.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="ml-auto text-[11.5px] text-text-4">
-            {filtered.length} of {invoices.length} invoices
-          </div>
-        </div>
-
-        {selected.length > 0 && (
-          <div className="hidden items-center gap-2 border-b border-blue-t bg-blue-l px-3 py-2 lg:flex">
-            <BellRing className="size-4 text-blue" />
-            <span className="text-[12px] font-semibold text-blue">
-              {selected.length} invoice{selected.length === 1 ? "" : "s"} selected
-            </span>
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="outline" size="xs" onClick={() => exportCsv(selected)}>
-                <Download /> Export selected
-              </Button>
-              <Button
-                variant="outline"
-                size="xs"
-                disabled={sendingReminders || selectedEligibleForReminder.length === 0}
-                onClick={sendRemindersToSelected}
-              >
-                <BellRing /> {sendingReminders ? "Sending…" : "Send reminders"}
-              </Button>
-              <Button variant="ghost" size="xs" onClick={() => setRowSelection({})}>
-                Clear selection
-              </Button>
+            <InvoicesBulkBar
+              selectedCount={selected.length}
+              sendingReminders={sendingReminders}
+              reminderEligibleCount={selectedEligibleForReminder.length}
+              onExportSelected={() => exportCsv(selected)}
+              onSendReminders={sendRemindersToSelected}
+              onClear={() => setRowSelection({})}
+            />
+            <InvoicesTable
+              table={table}
+              onRowClick={(inv) => router.push(`/dashboard/invoices/${inv.id}`)}
+              loading={invoicesLoading}
+              error={invoicesError ? "Couldn't load invoices. Try refreshing the page." : undefined}
+            />
+            <InvoicesMobileList
+              invoices={rows.map((r) => r.original)}
+              customerName={customerName}
+              loading={invoicesLoading}
+              error={invoicesError ? "Couldn't load invoices. Try refreshing the page." : undefined}
+            />
+            <div className="border-t border-border px-3">
+              <TablePagination table={table} totalCount={filtered.length} pageSizeOptions={[10, 25, 50]} />
             </div>
-          </div>
-        )}
-
-        {/* Desktop table */}
-        <Table className="hidden lg:table">
-          <TableHeader className="bg-surface-subtle">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="hover:bg-surface-subtle">
-                {headerGroup.headers.map((header) => (
-                  <TableHead
-                    key={header.id}
-                    style={header.column.columnDef.size !== undefined ? { width: header.column.getSize() } : undefined}
-                    className={cn(
-                      "px-5 py-2.5 text-[10.5px] font-bold uppercase tracking-wide text-text-3",
-                      header.column.id === "select" && "w-10 px-4",
-                      header.column.id === "actions" && "w-36 text-right"
-                    )}
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {rows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() ? "selected" : undefined}
-                onClick={() => router.push(`/dashboard/invoices/${row.original.id}`)}
-                className="cursor-pointer transition-colors hover:bg-surface-subtle"
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell
-                    key={cell.id}
-                    className={cn(
-                      "px-5 py-3",
-                      cell.column.id === "select" && "w-10 px-4",
-                      ["amount", "paid", "balance"].includes(cell.column.id) && "pr-5 text-right"
-                    )}
-                  >
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-            {rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-28 text-center text-[13px] text-text-4">
-                  No invoices match your filters.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-
-        {/* Mobile stacked cards */}
-        <div className="flex flex-col divide-y divide-border lg:hidden">
-          {filtered.map((inv) => (
-            <Link
-              key={inv.id}
-              href={`/dashboard/invoices/${inv.id}`}
-              className="flex flex-col gap-2.5 p-4 transition-colors hover:bg-surface-subtle"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[13px] font-bold text-text">{inv.number}</span>
-                <InvoiceStatusBadge status={invoiceDisplayStatus(inv)} />
-              </div>
-              <div className="flex items-center gap-2 text-[12.5px] text-text-2">
-                <span className="truncate">{customerName(inv.customerId)}</span>
-              </div>
-              <div className="flex items-center justify-between text-[12.5px]">
-                <span className="text-text-4">
-                  Issued {fmtDate(inv.issueDate)} · Due {fmtDate(inv.dueDate)}
-                </span>
-                <div className="text-right">
-                  <div className="font-bold text-text">{fmtMoney(inv.total, inv.currency)}</div>
-                  <div className="text-[11px] text-text-3">
-                    Balance{" "}
-                    <span
-                      className={cn(
-                        "font-semibold",
-                        invoiceBalance(inv) > 0 ? "text-amber" : "text-green"
-                      )}
-                    >
-                      {fmtMoney(invoiceBalance(inv))}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          ))}
-          {filtered.length === 0 && (
-            <div className="p-8 text-center text-[13px] text-text-4">No invoices match your filters.</div>
-          )}
-        </div>
-      </Card>
+          </Card>
         </TabsContent>
 
         <TabsContent value="recurring" className="mt-4">
@@ -509,35 +366,5 @@ export function InvoicesPage() {
         }}
       />
     </div>
-  );
-}
-
-function SortableHeader<TData>({
-  column,
-  label,
-  align = "left",
-}: {
-  column: Column<TData, unknown>;
-  label: string;
-  align?: "left" | "right";
-}) {
-  const sorted = column.getIsSorted();
-  return (
-    <button
-      onClick={column.getToggleSortingHandler()}
-      className={cn(
-        "flex items-center gap-1.5 rounded outline-none hover:text-text focus-visible:ring-2 focus-visible:ring-ring/50",
-        align === "right" && "ml-auto"
-      )}
-    >
-      {label}
-      {sorted === "asc" ? (
-        <ArrowUp className="size-3 text-blue" />
-      ) : sorted === "desc" ? (
-        <ArrowDown className="size-3 text-blue" />
-      ) : (
-        <ArrowUpDown className="size-3 opacity-40" />
-      )}
-    </button>
   );
 }

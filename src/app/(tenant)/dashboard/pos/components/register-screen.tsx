@@ -6,7 +6,7 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeading } from "@/components/shared/page-heading";
 import { toast } from "@/lib/toast";
-import type { ProductLookupItem } from "../../invoices/mock/product-lookup-seed";
+import type { ProductLookupItem } from "../mock/product-lookup-seed";
 import { computeCartTotals, type CartLine, type PosPayment, type PosSale } from "../types";
 import { posTerminalsApi } from "../api/terminals.service";
 import { posSessionsApi } from "../api/sessions.service";
