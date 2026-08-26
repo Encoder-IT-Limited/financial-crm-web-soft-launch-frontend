@@ -33,10 +33,10 @@ import {
   Bell,
   Sparkles,
   Settings,
-  Truck,
   Store,
   History,
   Monitor,
+  MonitorSmartphone,
 } from "lucide-react";
 import type { SidebarNavSection } from "@/types/nav";
 
