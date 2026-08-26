@@ -1,6 +1,6 @@
 # Bug Fixes Required
 
-## 1. BUG_01: Navbar Items Are Hidden on Smaller Screen Sizes
+## 1. BUG_01: Navbar Items Are Hidden on Smaller Screen Sizes ✅
 
 - **Module:** Navbar
 - **Feature:** Responsive Navigation
