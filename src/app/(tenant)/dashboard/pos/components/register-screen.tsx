@@ -57,6 +57,7 @@ export function RegisterScreen() {
 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartDiscount, setCartDiscount] = useState(0);
+  const [checkoutManagerPin, setCheckoutManagerPin] = useState<string | undefined>();
   const [customerId, setCustomerId] = useState<string | undefined>();
 
   const [openSessionOpen, setOpenSessionOpen] = useState(false);
@@ -74,13 +75,24 @@ export function RegisterScreen() {
       if (existing) {
         return prev.map((l) => (l.productId === product.id ? { ...l, quantity: l.quantity + 1 } : l));
       }
-      return [...prev, { productId: product.id, name: product.name, sku: product.sku, unitPrice: product.price, quantity: 1, taxRate: DEMO_VAT_RATE }];
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          name: product.name,
+          sku: product.sku,
+          unitPrice: product.price,
+          quantity: 1,
+          taxRate: product.taxRate ?? DEMO_VAT_RATE,
+        },
+      ];
     });
   }
 
   function resetCart() {
     setCart([]);
     setCartDiscount(0);
+    setCheckoutManagerPin(undefined);
     setCustomerId(undefined);
   }
 
@@ -97,14 +109,19 @@ export function RegisterScreen() {
         lines: cart,
         cartDiscount,
         payments,
+        managerPin: checkoutManagerPin,
       })
       .then((sale) => {
         toast.success(`${sale.number} completed`);
         queryClient.invalidateQueries({ queryKey: ["pos-products"] });
         queryClient.invalidateQueries({ queryKey: ["pos-sales"] });
+        queryClient.invalidateQueries({ queryKey: ["inventory"] });
         resetCart();
         setPaymentOpen(false);
         setCompletedSale(sale);
+      })
+      .catch((err: unknown) => {
+        toast.error(err instanceof Error ? err.message : "Checkout failed");
       })
       .finally(() => setCheckingOut(false));
   }
@@ -160,7 +177,15 @@ export function RegisterScreen() {
 
       <CloseSessionDialog session={session ?? null} open={closeSessionOpen} onOpenChange={setCloseSessionOpen} onClosed={() => {}} />
 
-      <DiscountDialog open={discountOpen} onOpenChange={setDiscountOpen} subtotal={totals.subtotal} onApply={setCartDiscount} />
+      <DiscountDialog
+        open={discountOpen}
+        onOpenChange={setDiscountOpen}
+        subtotal={totals.subtotal}
+        onApply={(amount, managerPin) => {
+          setCartDiscount(amount);
+          setCheckoutManagerPin(managerPin);
+        }}
+      />
 
       <PaymentDialog open={paymentOpen} onOpenChange={setPaymentOpen} total={totals.total} onConfirm={handleCheckout} confirming={checkingOut} />
 

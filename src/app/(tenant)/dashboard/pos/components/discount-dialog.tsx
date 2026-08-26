@@ -37,7 +37,7 @@ export function DiscountDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   subtotal: number;
-  onApply: (amount: number) => void;
+  onApply: (amount: number, managerPin?: string) => void;
 }) {
   const [kind, setKind] = useState<DiscountKind>("standard");
   const [standardIndex, setStandardIndex] = useState("0");
@@ -130,8 +130,8 @@ export function DiscountDialog({
         onOpenChange={setPinOpen}
         title="Approve custom discount"
         description={`Applying a custom discount of ${fmtMoney(Number(overrideAmount) || 0)} needs manager approval.`}
-        onApproved={() => {
-          onApply(Number(overrideAmount) || 0);
+        onApproved={(pin) => {
+          onApply(Number(overrideAmount) || 0, pin);
           onOpenChange(false);
         }}
       />

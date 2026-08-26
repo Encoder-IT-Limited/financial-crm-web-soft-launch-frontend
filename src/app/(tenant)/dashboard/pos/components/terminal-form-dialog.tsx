@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -15,18 +15,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { terminalFormSchema } from "../schemas";
+import { terminalFormSchema, terminalEditFormSchema } from "../schemas";
 import type { PosTerminal } from "../types";
 import { posTerminalsApi } from "../api/terminals.service";
-import { PRODUCT_LOOKUP_WAREHOUSES } from "../../invoices/mock/product-lookup-seed";
+import { inventoryApi } from "@/app/(tenant)/modules/inventory/api/inventory.service";
 import { FormField } from "../../invoices/components/form-field";
 
 const EMPTY = { name: "", code: "", warehouseId: "", accessCode: "" };
 
-/** Admin-only config — creating/editing a terminal doesn't need a
- * permission check wired up yet (no real role hierarchy exists in the
- * mock identity layer), but it's deliberately kept off the checkout
- * screen itself and lives on its own admin page. The access code set
+/** Admin-only config — creating/editing a terminal. The access code set
  * here is what a cashier enters to start a shift on this terminal
  * (see OpenSessionDialog) — separate from the manager-approval PIN. */
 export function TerminalFormDialog({
@@ -39,35 +36,57 @@ export function TerminalFormDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
-  // The edit dialog is conditionally mounted fresh per terminal (see
-  // terminals-list.tsx), so this initial value is always correct on
-  // mount; the create dialog stays mounted and resets via onOpenChange
-  // below instead — same "reset on open" convention as every other
-  // form dialog in this codebase (e.g. FulfillmentDialog).
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ["pos-warehouses"],
+    queryFn: inventoryApi.listWarehouses,
+  });
+  // When editing, leave access code blank to mean "keep existing hash".
   const [form, setForm] = useState(() =>
-    terminal ? { name: terminal.name, code: terminal.code, warehouseId: terminal.warehouseId, accessCode: terminal.accessCode } : EMPTY
+    terminal
+      ? { name: terminal.name, code: terminal.code, warehouseId: terminal.warehouseId, accessCode: "" }
+      : EMPTY
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   function reset() {
-    setForm(terminal ? { name: terminal.name, code: terminal.code, warehouseId: terminal.warehouseId, accessCode: terminal.accessCode } : EMPTY);
+    setForm(
+      terminal
+        ? { name: terminal.name, code: terminal.code, warehouseId: terminal.warehouseId, accessCode: "" }
+        : EMPTY
+    );
     setErrors({});
   }
 
   function handleSubmit() {
-    const result = terminalFormSchema.safeParse(form);
+    const schema = terminal ? terminalEditFormSchema : terminalFormSchema;
+    const result = schema.safeParse(form);
     if (!result.success) {
       setErrors(Object.fromEntries(result.error.issues.map((issue) => [issue.path.join("."), issue.message])));
       return;
     }
     setSaving(true);
-    const action = terminal ? posTerminalsApi.update(terminal.id, result.data) : posTerminalsApi.create(result.data);
+    const payload = {
+      name: result.data.name,
+      code: result.data.code,
+      warehouseId: result.data.warehouseId,
+      accessCode: result.data.accessCode || (terminal ? "••••" : result.data.accessCode),
+    };
+    // For create, accessCode is required by schema. For edit with blank, send placeholder that mapper skips.
+    const action = terminal
+      ? posTerminalsApi.update(terminal.id, {
+          ...payload,
+          accessCode: result.data.accessCode || "••••",
+        })
+      : posTerminalsApi.create(result.data);
     action
       .then(() => {
         toast.success(terminal ? "Terminal updated" : "Terminal created");
         queryClient.invalidateQueries({ queryKey: ["pos-terminals"] });
         onOpenChange(false);
+      })
+      .catch((err: unknown) => {
+        toast.error(err instanceof Error ? err.message : "Could not save terminal");
       })
       .finally(() => setSaving(false));
   }
@@ -105,7 +124,9 @@ export function TerminalFormDialog({
                 <SelectValue placeholder="Select a warehouse" />
               </SelectTrigger>
               <SelectContent>
-                {PRODUCT_LOOKUP_WAREHOUSES.map((w) => (
+                {warehouses
+                  .filter((w) => w.status === "active")
+                  .map((w) => (
                   <SelectItem key={w.id} value={w.id}>
                     {w.name}
                   </SelectItem>
@@ -117,7 +138,7 @@ export function TerminalFormDialog({
             <Input
               value={form.accessCode}
               onChange={(e) => setForm({ ...form, accessCode: e.target.value })}
-              placeholder="Cashiers enter this to start a shift here"
+              placeholder={terminal ? "Leave blank to keep current code" : "Cashiers enter this to start a shift here"}
               aria-invalid={!!errors.accessCode}
               className={cn(errors.accessCode && "border-red")}
             />

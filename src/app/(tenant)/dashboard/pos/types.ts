@@ -123,11 +123,10 @@ export type NewPosSaleInput = {
   lines: CartLine[];
   cartDiscount: number; // additional discount on top of any per-line discounts
   payments: PosPayment[];
+  managerPin?: string;
 };
 
-/** A returned line either goes back to sellable stock, or is flagged
- * damaged. Damaged doesn't restock in this demo — a real "quarantine"
- * stock status would need Inventory changes out of this plan's scope. */
+/** A returned line either goes back to sellable stock, or is flagged damaged. */
 export type RefundLineCondition = "sellable" | "damaged";
 
 export type RefundLineInput = { productId: string; quantity: number; condition: RefundLineCondition };
@@ -138,7 +137,7 @@ export type PosRefund = {
   lines: RefundLineInput[];
   amount: number;
   reason: string;
-  approvedBy: string; // manager-PIN gate, client-confirmed rule
+  approvedBy: string;
   createdAt: string;
 };
 
@@ -147,6 +146,7 @@ export type NewRefundInput = {
   lines: RefundLineInput[];
   reason: string;
   approvedBy: string;
+  managerPin?: string;
 };
 
 export function round2(value: number): number {

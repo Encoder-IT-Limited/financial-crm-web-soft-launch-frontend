@@ -4,16 +4,40 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { productLookupApi, stockAt } from "../../invoices/api/product-lookup.service";
+import { inventoryApi } from "@/app/(tenant)/modules/inventory/api/inventory.service";
 import type { ProductLookupItem } from "../../invoices/mock/product-lookup-seed";
 import { ProductTile } from "./product-tile";
 
+function stockAt(item: ProductLookupItem, warehouseId: string): number {
+  return item.stockByWarehouse[warehouseId] ?? 0;
+}
+
 /** Search box (also where a barcode scanner's fast text input lands —
  * scanners just "type" the code into whatever's focused) + a tap-to-add
- * product grid. Deliberately its own small component, not folded into
- * the register screen. */
+ * product grid. Catalog comes from live inventory; stock is per warehouse. */
 export function ProductSearchPanel({ warehouseId, onAdd }: { warehouseId: string; onAdd: (product: ProductLookupItem) => void }) {
-  const { data: products = [], isLoading } = useQuery({ queryKey: ["pos-products"], queryFn: productLookupApi.listProducts });
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ["pos-products", warehouseId],
+    queryFn: async (): Promise<ProductLookupItem[]> => {
+      const [catalog, stock] = await Promise.all([inventoryApi.listProducts(), inventoryApi.listStock()]);
+      return catalog
+        .filter((p) => p.status === "active")
+        .map((p) => {
+          const stockByWarehouse: Record<string, number> = {};
+          for (const row of stock) {
+            if (row.productId === p.id) stockByWarehouse[row.warehouseId] = row.quantity;
+          }
+          return {
+            id: p.id,
+            name: p.name,
+            sku: p.sku,
+            price: p.price,
+            taxRate: p.taxRate ?? 5,
+            stockByWarehouse,
+          };
+        });
+    },
+  });
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {

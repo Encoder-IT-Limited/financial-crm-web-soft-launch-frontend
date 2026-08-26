@@ -8,12 +8,14 @@ export type PosTerminal = {
   code: string;
   warehouseId: string;
   status: string;
+  hasAccessCode?: boolean;
 };
 
 export type PosSession = {
   id: string;
   terminalId: string;
   cashierId?: string;
+  cashierName?: string | null;
   status: string;
   openingCash: number | string;
   closingCash?: number | string | null;
@@ -112,13 +114,23 @@ export type PosReceipt = {
 
 export const posApi = {
   listTerminals: () => apiGet<PosTerminal[]>("/pos/terminals"),
-  createTerminal: (input: { name: string; code: string; warehouseId: string }) =>
+  createTerminal: (input: { name: string; code: string; warehouseId: string; accessCode: string }) =>
     apiSend<PosTerminal>("post", "/pos/terminals", input),
+  updateTerminal: (
+    id: string,
+    input: {
+      name?: string;
+      code?: string;
+      warehouseId?: string;
+      accessCode?: string;
+      status?: "ACTIVE" | "INACTIVE";
+    },
+  ) => apiSend<PosTerminal>("patch", `/pos/terminals/${id}`, input),
 
   listSessions: (status?: "OPEN" | "CLOSED") =>
     apiGet<PosSession[]>("/pos/sessions", status ? { params: { status } } : undefined),
 
-  openSession: (input: { terminalId: string; openingCash: number }) =>
+  openSession: (input: { terminalId: string; openingCash: number; accessCode: string; cashierName: string }) =>
     apiSend<PosSession>("post", "/pos/sessions", input),
   closeSession: (id: string, closingCash: number) =>
     apiSend<PosSession>("post", `/pos/sessions/${id}/close`, { closingCash }),

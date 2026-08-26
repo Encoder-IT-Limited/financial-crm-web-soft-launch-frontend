@@ -15,10 +15,12 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { ApiError } from "@/lib/api/errors";
 import { openSessionSchema } from "../schemas";
 import { posTerminalsApi } from "../api/terminals.service";
 import { posSessionsApi } from "../api/sessions.service";
 import { FormField } from "../../invoices/components/form-field";
+import { useMe } from "@/hooks/useMe";
 
 /** Starting a shift is also the cashier-login step — a name plus the
  * terminal's own access code, checked against that terminal's record.
@@ -42,6 +44,7 @@ export function OpenSessionDialog({
   onOpened: (terminalId: string) => void;
 }) {
   const queryClient = useQueryClient();
+  const { data: me } = useMe();
   const { data: terminals = [] } = useQuery({ queryKey: ["pos-terminals"], queryFn: posTerminalsApi.list });
   const activeTerminals = terminals.filter((t) => t.status === "active");
 
@@ -53,7 +56,7 @@ export function OpenSessionDialog({
   const [saving, setSaving] = useState(false);
 
   function reset() {
-    setCashierName("");
+    setCashierName(me?.name ?? "");
     setAccessCode("");
     setOpeningCash("0");
     setErrors({});
@@ -68,19 +71,33 @@ export function OpenSessionDialog({
     }
 
     const terminal = terminals.find((t) => t.id === result.data.terminalId);
-    if (!terminal || terminal.accessCode !== result.data.accessCode) {
-      setErrors({ accessCode: "Incorrect access code for this terminal" });
+    if (!terminal) {
+      setErrors({ terminalId: "Select a terminal" });
       return;
     }
 
     setSaving(true);
     posSessionsApi
-      .open({ terminalId: terminal.id, openedBy: result.data.cashierName, openingCash: result.data.openingCash })
+      .open({
+        terminalId: terminal.id,
+        openedBy: result.data.cashierName,
+        openingCash: result.data.openingCash,
+        accessCode: result.data.accessCode,
+      })
       .then(() => {
         toast.success(`Shift started — welcome, ${result.data.cashierName}`);
         queryClient.invalidateQueries({ queryKey: ["pos-open-session"] });
         onOpened(terminal.id);
         onOpenChange(false);
+      })
+      .catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : "Could not start shift";
+        const code = err instanceof ApiError ? err.code : undefined;
+        if (code === "INVALID_ACCESS_CODE") {
+          setErrors({ accessCode: "Incorrect access code for this terminal" });
+        } else {
+          toast.error(message);
+        }
       })
       .finally(() => setSaving(false));
   }
