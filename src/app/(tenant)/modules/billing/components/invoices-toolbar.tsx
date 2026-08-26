@@ -70,7 +70,7 @@ export function InvoicesToolbar({
           ))}
         </SelectContent>
       </Select>
-      <div className="ml-auto text-[11.5px] text-text-4">
+      <div className="ml-auto text-[11px] text-text-4">
         {filteredCount} of {totalCount} invoices
       </div>
     </div>
@@ -96,7 +96,7 @@ export function InvoicesBulkBar({
   return (
     <div className="hidden items-center gap-2 border-b border-blue-t bg-blue-l px-3 py-2 lg:flex">
       <BellRing className="size-4 text-blue" />
-      <span className="text-[12px] font-semibold text-blue">
+      <span className="text-[12.5px] font-semibold text-blue">
         {selectedCount} invoice{selectedCount === 1 ? "" : "s"} selected
       </span>
       <div className="ml-auto flex items-center gap-2">

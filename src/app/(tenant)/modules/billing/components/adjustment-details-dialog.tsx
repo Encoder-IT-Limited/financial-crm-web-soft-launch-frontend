@@ -83,7 +83,7 @@ export function AdjustmentDetailsDialog({
           {adjustment.voidedAt && <Field label="Voided" value={fmtDateTime(adjustment.voidedAt)} />}
 
           {canConvert && (
-            <div className="rounded-lg border border-blue-t bg-blue-l p-3 text-[11.5px] text-blue">
+            <div className="rounded-lg border border-blue-t bg-blue-l p-3 text-[11px] text-blue">
               {adjustment.kind === "debit" ? (
                 <>
                   This debit note isn&apos;t linked to an invoice yet, so there&apos;s nothing the customer can pay against. Convert it

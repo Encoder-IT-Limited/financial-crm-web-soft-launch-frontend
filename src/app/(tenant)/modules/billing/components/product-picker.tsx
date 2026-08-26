@@ -42,7 +42,13 @@ export function ProductPicker({
         }}
       >
         <SelectTrigger size="sm" className={cn("w-full", invalid && "border-red")}>
-          <SelectValue placeholder="Pick a product" />
+          <SelectValue placeholder="Pick a product">
+            {(value: string) => {
+              if (!value || value === CUSTOM) return "Custom / service line";
+              const product = products.find((p) => p.id === value);
+              return product ? `${product.sku} — ${product.name}` : "Pick a product";
+            }}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={CUSTOM}>Custom / service line</SelectItem>
@@ -78,7 +84,9 @@ export function WarehousePicker({
   return (
     <Select value={value || ""} onValueChange={(v) => onChange(v ?? "")}>
       <SelectTrigger size="sm" className="w-full">
-        <SelectValue placeholder="Warehouse" />
+        <SelectValue placeholder="Warehouse">
+          {(v: string) => warehouses.find((wh) => wh.id === v)?.name ?? "Warehouse"}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {warehouses.map((wh) => (

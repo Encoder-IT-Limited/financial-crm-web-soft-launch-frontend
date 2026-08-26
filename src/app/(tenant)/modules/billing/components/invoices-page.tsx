@@ -52,7 +52,7 @@ type Filters = InvoiceFilters;
 export function InvoicesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: invoices = [] } = useInvoices();
+  const { data: invoices = [], isLoading: invoicesLoading, isError: invoicesError } = useInvoices();
   const { data: customers = [] } = useCustomers();
   const { data: org } = useQuery({ queryKey: ["org-profile"], queryFn: invoiceApi.getOrgProfile, staleTime: Infinity });
   const [filters, setFilters] = useState<Filters>({ search: "", status: "all", customer: "all" });
@@ -335,8 +335,18 @@ export function InvoicesPage() {
               onSendReminders={sendRemindersToSelected}
               onClear={() => setRowSelection({})}
             />
-            <InvoicesTable table={table} onRowClick={(inv) => router.push(`/dashboard/invoices/${inv.id}`)} />
-            <InvoicesMobileList invoices={rows.map((r) => r.original)} customerName={customerName} />
+            <InvoicesTable
+              table={table}
+              onRowClick={(inv) => router.push(`/dashboard/invoices/${inv.id}`)}
+              loading={invoicesLoading}
+              error={invoicesError ? "Couldn't load invoices. Try refreshing the page." : undefined}
+            />
+            <InvoicesMobileList
+              invoices={rows.map((r) => r.original)}
+              customerName={customerName}
+              loading={invoicesLoading}
+              error={invoicesError ? "Couldn't load invoices. Try refreshing the page." : undefined}
+            />
             <div className="border-t border-border px-3">
               <TablePagination table={table} totalCount={filtered.length} pageSizeOptions={[10, 25, 50]} />
             </div>

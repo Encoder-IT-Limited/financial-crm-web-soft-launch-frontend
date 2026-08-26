@@ -69,7 +69,7 @@ export function NewInvoiceActions({
               <div className="flex items-center gap-1.5 text-[13px] font-semibold text-text">
                 <Wallet className="size-3.5 text-blue" /> Pay from {activeRetainer.number}
               </div>
-              <p className="mt-0.5 text-[11.5px] text-text-3">
+              <p className="mt-0.5 text-[11px] text-text-3">
                 {retainerCoversFully
                   ? `Draws ${fmtMoney(totals.total, currency)} from the ${fmtMoney(activeRetainer.remainingBalance, activeRetainer.currency)} remaining balance and marks this invoice paid on send. Only applies with "Create & Send".`
                   : `Only ${fmtMoney(activeRetainer.remainingBalance, activeRetainer.currency)} remains on this retainer — it'll cover part of this invoice as a partial payment; the rest stays owed normally. Only applies with "Create & Send".`}
@@ -82,7 +82,7 @@ export function NewInvoiceActions({
       <Card className="gap-0 border-blue-t bg-blue-l p-0">
         <div className="flex items-start gap-3 px-5 py-4">
           <FileText className="mt-0.5 size-4 shrink-0 text-blue" />
-          <div className="text-[11.5px] leading-relaxed text-blue/90">
+          <div className="text-[11px] leading-relaxed text-blue/90">
             Drafts stay private and are clearly labelled. Nothing is emailed until you click
             <strong> Create &amp; Send</strong>.
           </div>
@@ -99,7 +99,7 @@ export function NewInvoiceActions({
         <Button onClick={onSend} disabled={saving !== null}>
           <Send /> Create & Send
         </Button>
-        <Link href="/dashboard/invoices" className="text-center text-[11.5px] text-text-3 underline-offset-2 hover:underline">
+        <Link href="/dashboard/invoices" className="text-center text-[11px] text-text-3 underline-offset-2 hover:underline">
           Cancel and go back
         </Link>
       </div>

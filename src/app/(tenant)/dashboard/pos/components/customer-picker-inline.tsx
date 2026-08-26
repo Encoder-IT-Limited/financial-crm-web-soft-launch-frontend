@@ -6,7 +6,8 @@ import { UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { customersApi } from "../../../modules/crm/api/customers.service";
-import { AddCustomerDialog } from "../../invoices/components/add-customer-dialog";
+import type { Customer } from "../../../modules/crm/types";
+import { AddCustomerDialog } from "../../../modules/billing/components/add-customer-dialog";
 
 /** Optional customer attach — reuses CRM's existing quick-create dialog
  * rather than a POS-specific one, matching the client's "basic customer
@@ -47,7 +48,7 @@ export function CustomerPickerInline({
         </Button>
       )}
 
-      <AddCustomerDialog open={addOpen} onOpenChange={setAddOpen} onCreated={(customer) => onChange(customer.id)} />
+      <AddCustomerDialog open={addOpen} onOpenChange={setAddOpen} onCreated={(customer: Customer) => onChange(customer.id)} />
     </div>
   );
 }

@@ -12,7 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { terminalFormSchema, terminalEditFormSchema } from "../schemas";
@@ -43,8 +49,13 @@ export function TerminalFormDialog({
   // When editing, leave access code blank to mean "keep existing hash".
   const [form, setForm] = useState(() =>
     terminal
-      ? { name: terminal.name, code: terminal.code, warehouseId: terminal.warehouseId, accessCode: "" }
-      : EMPTY
+      ? {
+          name: terminal.name,
+          code: terminal.code,
+          warehouseId: terminal.warehouseId,
+          accessCode: "",
+        }
+      : EMPTY,
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -52,8 +63,13 @@ export function TerminalFormDialog({
   function reset() {
     setForm(
       terminal
-        ? { name: terminal.name, code: terminal.code, warehouseId: terminal.warehouseId, accessCode: "" }
-        : EMPTY
+        ? {
+            name: terminal.name,
+            code: terminal.code,
+            warehouseId: terminal.warehouseId,
+            accessCode: "",
+          }
+        : EMPTY,
     );
     setErrors({});
   }
@@ -62,7 +78,14 @@ export function TerminalFormDialog({
     const schema = terminal ? terminalEditFormSchema : terminalFormSchema;
     const result = schema.safeParse(form);
     if (!result.success) {
-      setErrors(Object.fromEntries(result.error.issues.map((issue) => [issue.path.join("."), issue.message])));
+      setErrors(
+        Object.fromEntries(
+          result.error.issues.map((issue) => [
+            issue.path.join("."),
+            issue.message,
+          ]),
+        ),
+      );
       return;
     }
     setSaving(true);
@@ -70,7 +93,8 @@ export function TerminalFormDialog({
       name: result.data.name,
       code: result.data.code,
       warehouseId: result.data.warehouseId,
-      accessCode: result.data.accessCode || (terminal ? "••••" : result.data.accessCode),
+      accessCode:
+        result.data.accessCode || (terminal ? "••••" : result.data.accessCode),
     };
     // For create, accessCode is required by schema. For edit with blank, send placeholder that mapper skips.
     const action = terminal
@@ -86,17 +110,29 @@ export function TerminalFormDialog({
         onOpenChange(false);
       })
       .catch((err: unknown) => {
-        toast.error(err instanceof Error ? err.message : "Could not save terminal");
+        toast.error(
+          err instanceof Error ? err.message : "Could not save terminal",
+        );
       })
       .finally(() => setSaving(false));
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { onOpenChange(next); if (next) reset(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (next) reset();
+      }}
+    >
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>{terminal ? "Edit Terminal" : "New Terminal"}</DialogTitle>
-          <DialogDescription>Every sale through this terminal deducts from its linked warehouse.</DialogDescription>
+          <DialogTitle>
+            {terminal ? "Edit Terminal" : "New Terminal"}
+          </DialogTitle>
+          <DialogDescription>
+            Every sale through this terminal deducts from its linked warehouse.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
@@ -119,7 +155,12 @@ export function TerminalFormDialog({
             />
           </FormField>
           <FormField label="Linked warehouse" error={errors.warehouseId}>
-            <Select value={form.warehouseId} onValueChange={(v) => setForm({ ...form, warehouseId: v ?? form.warehouseId })}>
+            <Select
+              value={form.warehouseId}
+              onValueChange={(v) =>
+                setForm({ ...form, warehouseId: v ?? form.warehouseId })
+              }
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a warehouse" />
               </SelectTrigger>
@@ -127,10 +168,10 @@ export function TerminalFormDialog({
                 {warehouses
                   .filter((w) => w.status === "active")
                   .map((w) => (
-                  <SelectItem key={w.id} value={w.id}>
-                    {w.name}
-                  </SelectItem>
-                ))}
+                    <SelectItem key={w.id} value={w.id}>
+                      {w.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
           </FormField>
@@ -138,7 +179,11 @@ export function TerminalFormDialog({
             <Input
               value={form.accessCode}
               onChange={(e) => setForm({ ...form, accessCode: e.target.value })}
-              placeholder={terminal ? "Leave blank to keep current code" : "Cashiers enter this to start a shift here"}
+              placeholder={
+                terminal
+                  ? "Leave blank to keep current code"
+                  : "Cashiers enter this to start a shift here"
+              }
               aria-invalid={!!errors.accessCode}
               className={cn(errors.accessCode && "border-red")}
             />
@@ -150,7 +195,11 @@ export function TerminalFormDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={saving}>
-            {saving ? "Saving..." : terminal ? "Save Changes" : "Create Terminal"}
+            {saving
+              ? "Saving..."
+              : terminal
+                ? "Save Changes"
+                : "Create Terminal"}
           </Button>
         </DialogFooter>
       </DialogContent>

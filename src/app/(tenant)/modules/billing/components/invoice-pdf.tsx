@@ -30,8 +30,8 @@ export function InvoicePdf({ invoice, customer }: { invoice: Invoice; customer?:
         <div className="text-left sm:text-right">
           <div className="text-xl font-bold text-text sm:text-[22px]">INVOICE</div>
           <div className="mt-0.5 text-[12px] font-semibold text-text-2">#{invoice.number}</div>
-          <div className="text-[11.5px] text-text-4">Date: {fmtDate(invoice.issueDate)}</div>
-          <div className="text-[11.5px] text-text-4">Due: {fmtDate(invoice.dueDate)}</div>
+          <div className="text-[11px] text-text-4">Date: {fmtDate(invoice.issueDate)}</div>
+          <div className="text-[11px] text-text-4">Due: {fmtDate(invoice.dueDate)}</div>
         </div>
       </div>
 
@@ -40,8 +40,8 @@ export function InvoicePdf({ invoice, customer }: { invoice: Invoice; customer?:
         <div>
           <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-text-4">Bill To</div>
           <div className="font-semibold text-text">{customer?.name ?? "—"}</div>
-          <div className="text-[11.5px] text-text-3">{customer?.email}</div>
-          <div className="text-[11.5px] text-text-3">{customer?.address}</div>
+          <div className="text-[11px] text-text-3">{customer?.email}</div>
+          <div className="text-[11px] text-text-3">{customer?.address}</div>
           {customer?.trn && <div className="mt-1 text-[10.5px] text-text-3">TRN: {customer.trn}</div>}
         </div>
         <div className="hidden size-20 flex-col items-center justify-center rounded-[6px] border border-dashed border-border bg-surface-subtle text-center text-[10px] text-text-4 sm:flex">

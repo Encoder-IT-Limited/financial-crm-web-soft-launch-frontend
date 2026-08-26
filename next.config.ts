@@ -14,8 +14,20 @@ function lanHosts(): string[] {
   return [...hosts];
 }
 
+// Kept in sync with the tunnel hosts `isDevStyleHost()` recognizes in
+// src/lib/api/http.ts — required so the dev server accepts requests
+// forwarded through a shared tunnel, not just the LAN.
+const TUNNEL_ORIGINS = [
+  "*.trycloudflare.com",
+  "*.loca.lt",
+  "*.ngrok-free.dev",
+  "*.ngrok-free.app",
+  "*.ngrok.app",
+  "*.ngrok.io",
+];
+
 const nextConfig: NextConfig = {
-  allowedDevOrigins: lanHosts(),
+  allowedDevOrigins: [...lanHosts(), ...TUNNEL_ORIGINS],
   async rewrites() {
     return [
       {

@@ -120,7 +120,7 @@ export function NewInvoiceForm({
           />
         </FormField>
 
-        <div className="rounded-lg border border-blue-t bg-blue-l p-3 text-[11.5px] text-blue">
+        <div className="rounded-lg border border-blue-t bg-blue-l p-3 text-[11px] text-blue">
           QR code will be auto-generated on the invoice PDF for easy payment scanning.
         </div>
       </div>
