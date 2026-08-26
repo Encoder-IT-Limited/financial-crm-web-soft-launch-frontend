@@ -6,6 +6,7 @@ import { FormDialog } from "@/components/shared/form-dialog";
 import { FormField } from "@/components/shared/form-field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/lib/toast";
+import { ApiError } from "@/lib/api/errors";
 import { fmtMoney } from "@/lib/format";
 import { retainerTransferSchema } from "../schemas";
 import type { Retainer } from "../types";
@@ -39,16 +40,13 @@ export function RetainerTransferDialog({
     setSaving(true);
     retainersApi
       .transfer(retainer.id, result.data.toRetainerId)
-      .then((ok) => {
-        if (!ok) {
-          toast.error("Transfer failed — check both retainers are active");
-          return;
-        }
+      .then(() => {
         toast.success(`${fmtMoney(retainer.remainingBalance, retainer.currency)} transferred out of ${retainer.number}`);
         queryClient.invalidateQueries({ queryKey: billingKeys.retainers() });
         setToRetainerId("");
         onOpenChange(false);
       })
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : "Transfer failed"))
       .finally(() => setSaving(false));
   }
 

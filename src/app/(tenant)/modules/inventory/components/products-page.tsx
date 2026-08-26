@@ -61,7 +61,7 @@ function presetFromSorting(sorting: SortingState): SortPreset {
 }
 
 function exportProductsCsv(rows: Product[]) {
-  const header = ["Product", "SKU", "Category", "Stock", "Price (AED)", "Status"];
+  const header = ["Product", "SKU", "Category", "Stock", "Price", "Status"];
   const body = rows.map((p) => [p.name, p.sku, p.category, p.stock, p.price, p.status]);
   const csv = [header, ...body]
     .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))

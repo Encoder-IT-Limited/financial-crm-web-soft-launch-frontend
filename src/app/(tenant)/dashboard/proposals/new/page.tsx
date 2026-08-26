@@ -12,15 +12,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageHeading } from "@/components/shared/page-heading";
 import { FormField } from "@/components/shared/form-field";
 import { toast } from "@/lib/toast";
+import { ApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils";
+import { useTenantCurrency } from "@/lib/use-tenant-currency";
 import { proposalFormSchema } from "../../../modules/billing/schemas";
-import { computeTotals, type Currency, type Proposal } from "../../../modules/billing/types";
+import { computeTotals, type Proposal } from "../../../modules/billing/types";
 import { proposalsApi } from "../../../modules/billing/api/proposals.service";
 import { customersApi } from "../../../modules/crm/api/customers.service";
 import { billingKeys } from "../../../modules/billing/query-keys";
 import { LineItemsEditor, emptyLines, type LineDraft } from "../../../modules/billing/components/line-items-editor";
 import { AddCustomerDialog } from "../../../modules/billing/components/add-customer-dialog";
 import { InvoiceSummaryCard } from "../../../modules/billing/components/invoice-summary-card";
+import { CurrencySelect } from "../../../modules/billing/components/currency-select";
 
 export default function NewProposalPage() {
   return (
@@ -41,10 +44,12 @@ function NewProposalForm() {
     queryKey: billingKeys.proposalNextNumber(),
     queryFn: proposalsApi.getNextNumber,
   });
+  const tenantCurrency = useTenantCurrency();
   const [editing, setEditing] = useState<Proposal | null>(null);
 
   const [customerId, setCustomerId] = useState("");
-  const [currency, setCurrency] = useState<Currency>("AED");
+  const [currencyOverride, setCurrencyOverride] = useState<Proposal["currency"] | null>(null);
+  const currency = currencyOverride ?? tenantCurrency;
   const [discountPercent, setDiscountPercent] = useState("0");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [expiryDate, setExpiryDate] = useState(() => {
@@ -69,7 +74,7 @@ function NewProposalForm() {
       }
       setEditing(proposal);
       setCustomerId(proposal.customerId);
-      setCurrency(proposal.currency ?? "AED");
+      setCurrencyOverride(proposal.currency);
       setDiscountPercent(String(proposal.discountPercent ?? 0));
       setDate(proposal.date);
       setExpiryDate(proposal.expiryDate);
@@ -80,6 +85,9 @@ function NewProposalForm() {
           quantity: String(l.quantity),
           unitPrice: String(l.unitPrice),
           taxRate: String(l.taxRate),
+          productId: l.productId,
+          warehouseId: l.warehouseId,
+          mode: l.productId ? "product" : "service",
         }))
       );
       setNotes(proposal.notes ?? "");
@@ -113,6 +121,7 @@ function NewProposalForm() {
         quantity: l.quantity,
         unitPrice: l.unitPrice,
         taxRate: l.taxRate,
+        productId: l.productId,
       })),
       notes,
     });
@@ -154,6 +163,7 @@ function NewProposalForm() {
         quantity: Number(l.quantity),
         unitPrice: Number(l.unitPrice),
         taxRate: Number(l.taxRate),
+        productId: l.mode === "product" ? l.productId : undefined,
       })),
       notes: notes.trim() || undefined,
     };
@@ -181,7 +191,7 @@ function NewProposalForm() {
         );
         if (mode === "draft") router.replace("/dashboard/proposals");
       })
-      .catch(() => toast.error("Something went wrong"))
+      .catch((err) => toast.error(err instanceof ApiError ? err.message : "Something went wrong"))
       .finally(() => setSaving(null));
   }
 
@@ -227,18 +237,14 @@ function NewProposalForm() {
               </FormField>
 
               <FormField label="Currency" error={errors.currency}>
-                <Select value={currency} onValueChange={(v) => { setCurrency((v ?? "AED") as Currency); setErrors({ ...errors, currency: "" }); }}>
-                  <SelectTrigger className={cn("w-full")}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(["AED", "USD", "EUR", "GBP", "SAR"] as Currency[]).map((code) => (
-                      <SelectItem key={code} value={code}>
-                        {code}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <CurrencySelect
+                  value={currency}
+                  onChange={(v) => {
+                    setCurrencyOverride(v);
+                    setErrors({ ...errors, currency: "" });
+                  }}
+                  invalid={!!errors.currency}
+                />
               </FormField>
 
               <FormField label="Date" error={errors.date}>
@@ -269,7 +275,7 @@ function NewProposalForm() {
             <div>
               <div className="mb-1.5 text-[11px] font-semibold text-text-2">Line items</div>
               {errors.lines && <p className="mb-1.5 text-[10.5px] text-red">{errors.lines}</p>}
-              <LineItemsEditor lines={lines} onChange={setLines} errors={errors} />
+              <LineItemsEditor lines={lines} onChange={setLines} errors={errors} currency={currency} />
             </div>
 
             <FormField label="Notes (printed on the proposal)" error={errors.notes}>

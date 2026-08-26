@@ -4,9 +4,15 @@
 /* place per docs/Project-Structure.md instead of under Sales.         */
 /* ------------------------------------------------------------------ */
 
-export type Currency = "AED" | "USD" | "EUR" | "GBP" | "SAR";
+export type Currency = "AED" | "USD" | "EUR" | "GBP" | "SAR" | "BDT";
 
-export const CURRENCIES: Currency[] = ["AED", "USD", "EUR", "GBP", "SAR"];
+export const CURRENCIES: Currency[] = ["AED", "USD", "EUR", "GBP", "SAR", "BDT"];
+
+export function asCurrency(value: string | null | undefined, fallback: Currency = "AED"): Currency {
+  const upper = (value ?? "").trim().toUpperCase();
+  if ((CURRENCIES as readonly string[]).includes(upper)) return upper as Currency;
+  return fallback;
+}
 
 export type CustomerStatus = "active" | "inactive";
 

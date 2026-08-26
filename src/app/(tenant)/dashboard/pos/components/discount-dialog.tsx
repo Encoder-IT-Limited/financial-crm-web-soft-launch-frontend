@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { fmtMoney } from "@/lib/format";
+import { useTenantCurrency } from "@/lib/use-tenant-currency";
 import { ManagerPinDialog } from "./manager-pin-dialog";
 
 type DiscountKind = "standard" | "override";
@@ -21,12 +22,6 @@ type DiscountKind = "standard" | "override";
 /** Standard (pre-configured) discounts apply immediately — offline-safe,
  * per the client's offline-capability split. A manual/override amount
  * routes through the manager-PIN gate first (client-confirmed rule). */
-const STANDARD_DISCOUNTS = [
-  { label: "No discount", amount: 0 },
-  { label: "5% off", percent: 5 },
-  { label: "10% off", percent: 10 },
-  { label: "AED 20 off", amount: 20 },
-];
 
 export function DiscountDialog({
   open,
@@ -39,6 +34,13 @@ export function DiscountDialog({
   subtotal: number;
   onApply: (amount: number, managerPin?: string) => void;
 }) {
+  const currency = useTenantCurrency();
+  const standardDiscounts = [
+    { label: "No discount", amount: 0 },
+    { label: "5% off", percent: 5 },
+    { label: "10% off", percent: 10 },
+    { label: `${fmtMoney(20, currency)} off`, amount: 20 },
+  ];
   const [kind, setKind] = useState<DiscountKind>("standard");
   const [standardIndex, setStandardIndex] = useState("0");
   const [overrideAmount, setOverrideAmount] = useState("");
@@ -51,7 +53,7 @@ export function DiscountDialog({
   }
 
   function standardAmount(): number {
-    const option = STANDARD_DISCOUNTS[Number(standardIndex)];
+    const option = standardDiscounts[Number(standardIndex)];
     if (!option) return 0;
     return option.percent ? Math.round(((subtotal * option.percent) / 100) * 100) / 100 : (option.amount ?? 0);
   }
@@ -91,7 +93,7 @@ export function DiscountDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {STANDARD_DISCOUNTS.map((option, i) => (
+                {standardDiscounts.map((option, i) => (
                   <SelectItem key={option.label} value={String(i)}>
                     {option.label}
                   </SelectItem>
@@ -115,7 +117,7 @@ export function DiscountDialog({
               Cancel
             </Button>
             {kind === "standard" ? (
-              <Button onClick={applyStandard}>Apply {fmtMoney(standardAmount())}</Button>
+              <Button onClick={applyStandard}>Apply {fmtMoney(standardAmount(), currency)}</Button>
             ) : (
               <Button onClick={requestOverride} disabled={!(Number(overrideAmount) > 0)}>
                 Request Approval
@@ -129,7 +131,7 @@ export function DiscountDialog({
         open={pinOpen}
         onOpenChange={setPinOpen}
         title="Approve custom discount"
-        description={`Applying a custom discount of ${fmtMoney(Number(overrideAmount) || 0)} needs manager approval.`}
+        description={`Applying a custom discount of ${fmtMoney(Number(overrideAmount) || 0, currency)} needs manager approval.`}
         onApproved={(pin) => {
           onApply(Number(overrideAmount) || 0, pin);
           onOpenChange(false);

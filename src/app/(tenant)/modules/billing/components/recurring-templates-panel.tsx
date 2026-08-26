@@ -29,6 +29,8 @@ export function RecurringTemplatesPanel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringTemplate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RecurringTemplate | null>(null);
+  const [pageIndex, setPageIndex] = useState(0);
+  const pageSize = 10;
 
   const customerName = (id: string) => customers.find((c) => c.id === id)?.name ?? "—";
   const lastInvoice = (template: RecurringTemplate) =>
@@ -37,6 +39,9 @@ export function RecurringTemplatesPanel() {
   const next = useMemo(() => {
     return templates.find((t) => t.status === "active")?.nextInvoiceDate;
   }, [templates]);
+
+  const pageCount = Math.max(1, Math.ceil(templates.length / pageSize));
+  const pageTemplates = templates.slice(pageIndex * pageSize, pageIndex * pageSize + pageSize);
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: billingKeys.recurring() });
@@ -109,11 +114,14 @@ export function RecurringTemplatesPanel() {
         <div className="flex items-start gap-2.5 border-b border-border bg-surface-subtle px-5 py-2.5 text-[11.5px] text-text-3">
           <CalendarClock className="mt-0.5 size-3.5 shrink-0 text-text-4" />
           <span>
-            Each cycle generates an invoice as a <strong>draft for review</strong>{" "}
+            Each cycle generates an invoice
+            {templates.some((t) => t.autoSend)
+              ? ". Templates with auto-send on email the customer immediately."
+              : " as a draft for review"}{" "}
             <Link href="/dashboard/invoices" className="underline decoration-dotted underline-offset-2">
               in your Invoices tab
             </Link>
-            . Send it when ready — auto-sending isn&apos;t enabled yet.
+            .
           </span>
         </div>
 
@@ -129,11 +137,12 @@ export function RecurringTemplatesPanel() {
                 <th className="px-5 py-2.5">Next billing</th>
                 <th className="px-5 py-2.5">Last invoice</th>
                 <th className="px-5 py-2.5">Status</th>
+                <th className="px-5 py-2.5">Auto-send</th>
                 <th className="px-5 py-2.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {templates.map((template) => {
+              {pageTemplates.map((template) => {
                 const last = lastInvoice(template);
                 return (
                   <tr key={template.id} className="border-b border-border transition-colors hover:bg-surface-subtle">
@@ -158,6 +167,9 @@ export function RecurringTemplatesPanel() {
                       <Badge tone={template.status === "active" ? "green" : "neutral"}>
                         {template.status === "active" ? "Active" : "Paused"}
                       </Badge>
+                    </td>
+                    <td className="px-5 py-3 text-[12.5px] text-text-2">
+                      {template.autoSend ? "On" : "Off"}
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1">
@@ -205,7 +217,7 @@ export function RecurringTemplatesPanel() {
               })}
               {templates.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="h-24 text-center text-[13px] text-text-4">
+                  <td colSpan={10} className="h-24 text-center text-[13px] text-text-4">
                     {templatesLoading ? "Loading templates…" : "No recurring templates yet — create one to start billing on a schedule."}
                   </td>
                 </tr>
@@ -215,7 +227,7 @@ export function RecurringTemplatesPanel() {
         </div>
 
         <div className="flex flex-col divide-y divide-border lg:hidden">
-          {templates.map((template) => {
+          {pageTemplates.map((template) => {
             const last = lastInvoice(template);
             return (
               <div key={template.id} className="flex flex-col gap-2 p-4">
@@ -234,6 +246,7 @@ export function RecurringTemplatesPanel() {
                   </span>
                   <span className="font-bold text-text">{fmtMoney(template.amount, template.currency)}</span>
                 </div>
+                {template.autoSend && <div className="text-[11px] text-text-3">Auto-send on</div>}
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="xs" disabled={template.status !== "active"} onClick={() => handleGenerate(template)}>
                     <RefreshCw /> Generate now
@@ -281,6 +294,27 @@ export function RecurringTemplatesPanel() {
             </div>
           )}
         </div>
+
+        {templates.length > pageSize && (
+          <div className="flex items-center justify-between border-t border-border px-5 py-2.5 text-[12.5px] text-text-3">
+            <span>
+              Page {pageIndex + 1} of {pageCount}
+            </span>
+            <div className="flex gap-2">
+              <Button variant="outline" size="xs" disabled={pageIndex === 0} onClick={() => setPageIndex((p) => p - 1)}>
+                Prev
+              </Button>
+              <Button
+                variant="outline"
+                size="xs"
+                disabled={pageIndex + 1 >= pageCount}
+                onClick={() => setPageIndex((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {dialogOpen && (
