@@ -5,6 +5,7 @@ export const invoiceLineSchema = z.object({
   quantity: z.coerce.number().positive("Qty must be greater than 0").max(1_000_000, "Qty too large"),
   unitPrice: z.coerce.number().nonnegative("Unit price can't be negative"),
   taxRate: z.coerce.number().min(0).max(100),
+  productId: z.string().uuid().optional(),
 });
 
 export const invoiceFormSchema = z
@@ -12,7 +13,7 @@ export const invoiceFormSchema = z
     customerId: z.string().min(1, "Select a customer"),
     issueDate: z.string().min(1, "Issue date is required"),
     dueDate: z.string().min(1, "Due date is required"),
-    currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR"]).default("AED"),
+    currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR", "BDT"]).default("AED"),
     discountPercent: z.coerce.number().min(0, "Discount can't be negative").max(100, "Discount max 100%").default(0),
     lines: z.array(invoiceLineSchema).min(1, "Add at least one line item"),
     notes: z.string().max(500, "Notes too long (max 500 chars)").optional(),
@@ -48,10 +49,11 @@ export const recurringTemplateSchema = z
   .object({
     customerId: z.string().min(1, "Select a customer"),
     description: z.string().trim().min(3, "Description is required"),
-    currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR"]).default("AED"),
+    currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR", "BDT"]).default("AED"),
     amount: z.coerce.number().positive("Amount must be greater than 0"),
     frequency: z.enum(["weekly", "monthly", "quarterly", "yearly"]),
     nextInvoiceDate: z.string().min(1, "Next billing date is required"),
+    autoSend: z.boolean().optional().default(false),
   })
   .superRefine((data, ctx) => {
     if (data.nextInvoiceDate < new Date().toISOString().slice(0, 10)) {
@@ -70,7 +72,7 @@ export const proposalFormSchema = z
     customerId: z.string().min(1, "Select a customer"),
     date: z.string().min(1, "Date is required"),
     expiryDate: z.string().min(1, "Expiry date is required"),
-    currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR"]).default("AED"),
+    currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR", "BDT"]).default("AED"),
     discountPercent: z.coerce.number().min(0, "Discount can't be negative").max(100, "Discount max 100%").default(0),
     lines: z.array(invoiceLineSchema).min(1, "Add at least one line item"),
     notes: z.string().max(500, "Notes too long (max 500 chars)").optional(),
@@ -87,13 +89,32 @@ export const proposalFormSchema = z
 
 export type ProposalFormValues = z.infer<typeof proposalFormSchema>;
 
-export const adjustmentFormSchema = z.object({
-  kind: z.enum(["credit", "debit"]),
-  customerId: z.string().min(1, "Select a customer"),
-  invoiceId: z.string().optional(),
-  amount: z.coerce.number().positive("Amount must be greater than 0"),
-  reason: z.string().trim().min(3, "Reason is required"),
-});
+export const adjustmentFormSchema = z
+  .object({
+    kind: z.enum(["credit", "debit"]),
+    customerId: z.string().min(1, "Select a customer"),
+    invoiceId: z.string().optional(),
+    amount: z.coerce.number().positive("Amount must be greater than 0"),
+    reason: z.string().trim().min(3, "Reason is required"),
+    currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR", "BDT"]).optional(),
+    linkedReturn: z.boolean().optional().default(false),
+    warehouseId: z.string().optional(),
+    returnItems: z.array(z.object({ productId: z.string().uuid(), quantity: z.coerce.number().positive() })).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.kind === "credit" && data.linkedReturn) {
+      if (!data.warehouseId) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["warehouseId"], message: "Select a warehouse" });
+      }
+      if (!data.returnItems?.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["returnItems"],
+          message: "Add at least one product quantity to restock",
+        });
+      }
+    }
+  });
 
 export type AdjustmentFormValues = z.infer<typeof adjustmentFormSchema>;
 
@@ -103,7 +124,7 @@ export const retainerFormSchema = z
     contractAmount: z.coerce.number().positive("Contract amount must be greater than 0"),
     billingPeriod: z.enum(["monthly", "quarterly", "yearly"]),
     billingModel: z.enum(["one-time", "recurring"]).default("one-time"),
-    currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR"]).default("AED"),
+    currency: z.enum(["AED", "USD", "EUR", "GBP", "SAR", "BDT"]).default("AED"),
     startDate: z.string().min(1, "Start date is required"),
     expiryDate: z.string().optional(),
     notes: z.string().max(500, "Notes too long (max 500 chars)").optional(),
@@ -146,6 +167,7 @@ export type RetainerTransferValues = z.infer<typeof retainerTransferSchema>;
 
 export const retainerRefundSchema = z.object({
   reason: z.string().trim().min(3, "A reason is required"),
+  amount: z.coerce.number().positive("Amount must be greater than 0").optional(),
 });
 
 export type RetainerRefundValues = z.infer<typeof retainerRefundSchema>;

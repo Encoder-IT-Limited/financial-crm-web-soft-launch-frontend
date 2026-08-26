@@ -1,5 +1,5 @@
 import { apiGet, apiSend } from "@/lib/api/envelope";
-import { ApiError } from "@/lib/api/errors";
+import { asCurrency } from "../../crm/types";
 import type { NewRetainerInput, Retainer, RetainerBillingPeriod, RetainerDispositionReason, RetainerStatus } from "../types";
 import { invoiceApi } from "./invoices.service";
 
@@ -78,7 +78,7 @@ function mapRetainer(row: ApiRetainer): Retainer {
     billingPeriod: normalizeBillingPeriod(row.billingPeriod),
     billingModel: BILLING_MODEL_FROM_API[row.billingModel] ?? "one-time",
     remainingBalance: Number(row.remainingBalance),
-    currency: row.currency as Retainer["currency"],
+    currency: asCurrency(row.currency),
     status,
     startDate: String(row.startDate).slice(0, 10),
     expiryDate: row.expiryDate ? String(row.expiryDate).slice(0, 10) : undefined,
@@ -100,7 +100,7 @@ function toCreateBody(input: NewRetainerInput, fundingInvoiceId?: string) {
     contractAmount: input.contractAmount,
     billingPeriod: input.billingPeriod,
     billingModel: input.billingModel === "recurring" ? "RECURRING" : "ONE_TIME",
-    currency: input.currency ?? "AED",
+    currency: input.currency,
     startDate: input.startDate,
     expiryDate: input.expiryDate || undefined,
     notes: input.notes,
@@ -112,7 +112,7 @@ function toUpdateBody(input: NewRetainerInput) {
   return {
     billingPeriod: input.billingPeriod,
     billingModel: input.billingModel === "recurring" ? "RECURRING" : "ONE_TIME",
-    currency: input.currency ?? "AED",
+    currency: input.currency,
     startDate: input.startDate,
     expiryDate: input.expiryDate || null,
     notes: input.notes ?? null,
@@ -137,7 +137,7 @@ export const retainersApi = {
         customerId: input.customerId,
         issueDate: today,
         dueDate: today,
-        currency: input.currency ?? "AED",
+        currency: input.currency,
         lines: [
           {
             description: `Retainer contract — ${input.billingPeriod} retainer funding`,
@@ -169,14 +169,8 @@ export const retainersApi = {
   drawForInvoice: async (
     retainerId: string,
     invoice: { id: string; number: string; total: number; issueDate: string },
-  ): Promise<boolean> => {
-    try {
-      await apiSend("post", `/retainers/${retainerId}/draw`, { invoiceId: invoice.id });
-      return true;
-    } catch (err) {
-      if (err instanceof ApiError) return false;
-      throw err;
-    }
+  ): Promise<void> => {
+    await apiSend("post", `/retainers/${retainerId}/draw`, { invoiceId: invoice.id });
   },
 
   topUp: async (id: string, amount: number, note?: string): Promise<void> => {
@@ -188,14 +182,8 @@ export const retainersApi = {
     await apiSend("post", `/retainers/${id}/status`, { status: apiStatus });
   },
 
-  transfer: async (fromId: string, toId: string): Promise<boolean> => {
-    try {
-      await apiSend("post", `/retainers/${fromId}/transfer`, { toRetainerId: toId });
-      return true;
-    } catch (err) {
-      if (err instanceof ApiError) return false;
-      throw err;
-    }
+  transfer: async (fromId: string, toId: string): Promise<void> => {
+    await apiSend("post", `/retainers/${fromId}/transfer`, { toRetainerId: toId });
   },
 
   rollOver: async (id: string, newExpiryDate?: string): Promise<Retainer | null> => {
@@ -213,13 +201,7 @@ export const retainersApi = {
     await apiSend("post", `/retainers/${id}/forfeit`);
   },
 
-  requestRefund: async (id: string, reason: string): Promise<boolean> => {
-    try {
-      await apiSend("post", `/retainers/${id}/refund`, { reason });
-      return true;
-    } catch (err) {
-      if (err instanceof ApiError) return false;
-      throw err;
-    }
+  requestRefund: async (id: string, reason: string, amount?: number): Promise<void> => {
+    await apiSend("post", `/retainers/${id}/refund`, { reason, amount });
   },
 };

@@ -1,5 +1,6 @@
-import { apiGet, apiSend } from "@/lib/api/envelope";
+import { apiGet, apiGetPage, apiSend } from "@/lib/api/envelope";
 import { authService } from "@/lib/auth/auth.service";
+import { asCurrency } from "../../crm/types";
 import type {
   FulfillInvoiceInput,
   Fulfillment,
@@ -71,6 +72,7 @@ type ApiInvoice = {
   balanceDue: number | string;
   status: string;
   source?: string;
+  currency?: string | null;
   createdAt: string;
   sentAt?: string | null;
   lastReminderAt?: string | null;
@@ -200,7 +202,7 @@ function mapInvoice(row: ApiInvoice): Invoice {
     customerId: row.customerId,
     issueDate: String(row.invoiceDate).slice(0, 10),
     dueDate: String(row.dueDate).slice(0, 10),
-    currency: "AED",
+    currency: asCurrency(row.currency),
     lines: mapLines(row.items),
     subtotal,
     discountPercent,
@@ -240,7 +242,15 @@ function toApiItems(input: NewInvoiceInput) {
  * Live invoicing API.
  */
 export const invoiceApi = {
-  list: async (): Promise<Invoice[]> => (await apiGet<ApiInvoice[]>("/invoices")).map(mapInvoice),
+  list: async (): Promise<Invoice[]> => {
+    const page = await apiGetPage<ApiInvoice>("/invoices");
+    return page.items.map(mapInvoice);
+  },
+
+  listPage: async (params?: { page?: number; pageSize?: number }) => {
+    const page = await apiGetPage<ApiInvoice>("/invoices", params);
+    return { ...page, items: page.items.map(mapInvoice) };
+  },
 
   get: async (id: string): Promise<Invoice | undefined> => {
     try {
@@ -251,8 +261,8 @@ export const invoiceApi = {
   },
 
   getNextNumber: async (): Promise<string> => {
-    const list = await apiGet<ApiInvoice[]>("/invoices");
-    return `INV-${String(list.length + 1).padStart(6, "0")}`;
+    const row = await apiGet<{ number: string }>("/invoices/next-number");
+    return row.number;
   },
 
   getOrgProfile: async (): Promise<OrgProfile> => {
@@ -277,6 +287,7 @@ export const invoiceApi = {
     const created = await apiSend<ApiInvoice>("post", "/invoices", {
       customerId: input.customerId,
       dueDate: input.dueDate,
+      currency: input.currency,
       items: toApiItems(input),
     });
     if (mode === "send") {

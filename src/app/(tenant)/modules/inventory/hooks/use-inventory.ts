@@ -9,8 +9,10 @@ import {
   type CreateWarehouseInput,
   type ReceiveStockInput,
   type UpdateProductInput,
+  type UpdateWarehouseInput,
 } from "../api/inventory.service";
 import { inventoryKeys } from "../query-keys";
+import type { TransferListParams } from "../types";
 
 export function useProducts() {
   return useQuery({ queryKey: inventoryKeys.products(), queryFn: inventoryApi.listProducts });
@@ -34,6 +36,14 @@ export function useUnits() {
 
 export function useWarehouses() {
   return useQuery({ queryKey: inventoryKeys.warehouses(), queryFn: inventoryApi.listWarehouses });
+}
+
+export function useWarehouse(id: string) {
+  return useQuery({
+    queryKey: inventoryKeys.warehouse(id),
+    queryFn: () => inventoryApi.getWarehouse(id),
+    enabled: Boolean(id),
+  });
 }
 
 export function useStock() {
@@ -68,11 +78,39 @@ export function useUpdateProduct() {
   });
 }
 
+export function useDeleteProduct() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => inventoryApi.deleteProduct(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: inventoryKeys.products() }),
+  });
+}
+
 export function useCreateWarehouse() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateWarehouseInput) => inventoryApi.createWarehouse(input),
     onSuccess: () => qc.invalidateQueries({ queryKey: inventoryKeys.warehouses() }),
+  });
+}
+
+export function useUpdateWarehouse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { id: string; input: UpdateWarehouseInput }) =>
+      inventoryApi.updateWarehouse(args.id, args.input),
+    onSuccess: (_d, args) => {
+      void qc.invalidateQueries({ queryKey: inventoryKeys.warehouses() });
+      void qc.invalidateQueries({ queryKey: inventoryKeys.warehouse(args.id) });
+    },
+  });
+}
+
+export function useDeleteWarehouse() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => inventoryApi.deleteWarehouse(id),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: inventoryKeys.warehouses() }),
   });
 }
 
@@ -84,6 +122,7 @@ export function useReceiveStock() {
       void qc.invalidateQueries({ queryKey: inventoryKeys.stock() });
       void qc.invalidateQueries({ queryKey: inventoryKeys.movements() });
       void qc.invalidateQueries({ queryKey: inventoryKeys.products() });
+      void qc.invalidateQueries({ queryKey: inventoryKeys.warehouses() });
     },
   });
 }
@@ -92,7 +131,8 @@ function invalidateStockViews(qc: ReturnType<typeof useQueryClient>) {
   void qc.invalidateQueries({ queryKey: inventoryKeys.stock() });
   void qc.invalidateQueries({ queryKey: inventoryKeys.movements() });
   void qc.invalidateQueries({ queryKey: inventoryKeys.products() });
-  void qc.invalidateQueries({ queryKey: inventoryKeys.transfers() });
+  void qc.invalidateQueries({ queryKey: [...inventoryKeys.all, "transfers"] });
+  void qc.invalidateQueries({ queryKey: inventoryKeys.warehouses() });
 }
 
 export function useAdjustStock() {
@@ -103,15 +143,26 @@ export function useAdjustStock() {
   });
 }
 
-export function useTransfers() {
-  return useQuery({ queryKey: inventoryKeys.transfers(), queryFn: inventoryApi.listTransfers });
+export function useTransfers(params?: TransferListParams) {
+  return useQuery({
+    queryKey: inventoryKeys.transfers(params as Record<string, unknown> | undefined),
+    queryFn: () => inventoryApi.listTransfers(params),
+  });
+}
+
+export function useTransfer(id: string) {
+  return useQuery({
+    queryKey: inventoryKeys.transfer(id),
+    queryFn: () => inventoryApi.getTransfer(id),
+    enabled: Boolean(id),
+  });
 }
 
 export function useCreateTransfer() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateTransferInput) => inventoryApi.createTransfer(input),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: inventoryKeys.transfers() }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: [...inventoryKeys.all, "transfers"] }),
   });
 }
 
@@ -119,7 +170,7 @@ export function useApproveTransfer() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => inventoryApi.approveTransfer(id),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: inventoryKeys.transfers() }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: [...inventoryKeys.all, "transfers"] }),
   });
 }
 

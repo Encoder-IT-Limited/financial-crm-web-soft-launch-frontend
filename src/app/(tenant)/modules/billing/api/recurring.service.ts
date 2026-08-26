@@ -1,5 +1,6 @@
-import { apiGet, apiSend } from "@/lib/api/envelope";
+import { apiGet, apiGetPage, apiSend } from "@/lib/api/envelope";
 import type { Invoice } from "../types";
+import { asCurrency } from "../../crm/types";
 import {
   type NewRecurringTemplateInput,
   type RecurrenceFrequency,
@@ -24,6 +25,7 @@ type ApiTemplate = {
   status: string;
   kind?: string;
   retainerId?: string | null;
+  currency?: string | null;
   createdAt: string;
 };
 
@@ -56,13 +58,14 @@ function mapTemplate(row: ApiTemplate): RecurringTemplate {
     number: `REC-${row.id.slice(0, 6).toUpperCase()}`,
     customerId: row.customerId,
     description: row.description,
-    currency: "AED",
+    currency: asCurrency(row.currency),
     amount: Number(row.amount),
     frequency: FREQ_FROM_API[row.frequency] ?? "monthly",
     nextInvoiceDate: String(row.nextInvoiceDate).slice(0, 10),
     status: row.status === "PAUSED" || row.status === "ENDED" ? "paused" : "active",
     kind: mapKind(row.kind),
     retainerId: row.retainerId ?? undefined,
+    autoSend: row.autoSend,
     createdAt: row.createdAt,
   };
 }
@@ -76,7 +79,8 @@ function toApiBody(input: NewRecurringTemplateInput) {
     nextInvoiceDate: input.nextInvoiceDate,
     amount: input.amount,
     description: input.description,
-    autoSend: false,
+    autoSend: input.autoSend ?? false,
+    currency: input.currency,
     kind,
     retainerId: input.kind === "retainer-topup" ? input.retainerId : undefined,
   };
@@ -84,8 +88,8 @@ function toApiBody(input: NewRecurringTemplateInput) {
 
 export const recurringApi = {
   list: async (): Promise<RecurringTemplate[]> => {
-    const rows = await apiGet<ApiTemplate[]>("/recurring-templates");
-    return rows.map(mapTemplate);
+    const page = await apiGetPage<ApiTemplate>("/recurring-templates");
+    return page.items.map(mapTemplate);
   },
 
   create: async (input: NewRecurringTemplateInput): Promise<RecurringTemplate> => {

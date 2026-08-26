@@ -8,6 +8,8 @@ export const inventoryKeys = {
   warehouse: (id: string) => [...inventoryKeys.warehouses(), id] as const,
   stock: () => [...inventoryKeys.all, "stock"] as const,
   movements: () => [...inventoryKeys.all, "movements"] as const,
-  transfers: () => [...inventoryKeys.all, "transfers"] as const,
+  transfers: (params?: Record<string, unknown>) =>
+    [...inventoryKeys.all, "transfers", params ?? {}] as const,
+  transfer: (id: string) => [...inventoryKeys.all, "transfer", id] as const,
   batches: () => [...inventoryKeys.all, "batches"] as const,
 };

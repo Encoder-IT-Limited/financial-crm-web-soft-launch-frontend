@@ -6,6 +6,7 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   EUR: "€",
   GBP: "£",
   SAR: "SAR",
+  BDT: "৳",
 };
 
 export function fmtMoney(value: number, currency = "AED"): string {

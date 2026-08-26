@@ -88,7 +88,8 @@ export function useForfeitRetainer() {
 export function useRefundRetainer() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (args: { id: string; reason: string }) => retainersApi.requestRefund(args.id, args.reason),
+    mutationFn: (args: { id: string; reason: string; amount?: number }) =>
+      retainersApi.requestRefund(args.id, args.reason, args.amount),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: billingKeys.retainers() });
       void qc.invalidateQueries({ queryKey: billingKeys.adjustments() });

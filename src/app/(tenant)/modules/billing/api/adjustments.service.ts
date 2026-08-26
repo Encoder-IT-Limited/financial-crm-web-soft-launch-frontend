@@ -1,5 +1,6 @@
-import { apiGet, apiSend } from "@/lib/api/envelope";
+import { apiGet, apiGetPage, apiSend } from "@/lib/api/envelope";
 import type { Adjustment, AdjustmentKind, Invoice, NewAdjustmentInput } from "../types";
+import { asCurrency } from "../../crm/types";
 import { invoiceApi } from "./invoices.service";
 
 /** Credit notes + debit notes — live `/credit-notes` and `/debit-notes`. */
@@ -12,6 +13,9 @@ type ApiCreditNote = {
   amount: number | string;
   reason: string;
   status: string;
+  currency?: string | null;
+  linkedReturn?: boolean;
+  refundAmount?: number | string | null;
   createdAt: string;
 };
 
@@ -23,6 +27,7 @@ type ApiDebitNote = {
   amount: number | string;
   reason: string;
   status: string;
+  currency?: string | null;
   createdAt: string;
 };
 
@@ -35,10 +40,12 @@ function mapCreditNote(row: ApiCreditNote): Adjustment {
     invoiceId: row.invoiceId ?? undefined,
     amount: Number(row.amount),
     reason: row.reason,
-    currency: "AED",
+    currency: asCurrency(row.currency),
     status: row.status === "VOID" ? "void" : "issued",
     createdBy: "System",
     createdAt: row.createdAt,
+    linkedReturn: row.linkedReturn,
+    refundAmount: row.refundAmount != null ? Number(row.refundAmount) : undefined,
   };
 }
 
@@ -51,7 +58,7 @@ function mapDebitNote(row: ApiDebitNote): Adjustment {
     invoiceId: row.invoiceId ?? undefined,
     amount: Number(row.amount),
     reason: row.reason,
-    currency: "AED",
+    currency: asCurrency(row.currency),
     status: row.status === "VOID" ? "void" : "issued",
     createdBy: "System",
     createdAt: row.createdAt,
@@ -61,10 +68,10 @@ function mapDebitNote(row: ApiDebitNote): Adjustment {
 export const adjustmentsApi = {
   list: async (): Promise<Adjustment[]> => {
     const [credits, debits] = await Promise.all([
-      apiGet<ApiCreditNote[]>("/credit-notes"),
-      apiGet<ApiDebitNote[]>("/debit-notes"),
+      apiGetPage<ApiCreditNote>("/credit-notes"),
+      apiGetPage<ApiDebitNote>("/debit-notes"),
     ]);
-    return [...credits.map(mapCreditNote), ...debits.map(mapDebitNote)].sort(
+    return [...credits.items.map(mapCreditNote), ...debits.items.map(mapDebitNote)].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
   },
@@ -75,12 +82,9 @@ export const adjustmentsApi = {
   },
 
   getNextNumber: async (kind: AdjustmentKind): Promise<string> => {
-    if (kind === "credit") {
-      const credits = await apiGet<ApiCreditNote[]>("/credit-notes");
-      return `CN-${String(credits.length + 1).padStart(4, "0")}`;
-    }
-    const debits = await apiGet<ApiDebitNote[]>("/debit-notes");
-    return `DN-${String(debits.length + 1).padStart(4, "0")}`;
+    const path = kind === "credit" ? "/credit-notes/next-number" : "/debit-notes/next-number";
+    const row = await apiGet<{ number: string }>(path);
+    return row.number;
   },
 
   create: async (input: NewAdjustmentInput): Promise<Adjustment> => {
@@ -90,7 +94,10 @@ export const adjustmentsApi = {
         invoiceId: input.invoiceId,
         amount: input.amount,
         reason: input.reason,
-        linkedReturn: false,
+        currency: input.currency,
+        linkedReturn: input.linkedReturn ?? false,
+        warehouseId: input.warehouseId,
+        returnItems: input.returnItems,
       });
       return mapCreditNote(row);
     }
@@ -100,6 +107,7 @@ export const adjustmentsApi = {
       invoiceId: input.invoiceId,
       amount: input.amount,
       reason: input.reason,
+      currency: input.currency,
     });
     return mapDebitNote(row);
   },

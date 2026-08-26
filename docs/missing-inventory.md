@@ -113,3 +113,46 @@
 
 - Provide access to the stock transfer details.
 - Display appropriate loading, empty, and error states.
+
+---
+
+## 4. Required API Endpoints
+
+All endpoints use the base URL `/api/v1`.
+
+### Products
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/products` | List all products (paginated, filterable) |
+| `GET` | `/products/:id` | Get a single product by ID |
+| `PUT` | `/products/:id` | Update an existing product |
+| `DELETE` | `/products/:id` | Delete a product |
+
+### Warehouses
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/warehouses` | List all warehouses |
+| `GET` | `/warehouses/:id` | Get a single warehouse by ID |
+| `PUT` | `/warehouses/:id` | Update an existing warehouse |
+| `DELETE` | `/warehouses/:id` | Delete a warehouse |
+
+### Stock Transfers
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/stock-transfers` | List stock transfers (paginated, filterable) |
+
+#### `GET /stock-transfers` Query Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `sourceWarehouse` | `string` | Filter by source warehouse ID |
+| `destinationWarehouse` | `string` | Filter by destination warehouse ID |
+| `status` | `string` | Filter by transfer status |
+| `dateFrom` | `string` | Filter by start date (ISO 8601) |
+| `dateTo` | `string` | Filter by end date (ISO 8601) |
+| `search` | `string` | Search by transfer number/reference |
+| `page` | `number` | Page number (default: 1) |
+| `pageSize` | `number` | Records per page (default: 20) |

@@ -1,12 +1,14 @@
-import { apiGet, apiSend } from "@/lib/api/envelope";
+import { apiGet, apiGetPage, apiSend } from "@/lib/api/envelope";
 import type { Invoice, NewProposalInput, Proposal, ProposalStatus } from "../types";
 import { round2 } from "../types";
+import { asCurrency } from "../../crm/types";
 import { invoiceApi } from "./invoices.service";
 
 /** Live proposals API — `/proposals`. */
 
 type ApiProposalItem = {
   id: string;
+  productId?: string | null;
   description: string;
   quantity: number | string;
   unitPrice: number | string;
@@ -30,6 +32,7 @@ type ApiProposal = {
   sentAt: string | null;
   respondedAt: string | null;
   convertedInvoiceId: string | null;
+  currency?: string | null;
   createdAt: string;
   items?: ApiProposalItem[];
 };
@@ -56,6 +59,7 @@ function mapLines(items: ApiProposalItem[] | undefined) {
       unitPrice,
       taxRate,
       total: Number(item.total),
+      productId: item.productId ?? undefined,
     };
   });
 }
@@ -71,7 +75,7 @@ function mapProposal(row: ApiProposal): Proposal {
     customerId: row.customerId,
     date: String(row.proposalDate).slice(0, 10),
     expiryDate: String(row.expiryDate).slice(0, 10),
-    currency: "AED",
+    currency: asCurrency(row.currency),
     lines: mapLines(row.items),
     subtotal,
     discountPercent,
@@ -98,6 +102,7 @@ function toApiItems(input: NewProposalInput) {
       unitPrice: line.unitPrice,
       discount: 0,
       tax,
+      productId: line.productId,
     };
   });
 }
@@ -108,12 +113,16 @@ function toApiBody(input: NewProposalInput) {
     proposalDate: input.date,
     expiryDate: input.expiryDate,
     notes: input.notes,
+    currency: input.currency,
     items: toApiItems(input),
   };
 }
 
 export const proposalsApi = {
-  list: async (): Promise<Proposal[]> => (await apiGet<ApiProposal[]>("/proposals")).map(mapProposal),
+  list: async (): Promise<Proposal[]> => {
+    const page = await apiGetPage<ApiProposal>("/proposals");
+    return page.items.map(mapProposal);
+  },
 
   get: async (id: string): Promise<Proposal | undefined> => {
     try {
@@ -124,8 +133,8 @@ export const proposalsApi = {
   },
 
   getNextNumber: async (): Promise<string> => {
-    const list = await apiGet<ApiProposal[]>("/proposals");
-    return `PRO-${String(list.length + 1).padStart(6, "0")}`;
+    const row = await apiGet<{ number: string }>("/proposals/next-number");
+    return row.number;
   },
 
   create: async (input: NewProposalInput, mode: "draft" | "send"): Promise<Proposal> => {
