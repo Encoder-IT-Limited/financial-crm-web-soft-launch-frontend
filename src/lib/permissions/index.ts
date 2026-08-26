@@ -43,9 +43,24 @@ export function isTenant(me: Me | undefined | null): boolean {
 export function can(me: Me | undefined | null, permission: string | string[]): boolean {
   if (!me) return false;
   if (isPlatform(me)) return true;
-  if (me.permissions.includes("*")) return true;
   const required = Array.isArray(permission) ? permission : [permission];
-  return required.some((p) => me.permissions.includes(p));
+  return required.some((p) => permissionAllowed(me.permissions, p));
+}
+
+function permissionAllowed(granted: string[], required: string): boolean {
+  for (const grant of granted) {
+    if (grant === "*") return true;
+    if (grant === required) return true;
+    if (grant.endsWith(".*")) {
+      const prefix = grant.slice(0, -2);
+      if (required === prefix || required.startsWith(`${prefix}.`)) return true;
+    }
+    if (grant.startsWith("*.")) {
+      const suffix = grant.slice(1);
+      if (required.endsWith(suffix)) return true;
+    }
+  }
+  return false;
 }
 
 export function hasModule(me: Me | undefined | null, moduleKey: ModuleKey): boolean {

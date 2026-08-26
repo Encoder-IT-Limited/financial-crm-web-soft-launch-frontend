@@ -1,5 +1,5 @@
-import { AdjustmentsPage } from "./components/adjustments-page";
+import { StockAdjustmentsPage } from "@/app/(tenant)/modules/inventory/components/stock-adjustments-page";
 
 export default function Page() {
-  return <AdjustmentsPage />;
+  return <StockAdjustmentsPage />;
 }

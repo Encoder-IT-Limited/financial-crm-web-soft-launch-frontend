@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,9 +10,9 @@ import { PageHeading } from "@/components/shared/page-heading";
 import { FilterableTable } from "@/components/shared/filterable-table";
 import { StatTiles } from "./stat-tiles";
 import { fmtDate, fmtMoney } from "@/lib/format";
-import { customersApi } from "../../crm/api/customers.service";
+import { useProposals } from "../hooks/use-proposals";
+import { useCustomers } from "../../crm/hooks/use-customers";
 import { proposalDisplayStatus, type Proposal, type ProposalDisplayStatus } from "../types";
-import { proposalsApi } from "../api/proposals.service";
 import { PROPOSAL_STATUS_CONFIG, ProposalStatusBadge } from "./proposal-status-badge";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,8 +24,8 @@ const STATUS_OPTIONS = Object.keys(PROPOSAL_STATUS_CONFIG) as ProposalDisplaySta
 
 export function ProposalsList() {
   const router = useRouter();
-  const { data: proposals = [], isLoading: loading } = useQuery({ queryKey: ["proposals"], queryFn: proposalsApi.list });
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
+  const { data: proposals = [], isLoading: loading } = useProposals();
+  const { data: customers = [] } = useCustomers();
   const [filters, setFilters] = useState<Filters>({ search: "", status: "all" });
 
   const customerName = (id: string) => customers.find((c) => c.id === id)?.name ?? "—";

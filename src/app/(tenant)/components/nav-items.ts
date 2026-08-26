@@ -25,6 +25,7 @@ import {
   MessageSquareText,
   UserPlus,
   FileDiff,
+  Truck,
   ClipboardList,
   Percent,
   Building2,
@@ -32,6 +33,10 @@ import {
   Bell,
   Sparkles,
   Settings,
+  Truck,
+  Store,
+  History,
+  Monitor,
 } from "lucide-react";
 import type { SidebarNavSection } from "@/types/nav";
 
@@ -116,6 +121,12 @@ export const tenantNavSections: SidebarNavSection[] = [
         module: "sales",
       },
       {
+        label: "POS",
+        href: "/dashboard/pos",
+        icon: MonitorSmartphone,
+        module: "sales",
+      },
+      {
         label: "Proposals",
         href: "/dashboard/proposals",
         icon: FileSignature,
@@ -133,6 +144,41 @@ export const tenantNavSections: SidebarNavSection[] = [
         icon: FileDiff,
         module: "sales",
       },
+      {
+        label: "Delivery / Fulfillment",
+        href: "/dashboard/fulfillment",
+        icon: Truck,
+        module: "sales",
+      },
+    ],
+  },
+  {
+    label: "POS",
+    items: [
+      {
+        label: "Terminals",
+        href: "/dashboard/pos/terminals",
+        icon: Monitor,
+        module: "pos",
+      },
+      {
+        label: "Register",
+        href: "/dashboard/pos",
+        icon: Store,
+        module: "pos",
+      },
+      {
+        label: "Sales",
+        href: "/dashboard/pos/sales",
+        icon: Receipt,
+        module: "pos",
+      },
+      {
+        label: "Sessions",
+        href: "/dashboard/pos/sessions",
+        icon: History,
+        module: "pos",
+      },
     ],
   },
   {
@@ -142,6 +188,12 @@ export const tenantNavSections: SidebarNavSection[] = [
         label: "Bills",
         href: "/dashboard/bills",
         icon: Receipt,
+        module: "purchasing",
+      },
+      {
+        label: "Purchase Orders",
+        href: "/dashboard/purchase-orders",
+        icon: ClipboardList,
         module: "purchasing",
       },
       {

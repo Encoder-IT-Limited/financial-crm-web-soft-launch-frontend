@@ -17,6 +17,7 @@ import { proposalFormSchema } from "../../../modules/billing/schemas";
 import { computeTotals, type Currency, type Proposal } from "../../../modules/billing/types";
 import { proposalsApi } from "../../../modules/billing/api/proposals.service";
 import { customersApi } from "../../../modules/crm/api/customers.service";
+import { billingKeys } from "../../../modules/billing/query-keys";
 import { LineItemsEditor, emptyLines, type LineDraft } from "../../../modules/billing/components/line-items-editor";
 import { AddCustomerDialog } from "../../../modules/billing/components/add-customer-dialog";
 import { InvoiceSummaryCard } from "../../../modules/billing/components/invoice-summary-card";
@@ -37,7 +38,7 @@ function NewProposalForm() {
 
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
   const { data: nextNumber = "PRO-····" } = useQuery({
-    queryKey: ["proposal-next-number"],
+    queryKey: billingKeys.proposalNextNumber(),
     queryFn: proposalsApi.getNextNumber,
   });
   const [editing, setEditing] = useState<Proposal | null>(null);
@@ -167,8 +168,8 @@ function NewProposalForm() {
 
     action
       .then(() => {
-        queryClient.invalidateQueries({ queryKey: ["proposals"] });
-        queryClient.invalidateQueries({ queryKey: ["proposal-next-number"] });
+        queryClient.invalidateQueries({ queryKey: billingKeys.proposals() });
+        queryClient.invalidateQueries({ queryKey: billingKeys.proposalNextNumber() });
         toast.success(
           mode === "draft"
             ? editing

@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Settings2, ScrollText, Share2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/lib/toast";
-import { PLATFORM_SETTINGS } from "@/config/platform-settings";
+import { ApiError } from "@/lib/api/errors";
+import { settingsApi } from "../api/settings.service";
 import { generalSettingsSchema, legalSchema, socialLinksSchema } from "../schemas";
 import type { GeneralSettings, LegalSettings, PlatformSettings, SocialLinks } from "../types";
 import { GeneralSettingsTab } from "./general-settings-tab";
@@ -19,22 +22,34 @@ const NAV_ITEMS = [
   { value: "social", label: "Social links", icon: Share2 },
 ];
 
+const settingsKeys = { all: ["admin", "settings"] as const };
+
 export function SettingsTabs() {
-  const [settings, setSettings] = useState<PlatformSettings>(PLATFORM_SETTINGS);
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: settingsKeys.all,
+    queryFn: settingsApi.get,
+  });
+  const [settings, setSettings] = useState<PlatformSettings | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (data) setSettings(data);
+  }, [data]);
+
   function patchGeneral(patch: Partial<GeneralSettings>) {
-    setSettings((prev) => ({ ...prev, general: { ...prev.general, ...patch } }));
+    setSettings((prev) => (prev ? { ...prev, general: { ...prev.general, ...patch } } : prev));
   }
   function patchLegal(patch: Partial<LegalSettings>) {
-    setSettings((prev) => ({ ...prev, legal: { ...prev.legal, ...patch } }));
+    setSettings((prev) => (prev ? { ...prev, legal: { ...prev.legal, ...patch } } : prev));
   }
   function patchSocialLinks(patch: Partial<SocialLinks>) {
-    setSettings((prev) => ({ ...prev, socialLinks: { ...prev.socialLinks, ...patch } }));
+    setSettings((prev) => (prev ? { ...prev, socialLinks: { ...prev.socialLinks, ...patch } } : prev));
   }
 
-  function handleSave() {
+  async function handleSave() {
+    if (!settings) return;
     const generalResult = generalSettingsSchema.safeParse(settings.general);
     const legalResult = legalSchema.safeParse(settings.legal);
     const socialResult = socialLinksSchema.safeParse(settings.socialLinks);
@@ -49,12 +64,22 @@ export function SettingsTabs() {
     if (Object.keys(nextErrors).length > 0) return;
 
     setSaving(true);
-    // TEMPORARY: no settings backend yet — nothing to persist beyond this
-    // page's local state (see src/config/platform-settings.ts).
-    setTimeout(() => {
+    try {
+      const saved = await settingsApi.updateGeneral(settings.general);
+      setSettings(saved);
+      await queryClient.invalidateQueries({ queryKey: settingsKeys.all });
+      toast.success("Settings saved", {
+        description: "General / maintenance fields persist to the API. Legal & social stay local until the backend supports them.",
+      });
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Could not save settings");
+    } finally {
       setSaving(false);
-      toast.success("Settings saved (not yet connected to a backend — changes reset on refresh)");
-    }, 400);
+    }
+  }
+
+  if (isLoading || !settings) {
+    return <Skeleton className="h-64 w-full" />;
   }
 
   return (

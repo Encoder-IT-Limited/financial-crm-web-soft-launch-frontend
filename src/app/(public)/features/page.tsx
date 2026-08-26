@@ -1,12 +1,15 @@
-import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/seo";
 import { FeatureDetailCard } from "../components/feature-detail-card";
 import { FinalCtaBanner } from "../components/final-cta-banner";
 import { MODULES } from "../components/modules-data";
 import { FEATURE_CATEGORIES } from "./categories";
 
-export const metadata: Metadata = {
-  title: "Features — MRM Portal",
-};
+export const metadata = pageMetadata({
+  title: "Features",
+  description:
+    "Explore accounting, sales, purchasing, inventory, banking, CRM, reports, and AI assistant modules built to work together.",
+  path: "/features",
+});
 
 export default function FeaturesPage() {
   return (

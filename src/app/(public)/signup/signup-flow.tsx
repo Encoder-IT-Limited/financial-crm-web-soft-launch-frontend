@@ -3,14 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 import { AuthShell } from "../components/auth-shell";
 import { AuthStepsList, type AuthStep } from "../components/auth-steps-list";
-import { PLANS } from "../components/plans-data";
 import { PlanStep } from "./plan-step";
 import { InfoStep, type InfoValues } from "./info-step";
 import { PaymentStep, type PaymentValues } from "./payment-step";
 import { signupService } from "../modules/signup/api/signup.service";
+import { usePublicPlans } from "../modules/plans/hooks/use-public-plans";
 import { ApiError } from "@/lib/api/errors";
 import type { Plan } from "@/types/plan";
 
@@ -31,7 +32,8 @@ type SignupFlowProps = {
 };
 
 export function SignupFlow({ initialPlanId }: SignupFlowProps) {
-  const preselectedPlan = PLANS.find((p) => p.id === initialPlanId) ?? null;
+  const { data: plans = [] } = usePublicPlans();
+  const preselectedPlan = plans.find((p) => p.id === initialPlanId) ?? null;
   const hasPlanStep = !preselectedPlan;
 
   const steps: AuthStep[] = hasPlanStep
@@ -51,6 +53,9 @@ export function SignupFlow({ initialPlanId }: SignupFlowProps) {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
+  const queryClient = useQueryClient();
+
+  if (!plan && preselectedPlan) setPlan(preselectedPlan);
 
   const step = steps[stepIndex].key;
 
@@ -73,14 +78,13 @@ export function SignupFlow({ initialPlanId }: SignupFlowProps) {
     setFormError(null);
     setSubmitting(true);
     try {
-      // Payment gateway isn't wired up yet — this simulates processing, then
-      // creates the account. Wire to a real gateway before launch.
       await new Promise((resolve) => setTimeout(resolve, 700));
       const me = await signupService.create({
         planId: plan.id,
         company: { name: info.companyName, country: info.country },
         owner: { name: info.fullName, email: info.email, password: info.password },
       });
+      queryClient.setQueryData(["me"], me);
       router.push(me.realm === "admin" ? "/admin" : "/dashboard");
     } catch (error) {
       setFormError(error instanceof ApiError ? error.message : "Couldn't complete payment. Try again.");

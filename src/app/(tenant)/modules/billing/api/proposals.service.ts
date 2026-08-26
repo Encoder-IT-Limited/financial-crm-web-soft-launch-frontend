@@ -1,135 +1,156 @@
-import { newId, nextSequence } from "@/lib/format";
-import type { Invoice, NewProposalInput, Proposal } from "../types";
-import { computeTotals, round2 } from "../types";
-import { seedProposals, seedProposalSeq } from "../mock/seed-proposals";
+import { apiGet, apiSend } from "@/lib/api/envelope";
+import type { Invoice, NewProposalInput, Proposal, ProposalStatus } from "../types";
+import { round2 } from "../types";
 import { invoiceApi } from "./invoices.service";
 
-/** Simulated network latency for the mock API. */
-const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
+/** Live proposals API — `/proposals`. */
 
-// In-memory mock "database" — module-scoped, resets on page reload. Same
-// pattern as invoiceApi/recurringApi: React Query is the reactivity layer.
-let proposals: Proposal[] = seedProposals;
-let proposalSeq: number = seedProposalSeq;
+type ApiProposalItem = {
+  id: string;
+  description: string;
+  quantity: number | string;
+  unitPrice: number | string;
+  discount: number | string;
+  tax: number | string;
+  total: number | string;
+};
+
+type ApiProposal = {
+  id: string;
+  customerId: string;
+  proposalNumber: string;
+  proposalDate: string;
+  expiryDate: string;
+  subtotal: number | string;
+  discount: number | string;
+  tax: number | string;
+  total: number | string;
+  notes: string | null;
+  status: string;
+  sentAt: string | null;
+  respondedAt: string | null;
+  convertedInvoiceId: string | null;
+  createdAt: string;
+  items?: ApiProposalItem[];
+};
+
+const STATUS_MAP: Record<string, ProposalStatus> = {
+  DRAFT: "draft",
+  SENT: "sent",
+  ACCEPTED: "accepted",
+  REJECTED: "rejected",
+};
+
+function mapLines(items: ApiProposalItem[] | undefined) {
+  if (!items?.length) return [];
+  return items.map((item) => {
+    const quantity = Number(item.quantity);
+    const unitPrice = Number(item.unitPrice);
+    const taxAmount = Number(item.tax);
+    const lineSub = quantity * unitPrice;
+    const taxRate = lineSub > 0 ? round2((taxAmount / lineSub) * 100) : 0;
+    return {
+      id: item.id,
+      description: item.description,
+      quantity,
+      unitPrice,
+      taxRate,
+      total: Number(item.total),
+    };
+  });
+}
+
+function mapProposal(row: ApiProposal): Proposal {
+  const status = STATUS_MAP[row.status] ?? "draft";
+  const subtotal = Number(row.subtotal);
+  const discount = Number(row.discount);
+  const discountPercent = subtotal > 0 && discount > 0 ? round2((discount / subtotal) * 100) : undefined;
+  return {
+    id: row.id,
+    number: row.proposalNumber,
+    customerId: row.customerId,
+    date: String(row.proposalDate).slice(0, 10),
+    expiryDate: String(row.expiryDate).slice(0, 10),
+    currency: "AED",
+    lines: mapLines(row.items),
+    subtotal,
+    discountPercent,
+    discount: discount,
+    tax: Number(row.tax),
+    total: Number(row.total),
+    status,
+    notes: row.notes ?? undefined,
+    createdBy: "—",
+    createdAt: row.createdAt,
+    sentAt: row.sentAt ? String(row.sentAt) : undefined,
+    respondedAt: row.respondedAt ? String(row.respondedAt) : undefined,
+    convertedInvoiceId: row.convertedInvoiceId ?? undefined,
+  };
+}
+
+function toApiItems(input: NewProposalInput) {
+  return input.lines.map((line) => {
+    const lineSub = line.quantity * line.unitPrice;
+    const tax = round2(lineSub * (line.taxRate / 100));
+    return {
+      description: line.description,
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      discount: 0,
+      tax,
+    };
+  });
+}
+
+function toApiBody(input: NewProposalInput) {
+  return {
+    customerId: input.customerId,
+    proposalDate: input.date,
+    expiryDate: input.expiryDate,
+    notes: input.notes,
+    items: toApiItems(input),
+  };
+}
 
 export const proposalsApi = {
-  list: async (): Promise<Proposal[]> => {
-    await delay(200);
-    return proposals;
-  },
+  list: async (): Promise<Proposal[]> => (await apiGet<ApiProposal[]>("/proposals")).map(mapProposal),
 
   get: async (id: string): Promise<Proposal | undefined> => {
-    await delay(150);
-    return proposals.find((p) => p.id === id);
+    try {
+      return mapProposal(await apiGet<ApiProposal>(`/proposals/${id}`));
+    } catch {
+      return undefined;
+    }
   },
 
-  /** The next auto-assigned proposal number, e.g. "PRO-0005". */
   getNextNumber: async (): Promise<string> => {
-    await delay(120);
-    return `PRO-${nextSequence(proposalSeq)}`;
+    const list = await apiGet<ApiProposal[]>("/proposals");
+    return `PRO-${String(list.length + 1).padStart(6, "0")}`;
   },
 
   create: async (input: NewProposalInput, mode: "draft" | "send"): Promise<Proposal> => {
-    await delay();
-    const number = `PRO-${nextSequence(proposalSeq)}`;
-    const totals = computeTotals(input.lines, input.discountPercent ?? 0);
-    const proposal: Proposal = {
-      id: newId("prop"),
-      number,
-      customerId: input.customerId,
-      date: input.date,
-      expiryDate: input.expiryDate,
-      currency: input.currency ?? "AED",
-      lines: input.lines.map((l) => ({ ...l, id: newId("ln"), total: round2(l.quantity * l.unitPrice) })),
-      subtotal: totals.subtotal,
-      discountPercent: input.discountPercent || undefined,
-      discount: totals.discount,
-      tax: totals.tax,
-      total: totals.total,
-      status: mode === "draft" ? "draft" : "sent",
-      notes: input.notes || undefined,
-      createdBy: "Salma H.",
-      createdAt: new Date().toISOString(),
-      sentAt: mode === "send" ? new Date().toISOString() : undefined,
-    };
-    proposals = [proposal, ...proposals];
-    proposalSeq += 1;
-    return proposal;
+    const url = mode === "send" ? "/proposals?mode=send" : "/proposals";
+    return mapProposal(await apiSend<ApiProposal>("post", url, toApiBody(input)));
   },
 
   update: async (id: string, input: NewProposalInput): Promise<void> => {
-    await delay();
-    const totals = computeTotals(input.lines, input.discountPercent ?? 0);
-    proposals = proposals.map((p) =>
-      p.id === id
-        ? {
-            ...p,
-            customerId: input.customerId,
-            date: input.date,
-            expiryDate: input.expiryDate,
-            currency: input.currency ?? p.currency,
-            lines: input.lines.map((l) => ({ ...l, id: newId("ln"), total: round2(l.quantity * l.unitPrice) })),
-            subtotal: totals.subtotal,
-            discountPercent: input.discountPercent || undefined,
-            discount: totals.discount,
-            tax: totals.tax,
-            total: totals.total,
-            notes: input.notes || undefined,
-          }
-        : p
-    );
+    await apiSend("patch", `/proposals/${id}`, toApiBody(input));
   },
 
   send: async (id: string): Promise<void> => {
-    await delay();
-    proposals = proposals.map((p) =>
-      p.id === id && p.status === "draft" ? { ...p, status: "sent", sentAt: p.sentAt ?? new Date().toISOString() } : p
-    );
+    await apiSend("post", `/proposals/${id}/send`);
   },
 
   reject: async (id: string): Promise<void> => {
-    await delay();
-    proposals = proposals.map((p) =>
-      p.id === id ? { ...p, status: "rejected", respondedAt: new Date().toISOString() } : p
-    );
+    await apiSend("post", `/proposals/${id}/reject`);
   },
 
-  /** Convert to a draft Invoice (source: "estimate"), prefilled from the
-   *  proposal's lines. Marks the proposal accepted and links the invoice. */
   convertToInvoice: async (id: string): Promise<Invoice | null> => {
-    await delay();
-    const proposal = proposals.find((p) => p.id === id);
-    if (!proposal || proposal.convertedInvoiceId) return null;
-
-    const issueDate = new Date().toISOString().slice(0, 10);
-    const due = new Date();
-    due.setDate(due.getDate() + 15);
-
-    const invoice = await invoiceApi.create(
-      {
-        customerId: proposal.customerId,
-        issueDate,
-        dueDate: due.toISOString().slice(0, 10),
-        currency: proposal.currency,
-        discountPercent: proposal.discountPercent,
-        lines: proposal.lines.map((l) => ({
-          description: l.description,
-          quantity: l.quantity,
-          unitPrice: l.unitPrice,
-          taxRate: l.taxRate,
-        })),
-        notes: `Converted from proposal ${proposal.number}`,
-      },
-      "draft",
-      "estimate"
+    const result = await apiSend<{ proposal: ApiProposal; invoice: { id: string } }>(
+      "post",
+      `/proposals/${id}/convert`,
     );
-
-    proposals = proposals.map((p) =>
-      p.id === id
-        ? { ...p, status: "accepted", respondedAt: p.respondedAt ?? new Date().toISOString(), convertedInvoiceId: invoice.id }
-        : p
-    );
-
-    return invoice;
+    if (!result.invoice?.id) return null;
+    return (await invoiceApi.get(result.invoice.id)) ?? null;
   },
 };

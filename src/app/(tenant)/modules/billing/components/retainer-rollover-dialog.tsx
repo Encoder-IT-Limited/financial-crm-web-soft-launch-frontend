@@ -11,6 +11,7 @@ import { fmtMoney } from "@/lib/format";
 import { retainerRolloverSchema } from "../schemas";
 import type { Retainer } from "../types";
 import { retainersApi } from "../api/retainers.service";
+import { billingKeys } from "../query-keys";
 
 export function RetainerRolloverDialog({
   open,
@@ -41,8 +42,8 @@ export function RetainerRolloverDialog({
           toast.error("Roll over failed — this retainer isn't active");
           return;
         }
-        toast.success(`Rolled over into new retainer ${created.number}`);
-        queryClient.invalidateQueries({ queryKey: ["retainers"] });
+        toast.success(`Contract extended — new end date ${created.expiryDate ?? result.data.newExpiryDate}`);
+        queryClient.invalidateQueries({ queryKey: billingKeys.retainers() });
         setNewExpiryDate("");
         onOpenChange(false);
       })

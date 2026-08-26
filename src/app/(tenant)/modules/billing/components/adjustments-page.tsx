@@ -9,9 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeading } from "@/components/shared/page-heading";
 import { FilterableTable } from "@/components/shared/filterable-table";
 import { fmtDate, fmtMoney } from "@/lib/format";
-import { customersApi } from "../../crm/api/customers.service";
-import { invoiceApi } from "../api/invoices.service";
+import { useCustomers } from "../../crm/hooks/use-customers";
+import { useInvoices } from "../hooks/use-invoices";
 import { adjustmentsApi } from "../api/adjustments.service";
+import { billingKeys } from "../query-keys";
 import type { Adjustment, AdjustmentKind } from "../types";
 import { AdjustmentStatusBadge } from "./adjustment-status-badge";
 import { AdjustmentFormDialog } from "./adjustment-form-dialog";
@@ -21,9 +22,12 @@ import { AdjustmentDetailsDialog } from "./adjustment-details-dialog";
 type AnyColumnDef<TData> = ColumnDef<TData, any>;
 
 export function AdjustmentsPage() {
-  const { data: adjustments = [], isLoading } = useQuery({ queryKey: ["adjustments"], queryFn: adjustmentsApi.list });
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
+  const { data: adjustments = [], isLoading } = useQuery({
+    queryKey: billingKeys.adjustments(),
+    queryFn: adjustmentsApi.list,
+  });
+  const { data: customers = [] } = useCustomers();
+  const { data: invoices = [] } = useInvoices();
 
   const [tab, setTab] = useState<AdjustmentKind>("credit");
   const [createOpen, setCreateOpen] = useState(false);
@@ -71,9 +75,15 @@ export function AdjustmentsPage() {
         title="Credit & Debit Notes"
         subtitle="Adjust amounts owed to or by customers"
         actions={
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus /> New {tab === "credit" ? "Credit" : "Debit"} Note
-          </Button>
+          tab === "credit" ? (
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus /> New Credit Note
+            </Button>
+          ) : (
+            <Button size="sm" variant="outline" onClick={() => setCreateOpen(true)}>
+              <Plus /> New Debit Note
+            </Button>
+          )
         }
       />
 

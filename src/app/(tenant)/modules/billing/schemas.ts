@@ -150,6 +150,20 @@ export const retainerRefundSchema = z.object({
 
 export type RetainerRefundValues = z.infer<typeof retainerRefundSchema>;
 
+export const fulfillmentLineInputSchema = z.object({
+  invoiceItemId: z.string().min(1),
+  quantity: z.coerce.number().min(0, "Quantity can't be negative"),
+});
+
+export const fulfillmentFormSchema = z.object({
+  warehouseId: z.string().min(1, "Select a warehouse"),
+  generateDeliveryNote: z.boolean().default(false),
+  notes: z.string().max(500).optional(),
+  lines: z.array(fulfillmentLineInputSchema).min(1, "Add at least one line"),
+});
+
+export type FulfillmentFormValues = z.infer<typeof fulfillmentFormSchema>;
+
 /** Pull the first issue message for a field path, e.g. "lines.0.description". */
 export function firstError(result: { issues: { path: (string | number)[]; message: string }[] }, path: string): string | undefined {
   return result.issues.find((issue) => issue.path.join(".") === path)?.message;

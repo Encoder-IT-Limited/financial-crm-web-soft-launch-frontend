@@ -9,11 +9,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/lib/toast";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "@/lib/toast";
 import type { Invoice } from "../types";
+import { invoiceApi } from "../api/invoices.service";
+import { downloadInvoicePdf } from "../lib/invoice-print";
 import { InvoicePdf } from "./invoice-pdf";
-import { customersApi } from "../../crm/api/customers.service";
+import { useCustomers } from "../../crm/hooks/use-customers";
 
 /** List-page "Preview PDF ↗" — mirrors the prototype's modal-inv-preview. */
 export function InvoicePreviewDialog({
@@ -25,8 +27,18 @@ export function InvoicePreviewDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
+  const { data: customers = [] } = useCustomers();
+  const { data: org } = useQuery({ queryKey: ["org-profile"], queryFn: invoiceApi.getOrgProfile, staleTime: Infinity });
   const customer = invoice ? customers.find((c) => c.id === invoice.customerId) : undefined;
+
+  function handleDownload() {
+    if (!invoice || !org) {
+      toast.error("Unable to generate PDF — try again in a moment");
+      return;
+    }
+    downloadInvoicePdf(invoice, customer, org);
+    toast.success(`Downloaded ${invoice.number}.pdf`);
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -47,13 +59,7 @@ export function InvoicePreviewDialog({
           >
             Close
           </Button>
-          <Button
-            onClick={() => {
-              toast.success(`PDF downloaded — ${invoice?.number}.pdf`);
-            }}
-          >
-            Download PDF
-          </Button>
+          <Button onClick={handleDownload}>Download PDF</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -5,13 +5,6 @@ import type { NextRequest } from "next/server";
 // not validation. Real enforcement happens server-side per request.
 const SESSION_COOKIE = "mrm_session";
 
-// TEMPORARY: no backend exists yet anywhere — dev machine or the deployed
-// demo — so a real session cookie can never be issued. Always skips the
-// auth-cookie redirect so every portal is reachable for review. useMe() has
-// a matching bypass (src/hooks/useMe.ts) that returns a mock identity
-// instead of calling /me. Remove both once a real backend is wired up.
-const DEV_AUTH_BYPASS = true;
-
 const ROOT_DOMAIN = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "";
 
 type Realm = "public" | "admin" | "tenant";
@@ -35,13 +28,24 @@ function resolveRealm(host: string): Realm {
 export function proxy(request: NextRequest) {
   const host = request.headers.get("host") ?? "";
   const { pathname } = request.nextUrl;
-  const isLocalDev = host.startsWith("localhost") || host.startsWith("127.0.0.1");
-  // TEMPORARY: without NEXT_PUBLIC_ROOT_DOMAIN configured (e.g. a Vercel demo
-  // deploy on its default *.vercel.app domain, no custom subdomains set up),
-  // there's no real subdomain routing to enforce — treat it the same as
-  // localhost. Set NEXT_PUBLIC_ROOT_DOMAIN once real subdomains exist.
-  const isUnroutedHost = isLocalDev || !ROOT_DOMAIN;
-  const realm = resolveRealm(host);
+  const hostname = host.split(":")[0];
+  const isIpv4 = /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname);
+  const isShareTunnel =
+    hostname.endsWith(".trycloudflare.com") ||
+    hostname.endsWith(".loca.lt") ||
+    hostname.endsWith(".ngrok-free.dev") ||
+    hostname.endsWith(".ngrok-free.app") ||
+    hostname.endsWith(".ngrok.app") ||
+    hostname.endsWith(".ngrok.io");
+  const isLocalDev =
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0" ||
+    isIpv4 ||
+    isShareTunnel;
+  // Soft-launch / tunnel / LAN: no real subdomain routing — path decides realm.
+  const isUnroutedHost = isLocalDev || !ROOT_DOMAIN || ROOT_DOMAIN === "localhost";
+  const realm = isUnroutedHost ? "public" : resolveRealm(host);
 
   // Realm guard: a host may only render its own portal's paths. Skipped
   // entirely when there's no real subdomain routing to enforce.
@@ -57,11 +61,9 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // Auth gating at the edge: cookie-presence redirect only, to avoid a flash
-  // of authenticated-looking chrome. Client-side AuthGate + server-side
-  // enforcement are the real checks.
+  // Cookie-presence redirect only — AuthGate + server-side checks are the real gate.
   const isProtected = pathname.startsWith("/admin") || pathname.startsWith("/dashboard");
-  if (isProtected && !DEV_AUTH_BYPASS && !request.cookies.has(SESSION_COOKIE)) {
+  if (isProtected && !request.cookies.has(SESSION_COOKIE)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Plus } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,9 +9,9 @@ import { PageHeading } from "@/components/shared/page-heading";
 import { FilterableTable } from "@/components/shared/filterable-table";
 import { StatTiles } from "./stat-tiles";
 import { fmtMoney } from "@/lib/format";
-import { customersApi } from "../../crm/api/customers.service";
+import { useRetainers } from "../hooks/use-retainers";
+import { useCustomers } from "../../crm/hooks/use-customers";
 import { retainerDisplayStatus, retainerPercentUsed, type Retainer, type RetainerDisplayStatus } from "../types";
-import { retainersApi } from "../api/retainers.service";
 import { RetainerStatusBadge } from "./retainer-status-badge";
 import { RetainerFormDialog } from "./retainer-form-dialog";
 import { RetainerDetailsDialog } from "./retainer-details-dialog";
@@ -25,8 +24,8 @@ type Filters = { search: string; status: "all" | RetainerDisplayStatus };
 const STATUS_OPTIONS: RetainerDisplayStatus[] = ["active", "paused", "expired", "closed"];
 
 export function RetainersList() {
-  const { data: retainers = [], isLoading: loading } = useQuery({ queryKey: ["retainers"], queryFn: retainersApi.list });
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
+  const { data: retainers = [], isLoading: loading } = useRetainers();
+  const { data: customers = [] } = useCustomers();
   const [filters, setFilters] = useState<Filters>({ search: "", status: "all" });
 
   const [createOpen, setCreateOpen] = useState(false);

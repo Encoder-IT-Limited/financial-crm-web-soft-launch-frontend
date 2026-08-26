@@ -1,58 +1,72 @@
-import { newId, nextSequence } from "@/lib/format";
-import type { Customer } from "../types";
+import { apiGet, apiSend } from "@/lib/api/envelope";
+import type { Customer, CustomerStatus, Currency } from "../types";
 import type { CustomerEditValues, CustomerValues } from "../schemas";
-import { seedCustomers, seedCustomerSeq } from "../mock/seed";
 
-/** Simulated network latency for the mock API. */
-const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms));
+type ApiCustomer = {
+  id: string;
+  customerCode: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  taxNumber: string | null;
+  creditLimit: number;
+  openingBalance: number;
+  status: string;
+};
 
-// In-memory mock "database" — module-scoped, resets on page reload. React
-// Query (useQuery/invalidateQueries) is the reactivity layer; this is just
-// the data these functions read/write.
-let customers: Customer[] = seedCustomers;
-let customerSeq: number = seedCustomerSeq;
+function mapCustomer(row: ApiCustomer): Customer {
+  return {
+    id: row.id,
+    customerCode: row.customerCode,
+    name: row.name,
+    email: row.email ?? "",
+    phone: row.phone ?? "",
+    address: row.address ?? "",
+    trn: row.taxNumber ?? "",
+    currency: "AED" as Currency,
+    creditLimit: Number(row.creditLimit ?? 0),
+    openingBalance: Number(row.openingBalance ?? 0),
+    status: (row.status === "INACTIVE" ? "inactive" : "active") as CustomerStatus,
+  };
+}
 
-/**
- * Mock API service layer for Customers. Consumed by the CRM pages and by
- * billing (invoice customer pickers) — one source of truth, no duplication.
- */
 export const customersApi = {
-  list: async (): Promise<Customer[]> => {
-    await delay(200);
-    return customers;
-  },
+  list: async (): Promise<Customer[]> => (await apiGet<ApiCustomer[]>("/customers")).map(mapCustomer),
 
   get: async (id: string): Promise<Customer | undefined> => {
-    await delay(150);
-    return customers.find((customer) => customer.id === id);
+    try {
+      return mapCustomer(await apiGet<ApiCustomer>(`/customers/${id}`));
+    } catch {
+      return undefined;
+    }
   },
 
-  /** Quick-create (AddCustomerDialog) — only collects contact fields;
-   *  financial fields get sensible defaults so the invoice-creation flow
-   *  never has to think about them. */
-  create: async (input: CustomerValues): Promise<Customer> => {
-    await delay();
-    const created: Customer = {
-      ...input,
-      id: newId("cust"),
-      customerCode: `CUST-${nextSequence(customerSeq)}`,
-      currency: "AED",
-      creditLimit: 0,
-      openingBalance: 0,
-      status: "active",
-    };
-    customers = [...customers, created];
-    customerSeq += 1;
-    return created;
-  },
+  create: async (input: CustomerValues): Promise<Customer> =>
+    mapCustomer(
+      await apiSend<ApiCustomer>("post", "/customers", {
+        name: input.name,
+        email: input.email,
+        phone: input.phone,
+        address: input.address,
+        taxNumber: input.trn,
+      }),
+    ),
 
   update: async (id: string, input: CustomerEditValues): Promise<void> => {
-    await delay();
-    customers = customers.map((customer) => (customer.id === id ? { ...customer, ...input } : customer));
+    await apiSend("patch", `/customers/${id}`, {
+      name: input.name,
+      email: input.email,
+      phone: input.phone,
+      address: input.address,
+      taxNumber: input.trn,
+      creditLimit: input.creditLimit,
+      openingBalance: input.openingBalance,
+      status: input.status === "inactive" ? "INACTIVE" : "ACTIVE",
+    });
   },
 
   remove: async (id: string): Promise<void> => {
-    await delay();
-    customers = customers.filter((customer) => customer.id !== id);
+    await apiSend("delete", `/customers/${id}`);
   },
 };

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { fmtMoney } from "@/lib/format";
 import { recurringTemplateSchema } from "../schemas";
 import { FREQUENCY_LABELS, RECURRENCE_FREQUENCIES, type RecurringTemplate } from "../recurring/types";
-import { customersApi } from "../../crm/api/customers.service";
+import { useCustomers } from "../../crm/hooks/use-customers";
 import { FormField } from "./form-field";
 import type { Currency } from "../types";
 
@@ -33,14 +32,13 @@ export type RecurringTemplateValues = {
 type RecurringTemplateDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Rendered only while open — the parent mounts this component fresh for
-   *  each open, so the form initializes straight from `editing`. */
+  /** Parent remounts this while open so form seeds from `editing`. */
   editing?: RecurringTemplate | null;
-  onSave: (values: RecurringTemplateValues) => void;
+  onSave: (values: RecurringTemplateValues) => void | Promise<void>;
 };
 
 export function RecurringTemplateDialog({ open, onOpenChange, editing, onSave }: RecurringTemplateDialogProps) {
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
+  const { data: customers = [] } = useCustomers();
 
   const [customerId, setCustomerId] = useState(editing?.customerId ?? "");
   const [description, setDescription] = useState(editing?.description ?? "");
@@ -49,8 +47,9 @@ export function RecurringTemplateDialog({ open, onOpenChange, editing, onSave }:
   const [frequency, setFrequency] = useState<RecurringTemplate["frequency"]>(editing?.frequency ?? "monthly");
   const [nextInvoiceDate, setNextInvoiceDate] = useState(editing?.nextInvoiceDate ?? defaultNextDate());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
-  function handleSave() {
+  async function handleSave() {
     const parsed = recurringTemplateSchema.safeParse({
       customerId,
       description,
@@ -68,9 +67,16 @@ export function RecurringTemplateDialog({ open, onOpenChange, editing, onSave }:
       setErrors(mapped);
       return;
     }
-    onSave(parsed.data);
-    toast.success(editing ? `${editing.number} updated` : "Recurring template created");
-    onOpenChange(false);
+    setSaving(true);
+    try {
+      await onSave(parsed.data);
+      toast.success(editing ? `${editing.number} updated` : "Recurring template created");
+      onOpenChange(false);
+    } catch {
+      // Parent surfaces the error toast
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -178,7 +184,9 @@ export function RecurringTemplateDialog({ open, onOpenChange, editing, onSave }:
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>{editing ? "Save Changes" : "Create Template"}</Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Saving…" : editing ? "Save Changes" : "Create Template"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

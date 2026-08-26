@@ -1,5 +1,5 @@
-import { InventoryDashboard } from "./components/inventory-dashboard";
+import { InventoryDashboardPage } from "@/app/(tenant)/modules/inventory/components/inventory-dashboard-page";
 
 export default function Page() {
-  return <InventoryDashboard />;
+  return <InventoryDashboardPage />;
 }

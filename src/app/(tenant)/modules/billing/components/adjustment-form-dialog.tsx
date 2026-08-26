@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { FormDialog } from "@/components/shared/form-dialog";
 import { FormField } from "@/components/shared/form-field";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,10 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { adjustmentFormSchema } from "../schemas";
 import type { AdjustmentKind } from "../types";
-import { customersApi } from "../../crm/api/customers.service";
-import { invoiceApi } from "../api/invoices.service";
+import { useCustomers } from "../../crm/hooks/use-customers";
+import { useInvoices } from "../hooks/use-invoices";
 import { adjustmentsApi } from "../api/adjustments.service";
+import { billingKeys } from "../query-keys";
 
 const NO_INVOICE = "none";
 
@@ -26,8 +27,8 @@ export function AdjustmentFormDialog({
   kind: AdjustmentKind;
 }) {
   const queryClient = useQueryClient();
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
+  const { data: customers = [] } = useCustomers();
+  const { data: invoices = [] } = useInvoices();
 
   const [customerId, setCustomerId] = useState("");
   const [invoiceId, setInvoiceId] = useState(NO_INVOICE);
@@ -64,7 +65,7 @@ export function AdjustmentFormDialog({
       .create(result.data)
       .then((created) => {
         toast.success(`${created.number} issued`);
-        queryClient.invalidateQueries({ queryKey: ["adjustments"] });
+        queryClient.invalidateQueries({ queryKey: billingKeys.adjustments() });
         reset();
         onOpenChange(false);
       })

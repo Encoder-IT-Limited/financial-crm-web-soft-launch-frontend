@@ -1,5 +1,12 @@
 import { LegalPage } from "../components/legal-page";
 import { PLATFORM_SETTINGS } from "@/config/platform-settings";
+import { pageMetadata } from "@/lib/seo";
+
+export const metadata = pageMetadata({
+  title: "Privacy Policy",
+  description: `Privacy Policy for ${PLATFORM_SETTINGS.general.platformName} — how we collect, use, and isolate tenant data.`,
+  path: "/privacy",
+});
 
 export default function PrivacyPolicyPage() {
   return (

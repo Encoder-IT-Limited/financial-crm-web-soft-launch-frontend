@@ -1,16 +1,6 @@
-import { notFound } from "next/navigation";
-import { products } from "../mock-data";
-import { ProductDetails } from "../components/product-details";
+import { ProductDetailsPage } from "@/app/(tenant)/modules/inventory/components/product-details-page";
 
-export default async function Page({
-  params,
-}: {
-  params: Promise<{ productId: string }>;
-}) {
+export default async function Page({ params }: { params: Promise<{ productId: string }> }) {
   const { productId } = await params;
-  const product = products.find((p) => p.id === productId);
-
-  if (!product) notFound();
-
-  return <ProductDetails product={product} />;
+  return <ProductDetailsPage productId={productId} />;
 }

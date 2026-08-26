@@ -92,8 +92,83 @@ export type Invoice = {
   sentAt?: string;
   lastReminderAt?: string;
   cancelledAt?: string;
+  fulfilledAt?: string;
   payments: Payment[];
+  fulfillments?: Fulfillment[];
 };
+
+/* ------------------------------------------------------------------ */
+/* Delivery / Fulfillment — stock deduction at ship time (Phase I).      */
+/* ------------------------------------------------------------------ */
+
+export type FulfillmentTrigger = "manual" | "delivery-note" | "pos-auto";
+export type FulfillmentLineStatus = "fulfilled" | "pending-reconciliation";
+export type InvoiceFulfillmentStatus = "not-applicable" | "unfulfilled" | "partially-fulfilled" | "fulfilled";
+
+export type FulfillmentLine = {
+  id: string;
+  invoiceLineId: string;
+  productId: string;
+  warehouseId: string;
+  quantityFulfilled: number;
+  status: FulfillmentLineStatus;
+};
+
+export type Fulfillment = {
+  id: string;
+  deliveryNoteNumber?: string;
+  invoiceId: string;
+  trigger: FulfillmentTrigger;
+  fulfilledAt: string;
+  fulfilledBy: string;
+  lines: FulfillmentLine[];
+  notes?: string;
+};
+
+export type FulfillInvoiceInput = {
+  warehouseId: string;
+  lines?: { invoiceItemId: string; quantity: number }[];
+  generateDeliveryNote?: boolean;
+  notes?: string;
+};
+
+/** Product-linked lines that can be fulfilled. */
+export function fulfillableLines(invoice: Invoice): InvoiceLine[] {
+  return invoice.lines.filter((l) => l.productId);
+}
+
+/** Total quantity already fulfilled for a line across all fulfillments. */
+export function fulfilledQuantity(invoice: Invoice, invoiceLineId: string): number {
+  let total = 0;
+  for (const f of invoice.fulfillments ?? []) {
+    for (const line of f.lines) {
+      if (line.invoiceLineId === invoiceLineId) total += line.quantityFulfilled;
+    }
+  }
+  return round2(total);
+}
+
+export function remainingFulfillQuantity(invoice: Invoice, line: InvoiceLine): number {
+  return round2(Math.max(0, line.quantity - fulfilledQuantity(invoice, line.id)));
+}
+
+export function totalOrderedQuantity(invoice: Invoice): number {
+  return round2(fulfillableLines(invoice).reduce((sum, l) => sum + l.quantity, 0));
+}
+
+export function totalFulfilledQuantity(invoice: Invoice): number {
+  return round2(fulfillableLines(invoice).reduce((sum, l) => sum + fulfilledQuantity(invoice, l.id), 0));
+}
+
+export function invoiceFulfillmentStatus(invoice: Invoice): InvoiceFulfillmentStatus {
+  const lines = fulfillableLines(invoice);
+  if (lines.length === 0) return "not-applicable";
+  const ordered = totalOrderedQuantity(invoice);
+  const fulfilled = totalFulfilledQuantity(invoice);
+  if (fulfilled <= 0) return "unfulfilled";
+  if (fulfilled >= ordered - 1e-9) return "fulfilled";
+  return "partially-fulfilled";
+}
 
 export type OrgProfile = {
   legalName: string;
@@ -111,7 +186,7 @@ export type NewInvoiceInput = {
   dueDate: string;
   currency?: Currency;
   discountPercent?: number;
-  lines: { description: string; quantity: number; unitPrice: number; taxRate: number }[];
+  lines: { description: string; quantity: number; unitPrice: number; taxRate: number; productId?: string }[];
   notes?: string;
 };
 

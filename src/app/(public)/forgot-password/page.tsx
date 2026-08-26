@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { authPageMetadata } from "@/lib/seo";
 import { AuthShell } from "../components/auth-shell";
 import { ForgotPasswordForm } from "./forgot-password-form";
+
+export const metadata = authPageMetadata(
+  "Forgot password",
+  "Request a verification code to reset your MRM Portal password."
+);
 
 export default function ForgotPasswordPage() {
   return (

@@ -1,5 +1,5 @@
 import { PageHeading } from "@/components/shared/page-heading";
-import { WarehouseForm } from "../components/warehouse-form";
+import { WarehouseForm } from "@/app/(tenant)/modules/inventory/components/warehouse-form";
 
 export default function Page() {
   return (

@@ -1,6 +1,12 @@
 import Link from "next/link";
+import { authPageMetadata } from "@/lib/seo";
 import { AuthShell } from "../components/auth-shell";
 import { LoginForm } from "./login-form";
+
+export const metadata = authPageMetadata(
+  "Log in",
+  "Log in to your MRM Portal account to access your workspace."
+);
 
 export default function LoginPage() {
   return (
