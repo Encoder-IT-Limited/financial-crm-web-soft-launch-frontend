@@ -289,6 +289,10 @@ export function ProductsPage() {
           onSortChange={(preset) => setSorting(SORT_PRESETS[preset])}
           selectedCount={selectedCount}
           onClearSelection={() => setRowSelection({})}
+          onReset={() => {
+            setFilters({ search: "", category: "all", status: "all" });
+            setSorting([]);
+          }}
         />
 
         {isLoading ? (

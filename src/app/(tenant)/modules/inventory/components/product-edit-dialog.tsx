@@ -14,7 +14,11 @@ import { FormField } from "@/components/shared/form-field";
 import { ApiError } from "@/lib/api/errors";
 import { toast } from "@/lib/toast";
 import type { Product } from "../types";
-import { useCategories, useUnits, useUpdateProduct } from "../hooks/use-inventory";
+import {
+  useCategories,
+  useUnits,
+  useUpdateProduct,
+} from "../hooks/use-inventory";
 
 export function ProductEditDialog({
   product,
@@ -38,10 +42,18 @@ export function ProductEditDialog({
   const [sellingPrice, setSellingPrice] = useState(String(product.price));
   const [costPrice, setCostPrice] = useState(String(product.costPrice));
   const [taxRate, setTaxRate] = useState(String(product.taxRate ?? 0));
-  const [minimumStock, setMinimumStock] = useState(String(product.minimumStock));
-  const [maximumStock, setMaximumStock] = useState(String(product.maximumStock));
-  const [reorderLevel, setReorderLevel] = useState(String(product.reorderLevel));
-  const [trackBatch, setTrackBatch] = useState(product.trackBatch ? "yes" : "no");
+  const [minimumStock, setMinimumStock] = useState(
+    String(product.minimumStock),
+  );
+  const [maximumStock, setMaximumStock] = useState(
+    String(product.maximumStock),
+  );
+  const [reorderLevel, setReorderLevel] = useState(
+    String(product.reorderLevel),
+  );
+  const [trackBatch, setTrackBatch] = useState(
+    product.trackBatch ? "yes" : "no",
+  );
   const [status, setStatus] = useState(product.status);
 
   useEffect(() => {
@@ -73,7 +85,11 @@ export function ProductEditDialog({
       toast.error("Name and SKU are required");
       return;
     }
-    if ([price, cost, tax, min, max, reorder].some((n) => !Number.isFinite(n) || n < 0)) {
+    if (
+      [price, cost, tax, min, max, reorder].some(
+        (n) => !Number.isFinite(n) || n < 0,
+      )
+    ) {
       toast.error("Check numeric fields");
       return;
     }
@@ -114,16 +130,31 @@ export function ProductEditDialog({
       submitting={updateProduct.isPending}
     >
       <FormField label="Name">
-        <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9" />
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="h-9"
+        />
       </FormField>
       <FormField label="SKU">
-        <Input value={sku} onChange={(e) => setSku(e.target.value)} className="h-9" />
+        <Input
+          value={sku}
+          onChange={(e) => setSku(e.target.value)}
+          className="h-9"
+        />
       </FormField>
       <FormField label="Barcode">
-        <Input value={barcode} onChange={(e) => setBarcode(e.target.value)} className="h-9" />
+        <Input
+          value={barcode}
+          onChange={(e) => setBarcode(e.target.value)}
+          className="h-9"
+        />
       </FormField>
       <FormField label="Category">
-        <Select value={categoryId || "__none"} onValueChange={(v) => setCategoryId(v === "__none" ? "" : (v ?? ""))}>
+        <Select
+          value={categoryId || "__none"}
+          onValueChange={(v) => setCategoryId(v === "__none" ? "" : (v ?? ""))}
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select category" />
           </SelectTrigger>
@@ -138,7 +169,10 @@ export function ProductEditDialog({
         </Select>
       </FormField>
       <FormField label="Unit">
-        <Select value={unitId || "__none"} onValueChange={(v) => setUnitId(v === "__none" ? "" : (v ?? ""))}>
+        <Select
+          value={unitId || "__none"}
+          onValueChange={(v) => setUnitId(v === "__none" ? "" : (v ?? ""))}
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select unit" />
           </SelectTrigger>
@@ -153,25 +187,70 @@ export function ProductEditDialog({
         </Select>
       </FormField>
       <FormField label="Selling price">
-        <Input type="number" min={0} step="any" value={sellingPrice} onChange={(e) => setSellingPrice(e.target.value)} className="h-9" />
+        <Input
+          type="number"
+          min={0}
+          step="any"
+          value={sellingPrice}
+          onChange={(e) => setSellingPrice(e.target.value)}
+          className="h-9"
+        />
       </FormField>
       <FormField label="Cost price">
-        <Input type="number" min={0} step="any" value={costPrice} onChange={(e) => setCostPrice(e.target.value)} className="h-9" />
+        <Input
+          type="number"
+          min={0}
+          step="any"
+          value={costPrice}
+          onChange={(e) => setCostPrice(e.target.value)}
+          className="h-9"
+        />
       </FormField>
       <FormField label="Tax rate %">
-        <Input type="number" min={0} step="any" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className="h-9" />
+        <Input
+          type="number"
+          min={0}
+          step="any"
+          value={taxRate}
+          onChange={(e) => setTaxRate(e.target.value)}
+          className="h-9"
+        />
       </FormField>
       <FormField label="Minimum stock">
-        <Input type="number" min={0} step="any" value={minimumStock} onChange={(e) => setMinimumStock(e.target.value)} className="h-9" />
+        <Input
+          type="number"
+          min={0}
+          step="any"
+          value={minimumStock}
+          onChange={(e) => setMinimumStock(e.target.value)}
+          className="h-9"
+        />
       </FormField>
       <FormField label="Maximum stock">
-        <Input type="number" min={0} step="any" value={maximumStock} onChange={(e) => setMaximumStock(e.target.value)} className="h-9" />
+        <Input
+          type="number"
+          min={0}
+          step="any"
+          value={maximumStock}
+          onChange={(e) => setMaximumStock(e.target.value)}
+          className="h-9"
+        />
       </FormField>
       <FormField label="Reorder level">
-        <Input type="number" min={0} step="any" value={reorderLevel} onChange={(e) => setReorderLevel(e.target.value)} className="h-9" />
+        <Input
+          type="number"
+          min={0}
+          step="any"
+          value={reorderLevel}
+          onChange={(e) => setReorderLevel(e.target.value)}
+          className="h-9"
+        />
       </FormField>
       <FormField label="Batch tracking">
-        <Select value={trackBatch} onValueChange={(v) => setTrackBatch(v ?? "yes")}>
+        <Select
+          value={trackBatch}
+          onValueChange={(v) => setTrackBatch(v ?? "yes")}
+        >
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -182,7 +261,12 @@ export function ProductEditDialog({
         </Select>
       </FormField>
       <FormField label="Status">
-        <Select value={status} onValueChange={(v) => setStatus((v as "active" | "inactive") ?? "active")}>
+        <Select
+          value={status}
+          onValueChange={(v) =>
+            setStatus((v as "active" | "inactive") ?? "active")
+          }
+        >
           <SelectTrigger className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -193,7 +277,11 @@ export function ProductEditDialog({
         </Select>
       </FormField>
       <FormField label="Description">
-        <Input value={description} onChange={(e) => setDescription(e.target.value)} className="h-9" />
+        <Input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="h-9"
+        />
       </FormField>
     </FormDialog>
   );
