@@ -254,6 +254,18 @@ export type InvoiceStats = {
   collected: number;
 };
 
+export type InvoiceSummaryMonth = {
+  key: string;
+  label: string;
+  invoiced: number;
+  collected: number;
+};
+
+export type InvoiceSummary = {
+  months: InvoiceSummaryMonth[];
+  totals: { invoiced: number; collected: number; outstanding: number };
+};
+
 function compactParams(params?: InvoiceListParams): Record<string, unknown> | undefined {
   if (!params) return undefined;
   const out: Record<string, unknown> = {};
@@ -286,6 +298,23 @@ export const invoiceApi = {
       overdue: Number(row.overdue ?? 0),
       drafts: Number(row.drafts ?? 0),
       collected: Number(row.collected ?? 0),
+    };
+  },
+
+  summary: async (months = 12): Promise<InvoiceSummary> => {
+    const row = await apiGet<InvoiceSummary>("/invoices/summary", { params: { months } });
+    return {
+      months: (row.months ?? []).map((m) => ({
+        key: m.key,
+        label: m.label,
+        invoiced: Number(m.invoiced ?? 0),
+        collected: Number(m.collected ?? 0),
+      })),
+      totals: {
+        invoiced: Number(row.totals?.invoiced ?? 0),
+        collected: Number(row.totals?.collected ?? 0),
+        outstanding: Number(row.totals?.outstanding ?? 0),
+      },
     };
   },
 

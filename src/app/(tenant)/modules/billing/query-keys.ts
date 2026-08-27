@@ -3,6 +3,7 @@ export const billingKeys = {
   invoices: () => [...billingKeys.all, "invoices"] as const,
   invoicesPage: (params: Record<string, unknown>) => [...billingKeys.invoices(), "page", params] as const,
   invoiceStats: () => [...billingKeys.invoices(), "stats"] as const,
+  invoiceSummary: (months = 12) => [...billingKeys.invoices(), "summary", months] as const,
   invoice: (id: string) => [...billingKeys.invoices(), id] as const,
   nextNumber: () => [...billingKeys.all, "invoice-next-number"] as const,
   recurring: () => [...billingKeys.all, "recurring"] as const,

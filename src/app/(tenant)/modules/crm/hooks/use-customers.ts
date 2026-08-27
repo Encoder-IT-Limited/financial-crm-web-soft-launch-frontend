@@ -15,3 +15,11 @@ export function useCustomer(id: string) {
     enabled: Boolean(id),
   });
 }
+
+export function useCustomerStatement(id: string) {
+  return useQuery({
+    queryKey: crmKeys.customerStatement(id),
+    queryFn: () => customersApi.statement(id),
+    enabled: Boolean(id),
+  });
+}
