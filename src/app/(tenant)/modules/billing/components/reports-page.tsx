@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Download } from "lucide-react";
@@ -17,9 +17,10 @@ import { downloadCsv } from "@/lib/csv";
 import { cn } from "@/lib/utils";
 import { customersApi } from "../../crm/api/customers.service";
 import { invoiceApi } from "../api/invoices.service";
-import { adjustmentsApi } from "../api/adjustments.service";
 import { billingKeys } from "../query-keys";
-import { invoiceBalance, invoiceDisplayStatus, PAYMENT_METHOD_LABELS, type Invoice, type InvoiceDisplayStatus } from "../types";
+import { crmKeys } from "../../crm/query-keys";
+import { invoiceBalance, invoiceDisplayStatus, type Invoice, type InvoiceDisplayStatus } from "../types";
+import { useCustomerStatement } from "../../crm/hooks/use-customers";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyColumnDef<TData> = ColumnDef<TData, any>;
@@ -51,39 +52,13 @@ export function ReportsPage() {
 }
 
 function SalesReport() {
-  const { data: invoices = [], isLoading } = useQuery({ queryKey: ["invoices"], queryFn: () => invoiceApi.list() });
+  const { data, isLoading } = useQuery({
+    queryKey: billingKeys.invoiceSummary(12),
+    queryFn: () => invoiceApi.summary(12),
+  });
 
-  const months = useMemo(() => {
-    const now = new Date();
-    const buckets: { key: string; label: string; invoiced: number; collected: number }[] = [];
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      buckets.push({
-        key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-        label: d.toLocaleDateString("en", { month: "short", year: "2-digit" }),
-        invoiced: 0,
-        collected: 0,
-      });
-    }
-    for (const inv of invoices) {
-      if (inv.status === "cancelled") continue;
-      const bucket = buckets.find((b) => b.key === inv.issueDate.slice(0, 7));
-      if (bucket) bucket.invoiced += inv.total;
-      for (const payment of inv.payments) {
-        const paymentBucket = buckets.find((b) => b.key === payment.date.slice(0, 7));
-        if (paymentBucket) paymentBucket.collected += payment.amount;
-      }
-    }
-    return buckets;
-  }, [invoices]);
-
-  const totals = useMemo(() => {
-    const live = invoices.filter((inv) => inv.status !== "cancelled");
-    const invoiced = live.reduce((sum, inv) => sum + inv.total, 0);
-    const collected = live.reduce((sum, inv) => sum + inv.paidAmount, 0);
-    const outstanding = live.reduce((sum, inv) => sum + invoiceBalance(inv), 0);
-    return { invoiced, collected, outstanding };
-  }, [invoices]);
+  const months = data?.months ?? [];
+  const totals = data?.totals ?? { invoiced: 0, collected: 0, outstanding: 0 };
 
   function exportCsv() {
     downloadCsv(
@@ -138,16 +113,14 @@ function SalesReport() {
 }
 
 function InvoiceReport() {
-  const { data: invoices = [], isLoading } = useQuery({ queryKey: ["invoices"], queryFn: () => invoiceApi.list() });
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
   const [status, setStatus] = useState<"all" | InvoiceDisplayStatus>("all");
+  const { data: invoices = [], isLoading } = useQuery({
+    queryKey: billingKeys.invoicesPage({ status, report: true }),
+    queryFn: () => invoiceApi.list({ status: status === "all" ? undefined : status }),
+  });
+  const { data: customers = [] } = useQuery({ queryKey: crmKeys.customers(), queryFn: customersApi.list });
 
   const customerName = (id: string) => customers.find((c) => c.id === id)?.name ?? "—";
-
-  const filtered = useMemo(
-    () => invoices.filter((inv) => status === "all" || invoiceDisplayStatus(inv) === status),
-    [invoices, status]
-  );
 
   const columns: AnyColumnDef<Invoice>[] = [
     { accessorKey: "number", header: "Invoice #", cell: ({ row }) => <span className="font-bold text-text">{row.original.number}</span> },
@@ -177,7 +150,7 @@ function InvoiceReport() {
     downloadCsv(
       "invoice-report.csv",
       ["Invoice #", "Customer", "Issue Date", "Total", "Paid", "Balance", "Status"],
-      filtered.map((inv) => [
+      invoices.map((inv) => [
         inv.number,
         customerName(inv.customerId),
         fmtDate(inv.issueDate),
@@ -192,7 +165,7 @@ function InvoiceReport() {
   return (
     <FilterableTable
       columns={columns}
-      data={filtered}
+      data={invoices}
       loading={isLoading}
       getRowId={(inv) => inv.id}
       emptyState="No invoices match your filters."
@@ -222,58 +195,16 @@ function InvoiceReport() {
   );
 }
 
-type StatementRow = {
-  id: string;
-  date: string;
-  description: string;
-  charge: number;
-  credit: number;
-};
-
 function CustomerStatement() {
-  const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => invoiceApi.list() });
-  const { data: adjustments = [] } = useQuery({ queryKey: billingKeys.adjustments(), queryFn: adjustmentsApi.list });
+  const { data: customers = [] } = useQuery({ queryKey: crmKeys.customers(), queryFn: customersApi.list });
   const [customerId, setCustomerId] = useState("");
+  const { data: statement, isLoading } = useCustomerStatement(customerId);
 
   const customer = customers.find((c) => c.id === customerId);
-
-  const rows = useMemo<StatementRow[]>(() => {
-    if (!customerId) return [];
-    const entries: StatementRow[] = [];
-    for (const inv of invoices) {
-      if (inv.customerId !== customerId || inv.status === "cancelled") continue;
-      entries.push({ id: `inv-${inv.id}`, date: inv.issueDate, description: `Invoice ${inv.number}`, charge: inv.total, credit: 0 });
-      for (const payment of inv.payments) {
-        entries.push({
-          id: `pay-${payment.id}`,
-          date: payment.date,
-          description: `Payment for ${inv.number} (${PAYMENT_METHOD_LABELS[payment.method]})`,
-          charge: 0,
-          credit: payment.amount,
-        });
-      }
-    }
-    for (const adj of adjustments) {
-      if (adj.customerId !== customerId || adj.status !== "issued") continue;
-      entries.push({
-        id: `adj-${adj.id}`,
-        date: adj.createdAt,
-        description: `${adj.number} (${adj.kind === "credit" ? "Credit" : "Debit"} Note)`,
-        charge: adj.kind === "debit" ? adj.amount : 0,
-        credit: adj.kind === "credit" ? adj.amount : 0,
-      });
-    }
-    return entries.sort((a, b) => (a.date < b.date ? -1 : 1));
-  }, [customerId, invoices, adjustments]);
-
-  const opening = customer?.openingBalance ?? 0;
-  const rowsWithBalance = rows.reduce<(StatementRow & { balance: number })[]>((acc, row) => {
-    const previous = acc.length > 0 ? acc[acc.length - 1].balance : opening;
-    acc.push({ ...row, balance: previous + row.charge - row.credit });
-    return acc;
-  }, []);
-  const closingBalance = rowsWithBalance.length > 0 ? rowsWithBalance[rowsWithBalance.length - 1].balance : opening;
+  const currency = statement?.currency ?? customer?.currency;
+  const opening = statement?.openingBalance ?? customer?.openingBalance ?? 0;
+  const closingBalance = statement?.closingBalance ?? opening;
+  const rows = statement?.rows ?? [];
 
   function exportCsv() {
     if (!customer) return;
@@ -282,7 +213,7 @@ function CustomerStatement() {
       ["Date", "Description", "Charge", "Credit", "Balance"],
       [
         ["", "Opening Balance", "", "", opening],
-        ...rowsWithBalance.map((r) => [fmtDate(r.date), r.description, r.charge || "", r.credit || "", r.balance]),
+        ...rows.map((r) => [fmtDate(r.date), r.description, r.charge || "", r.credit || "", r.balance]),
       ]
     );
   }
@@ -313,12 +244,16 @@ function CustomerStatement() {
         </div>
       </Card>
 
-      {customer && (
+      {customer && isLoading && (
+        <div className="h-64 animate-pulse rounded-[10px] border border-border bg-surface-subtle" />
+      )}
+
+      {customer && statement && (
         <>
           <StatTiles
             tiles={[
-              { label: "Opening Balance", value: fmtMoney(opening, customer.currency), tone: "neutral" },
-              { label: "Closing Balance", value: fmtMoney(closingBalance, customer.currency), tone: closingBalance > 0 ? "amber" : "green" },
+              { label: "Opening Balance", value: fmtMoney(opening, currency), tone: "neutral" },
+              { label: "Closing Balance", value: fmtMoney(closingBalance, currency), tone: closingBalance > 0 ? "amber" : "green" },
             ]}
           />
 
@@ -339,15 +274,15 @@ function CustomerStatement() {
                     <td className="px-5 py-2.5 text-text-4" colSpan={4}>
                       Opening Balance
                     </td>
-                    <td className="px-5 py-2.5 text-right font-semibold text-text">{fmtMoney(opening, customer.currency)}</td>
+                    <td className="px-5 py-2.5 text-right font-semibold text-text">{fmtMoney(opening, currency)}</td>
                   </tr>
-                  {rowsWithBalance.map((row) => (
+                  {rows.map((row) => (
                     <tr key={row.id} className="border-t border-border">
                       <td className="px-5 py-2.5 text-text-3">{fmtDate(row.date)}</td>
                       <td className="px-5 py-2.5 text-text-2">{row.description}</td>
-                      <td className="px-5 py-2.5 text-right text-text">{row.charge > 0 ? fmtMoney(row.charge, customer.currency) : "—"}</td>
-                      <td className="px-5 py-2.5 text-right text-green">{row.credit > 0 ? fmtMoney(row.credit, customer.currency) : "—"}</td>
-                      <td className="px-5 py-2.5 text-right font-semibold text-text">{fmtMoney(row.balance, customer.currency)}</td>
+                      <td className="px-5 py-2.5 text-right text-text">{row.charge > 0 ? fmtMoney(row.charge, currency) : "—"}</td>
+                      <td className="px-5 py-2.5 text-right text-green">{row.credit > 0 ? fmtMoney(row.credit, currency) : "—"}</td>
+                      <td className="px-5 py-2.5 text-right font-semibold text-text">{fmtMoney(row.balance, currency)}</td>
                     </tr>
                   ))}
                   {rows.length === 0 && (
