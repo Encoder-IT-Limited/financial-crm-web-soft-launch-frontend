@@ -3,7 +3,7 @@
 Scope: **only** the `(public)` and `(admin)` route groups — not the tenant portal, which is
 already scaffolded per `Project-Structure.md`. This plan folds in the client's Q&A answers
 (seat counting, subscription suspension, predefined roles, plan/module gating) and the SRS
-(`inv-pos-hr-tenant.md`) wherever they touch these two realms. Planning only — no code yet.
+(`docs/source/inv-pos-hr-tenant-SRS.md`) wherever they touch these two realms. Planning only — no code yet.
 
 ---
 

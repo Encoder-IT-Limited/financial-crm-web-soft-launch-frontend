@@ -15,7 +15,7 @@ out as the **first two weeks / first phase** of delivery:
 
 1. **Client's direct answers** (`docs/Questions for MRM.md`, `docs/Copy of question for MRM.md`) — authoritative, overrides everything below.
 2. `docs/MRM_Project_Proposal_v2.pdf` — the signed-scope document (modules, hours, 14-week plan).
-3. `docs/inv-pos-hr-tenant.md` — the detailed SRS the proposal was built from (functional requirements, workflows, DB design).
+3. `docs/source/inv-pos-hr-tenant-SRS.md` — the detailed SRS the proposal was built from (functional requirements, workflows, DB design).
 4. `docs/Client-proposal.md` — a cross-reference note comparing an earlier prototype against the proposal; used only to fill gaps.
 
 Every requirement below is tagged **[Client decision]**, **[Proposal]**, or **[SRS]** so it's
@@ -295,7 +295,7 @@ Retainers, Payment Tracking, Credit & Debit Notes, PDF generation with QR code.
 **[Proposal — hours]** 39 hrs / 7.5%.
 
 *Retainers have their own much deeper Q&A round and are already built — see
-`docs/Sales-Invoicing-Implementation-Plan.md` Phase E/H for the full requirement set and
+`docs/plans/Sales-Invoicing-Implementation-Plan.md` Phase E/H for the full requirement set and
 implementation. Summarized here only at the level the other four modules get.*
 
 ### 5.1 Inventory deduction timing (the join point with Inventory)

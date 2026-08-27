@@ -288,7 +288,7 @@ Everything below is genuinely new work relative to this demo, not a refinement o
 written up in full in `docs/backend/Backend-Build-Guide.md` §7.4/§7.5, summarized here so this
 plan doc stays a complete picture of "what POS needs" on its own.
 
-**Offline mode** (client-confirmed policy, `Client-Requirements-Phase1.md` §4.2/§4.3 — the *rules*
+**Offline mode** (client-confirmed policy, `docs/requirements/Client-Requirements-Phase1.md` §4.2/§4.3 — the *rules*
 are already decided, only the implementation is missing):
 
 - Sales, basic customer lookup/creation, and standard pre-configured discounts work offline;

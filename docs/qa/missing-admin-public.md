@@ -40,7 +40,7 @@ constant `src/config/platform-settings.ts` directly at build/request time.
   no-op from the visitor's perspective no matter what the admin does.
 - **Privacy/Terms body + "last updated" date.** `privacy/page.tsx` and
   `terms/page.tsx` render `PLATFORM_SETTINGS.legal.{privacyBody,termsBody,
-  privacyLastUpdated,termsLastUpdated}` from the static file — and per the
+privacyLastUpdated,termsLastUpdated}` from the static file — and per the
   Admin — Settings section below, the Legal tab doesn't even persist to a
   backend yet, so there's a double disconnect here: nothing to save, and
   nowhere for it to go even if it did.
@@ -122,7 +122,7 @@ for the toggle to mean anything.
 - **[P2] Stale "coming soon" invoice-download copy, and no endpoint to back
   it.** `payment-details-dialog.tsx` and `payments-list.tsx`'s `handleDownload()`
   both still show `toast.info("... invoice download will be available once
-  the billing backend is connected")`. Confirmed: `payments.service.ts` only
+the billing backend is connected")`. Confirmed: `payments.service.ts` only
   implements `list()` and `updateStatus()` — no invoice/receipt endpoint
   exists at all yet. Also no `get(id)` (the details dialog re-derives a
   single payment from the already-fetched list instead of fetching it
@@ -171,7 +171,7 @@ for the toggle to mean anything.
   exist — same component, two files, differing only in casing (a merge
   artifact). Works by accident on case-insensitive filesystems (Windows/macOS)
   but breaks on case-sensitive deploy targets (Linux/most CI). Fix: `grep -rn
-  "AdminSidebar\|admin-sidebar" src` to see which one is actually imported,
+"AdminSidebar\|admin-sidebar" src` to see which one is actually imported,
   delete the other — `admin-sidebar.tsx` is the correct casing per this
   project's kebab-case rule (AGENTS.md §8).
 - **No dashboard/metrics summary endpoint.** `admin/page.tsx` fetches the
@@ -281,7 +281,7 @@ for the toggle to mean anything.
 
 - **No backend at all.** `contact/contact-form.tsx`'s `handleSubmit`
   explicitly simulates success (`setTimeout` delay), commented `// TEMPORARY:
-  no backend/contact service yet`. The form always shows "Message sent"
+no backend/contact service yet`. The form always shows "Message sent"
   regardless of whether anything was recorded.
 
 ## Public — Legal
@@ -293,166 +293,4 @@ for the toggle to mean anything.
   the "Last updated" date. Self-aware placeholder, but live on a legally
   significant public page — a launch-blocker if it ships unnoticed.
 
-## Public — Home / Navbar
-
-- **[P1, from earlier QA report] Navbar items hidden on smaller screens, no
-  mobile menu** — see BUG_01 below.
-
-## Public — Global
-
-- **[from earlier QA report] Global font family not set to 'Outfit'** — see
-  BUG_09 below; likely a requirements conflict, not a bug (font stack is
-  deliberate/documented — confirm with the client before changing).
-
 ---
-
-## Original QA Bug Reports (BUG_01–BUG_09)
-
-Verbatim from the client-provided QA list, each with an Engineering Note added
-where code-verified. All of these are admin or public portal — none are
-tenant-portal.
-
-### 1. BUG_01: Navbar Items Are Hidden on Smaller Screen Sizes
-
-- **Module:** Navbar
-- **Feature:** Responsive Navigation
-- **URL:** https://erupt-wired-compacter.ngrok-free.dev/login
-- **Description:** Three navbar items are not visible on smaller mobile screen sizes. The items gradually become visible when the screen width is increased.
-- **Steps to Reproduce:**
-  1. Open the website.
-  2. Navigate to the Features page.
-  3. Open Chrome DevTools and enable Responsive/Device Mode.
-  4. Set the viewport to a small mobile width, such as 360px.
-  5. Observe the navbar.
-  6. Gradually increase the viewport width.
-  7. Observe the navbar items.
-- **Expected Result:** All navbar navigation options should remain accessible and should properly adjust according to the screen size. If items are intentionally hidden on mobile, they should be available through a responsive menu.
-- **Actual Result:** Three navbar items are hidden at smaller screen widths and gradually become visible as the viewport width increases.
-- **Engineering Note (code-verified):** Confirmed root cause in `src/app/(public)/components/public-navbar.tsx` — the Features/Pricing/Contact links use `hidden ... sm:flex` (hard cutoff at 640px) with **no mobile menu / hamburger fallback implemented at all**. Below 640px those links are simply unreachable, not "gradually visible." This also violates the project's own documented rule (`docs/Project-Structure.md` §6 / `Basic-Setup.md` §8) that every page must work down to 360px. **Fix**: add a mobile nav drawer/sheet that surfaces the same `NAV_LINKS` array below `sm:`, not just adjust the breakpoint.
-
-### 2. BUG_02: Compare Plans Table Does Not Display All Plans on Mobile View
-
-- **Module:** Pricing
-- **Feature:** Compare Plans / Pricing Table
-- **URL:** https://erupt-wired-compacter.ngrok-free.dev/admin/plans
-- **Description:** The Compare Plans section contains three plans — Starter, Growth, and Enterprise. On smaller mobile screen sizes, the Growth and Enterprise plans are not visible, and at narrower widths the Enterprise plan is also not displayed.
-- **Steps to Reproduce:**
-  1. Open the website.
-  2. Navigate to the Pricing page.
-  3. Scroll to the Compare Plans section.
-  4. Enable Chrome DevTools Responsive/Device Mode.
-  5. Test different mobile screen widths.
-  6. Observe the Starter, Growth, and Enterprise columns.
-- **Expected Result:** All three plans (Starter, Growth, and Enterprise) should remain accessible on mobile devices. The table should properly adapt using responsive layout, horizontal scrolling, stacking, or another suitable responsive solution.
-- **Actual Result:** Growth and Enterprise plans are not visible at certain mobile widths. At narrower screen widths, the Enterprise plan is also not visible.
-- **Engineering Note (code-verified):** `src/app/(public)/pricing/components/comparison-table.tsx` already wraps the table in `overflow-x-auto` with `min-w-[600px]` on the `<table>` — structurally this should horizontal-scroll rather than clip columns entirely, which doesn't match "not visible" as described. Couldn't reproduce from code alone (this project's standing rule is `tsc`/lint verification only, not a live browser check — see AGENTS.md §7). Possible causes worth checking live: a parent element with `overflow-x-hidden` clipping the scroll container, or the URL tested (`/admin/plans`) actually being the wrong page — the real Compare Plans section lives at the public `/pricing` route, not `/admin/plans`. Re-verify against the correct URL before treating this as unresolved. (Separately, this table also has a real mock-vs-live data-source bug — see "Public — Pricing" above.)
-
-### 3. BUG_03: Default Value Is Not Replaced When Entering a New Quantity
-
-- **Module:** Quantity / Counter
-- **Feature:** Increase/Decrease Quantity
-- **URL:** https://erupt-wired-compacter.ngrok-free.dev/pricing
-- **Description:** The quantity input field has a default value of 1. When the user enters 29, the existing 1 remains and the entered value is appended, resulting in 129.
-- **Steps to Reproduce:**
-  1. Open the website.
-  2. Navigate to the section containing the increase/decrease quantity option.
-  3. Observe that the quantity field contains 1 by default.
-  4. Click inside the quantity field.
-  5. Enter 29.
-  6. Observe the displayed value.
-- **Expected Result:** The existing default value 1 should be replaced when the user enters a new quantity, or the user should be able to easily clear the existing value before entering a new quantity. The field should display 29.
-- **Actual Result:** The existing 1 remains in the field and the entered 29 is appended, resulting in 129.
-- **Engineering Note (code-verified):** Found in `src/app/(public)/pricing/components/pricing-calculator.tsx` — the seats field is a standard controlled `<input type="number">` (default value `10`, not `1`, but same underlying issue). This is normal number-input behavior when a user clicks into the field mid-value and types without first selecting the existing digits — not a broken implementation, but the field has no `onFocus` select-all, which is the standard fix for exactly this friction on a stepper input. **Fix**: add `onFocus={(e) => e.target.select()}` to the input so any click-to-type replaces the current value.
-
-### 4. BUG_04: Inconsistent Horizontal Scrolling in Recent Payments Table on Mobile Devices
-
-- **Module:** Admin Dashboard
-- **Feature:** Recent Payments → View All
-- **URL:** https://erupt-wired-compacter.ngrok-free.dev/admin/payments
-- **Description:** The Recent Payments table accessed through the View All option shows inconsistent horizontal scrolling behavior across different mobile screen sizes. On some mobile devices, a horizontal scrollbar is available, while on others it is not.
-- **Steps to Reproduce:**
-  1. Log in to the Admin Dashboard.
-  2. Locate the Recent Payments section.
-  3. Click View All.
-  4. Observe the payment table and its columns.
-  5. Test the page on different mobile screen sizes/devices.
-  6. Compare the horizontal scrolling behavior.
-- **Expected Result:** The table should have consistent responsive behavior across all supported mobile screen sizes. If the table exceeds the viewport width, users should be able to horizontally scroll and access all columns.
-- **Actual Result:** On some mobile screen sizes, a horizontal scrollbar is available, while on other mobile screen sizes, no scrollbar is available, making the table's responsive behavior inconsistent.
-
-### 5. BUG_05: Clear Filter Option Is Not Visible on Mobile View
-
-- **Module:** Admin Dashboard → All Clients
-- **Feature:** Client Filter
-- **URL:** https://erupt-wired-compacter.ngrok-free.dev/admin/tenants
-- **Description:** The All Clients page contains Filter and Clear Filter options. However, the Clear Filter option is not visible on mobile screen sizes.
-- **Steps to Reproduce:**
-  1. Log in to the Admin Dashboard.
-  2. Navigate to All Clients.
-  3. Open the Filter option.
-  4. Apply any available filter.
-  5. Observe the filter controls on a mobile screen.
-- **Expected Result:** Clear Filter options should be properly visible and accessible on all supported mobile screen sizes.
-- **Actual Result:** The Clear Filter option is not visible on mobile screen sizes.
-
-### 6. BUG_06: Plan and Status Fields Overlap in Edit Client Tab on Mobile and Web View
-
-- **Module:** Admin Dashboard → All Clients
-- **Feature:** Edit Client
-- **URL:** https://erupt-wired-compacter.ngrok-free.dev/admin/tenants
-- **Description:** When editing a client from the mobile and web responsive view, the Plan and Status fields overlap with each other in the Edit Client tab.
-- **Steps to Reproduce:**
-  1. Log in to the Admin Dashboard.
-  2. Navigate to All Clients.
-  3. Select a client.
-  4. Click Edit.
-  5. Open the Edit Client tab on a mobile screen size.
-  6. Observe the Plan and Status fields.
-- **Expected Result:** All fields in the Edit Client tab should be properly aligned and spaced without overlapping on web & mobile screen and sizes.
-- **Actual Result:** The Plan and Status fields overlap each other in the mobile responsive view.
-
-### 7. BUG_07: User Is Automatically Logged Out After 5–10 Minutes
-
-- **Module:** Authentication / Session Management
-- **Feature:** User Login Session
-- **URL:** https://erupt-wired-compacter.ngrok-free.dev/login
-- **Description:** The logged-in user is automatically logged out after approximately 5–10 minutes, even without manually logging out or performing any logout action.
-- **Steps to Reproduce:**
-  1. Open the website.
-  2. Log in with valid credentials.
-  3. Navigate to any dashboard/page.
-  4. Continue using the application or leave the session idle for approximately 5–10 minutes.
-  5. Observe the user's session.
-- **Expected Result:** The user should remain logged in according to the application's configured session timeout policy. If automatic logout is intended, an appropriate warning should be provided before the session expires.
-- **Actual Result:** The user is automatically logged out after approximately 5–10 minutes without any manual logout action.
-- **Engineering Note (code-verified):** No session-expiry, token-refresh, or timeout logic exists anywhere in this codebase — `src/lib/dev/mock-identity.ts` is an always-on dev auth bypass with no real session concept yet (see its own comment: "TEMPORARY: stands in for a real /me response until a backend exists"). This bug cannot originate from application code as it stands. The tested URL (`erupt-wired-compacter.ngrok-free.dev`) is a free-tier ngrok tunnel — those commonly drop/rotate connections after a period of inactivity, which would present exactly as an unexpected "logout." Re-test against a stable hosting URL before treating this as an app bug.
-
-### 8. BUG_08: Page Scrolling Stops After Selecting a Plan in Plans and Pricing Section
-
-- **Module:** Pricing
-- **Feature:** Plans and Pricing
-- **URL:** https://erupt-wired-compacter.ngrok-free.dev/pricing
-- **Description:** After clicking/selecting any plan from the Plans and Pricing section, the page becomes unscrollable. The user cannot scroll upward or downward.
-- **Steps to Reproduce:**
-  1. Open the website on a mobile device/responsive view.
-  2. Navigate to the Plans and Pricing section.
-  3. Click/select any available plan.
-  4. Try to scroll upward and downward.
-  5. Observe the page behavior.
-- **Expected Result:** After selecting a plan, the page should remain scrollable so the user can navigate freely between different sections.
-- **Actual Result:** After selecting a plan, the page cannot be scrolled upward or downward.
-
-### 9. BUG_09: Global Font Family Is Not Set to 'Outfit'
-
-- **Module:** Global / UI
-- **Feature:** Typography / Global Styles
-- **URL:** ALL
-- **Description:** The entire website's font family is not set to 'Outfit'. It needs to be updated globally to use the 'Outfit' font across all pages, components, and text elements.
-- **Steps to Reproduce:**
-  1. Open the website in any browser.
-  2. Navigate through different pages (e.g., Home, Pricing, Admin Dashboard).
-  3. Inspect any text element using browser DevTools.
-  4. Check the computed `font-family` property for the body or root elements.
-- **Expected Result:** The global `font-family` for the entire website should be set to 'Outfit' (e.g., `font-family: 'Outfit', sans-serif;` applied globally). All text across the application should consistently render in the 'Outfit' font.
-- **Actual Result:** The website is currently using a different default or fallback font instead of 'Outfit' across the application.
-- **Engineering Note (code-verified) — likely a requirements conflict, not a bug:** `src/app/layout.tsx` has an explicit comment: *"System font stack per docs/Project-Structure.md §2.2 — matches the client's prototype exactly, no webfont dependency."* `docs/Project-Structure.md` §2.2 documents the font stack as `-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif` — a deliberate, documented decision, not an oversight. The string "Outfit" doesn't appear anywhere else in this repo (not in the prototype HTML, not in any design doc), so there's no evidence in this codebase that Outfit was ever the intended font. **Before implementing this**: confirm with the client/design owner whether the font requirement changed since `Project-Structure.md` was written — if yes, this is a real spec update (update both the doc and the code together); if no, this bug should be closed as a misunderstanding rather than "fixed" by overriding a deliberate decision.
