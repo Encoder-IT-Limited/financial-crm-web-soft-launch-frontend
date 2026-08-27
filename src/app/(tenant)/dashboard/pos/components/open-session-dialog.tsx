@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -45,7 +45,7 @@ export function OpenSessionDialog({
 }) {
   const queryClient = useQueryClient();
   const { data: me } = useMe();
-  const { data: terminals = [] } = useQuery({ queryKey: ["pos-terminals"], queryFn: posTerminalsApi.list });
+  const { data: terminals = [] } = useQuery({ queryKey: ["pos-terminals"], queryFn: () => posTerminalsApi.list() });
   const activeTerminals = terminals.filter((t) => t.status === "active");
 
   const [terminalId, setTerminalId] = useState(defaultTerminalId ?? "");
@@ -56,11 +56,18 @@ export function OpenSessionDialog({
   const [saving, setSaving] = useState(false);
 
   function reset() {
+    setTerminalId(defaultTerminalId ?? "");
     setCashierName(me?.name ?? "");
     setAccessCode("");
     setOpeningCash("0");
     setErrors({});
   }
+
+  useEffect(() => {
+    if (open) reset();
+    // Reset only when the dialog opens — not on every parent re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   function handleSubmit() {
     const selectedTerminalId = terminalId || activeTerminals[0]?.id || "";
@@ -103,7 +110,7 @@ export function OpenSessionDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { onOpenChange(next); if (next) reset(); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Start Shift</DialogTitle>

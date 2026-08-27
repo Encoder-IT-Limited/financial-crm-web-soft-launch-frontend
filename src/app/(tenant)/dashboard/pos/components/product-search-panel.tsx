@@ -12,6 +12,10 @@ function stockAt(item: ProductLookupItem, warehouseId: string): number {
   return item.stockByWarehouse[warehouseId] ?? 0;
 }
 
+function damagedAt(item: ProductLookupItem, warehouseId: string): number {
+  return item.damagedByWarehouse?.[warehouseId] ?? 0;
+}
+
 /** Search box (also where a barcode scanner's fast text input lands —
  * scanners just "type" the code into whatever's focused) + a tap-to-add
  * product grid. Catalog comes from live inventory; stock is per warehouse. */
@@ -19,13 +23,20 @@ export function ProductSearchPanel({ warehouseId, onAdd }: { warehouseId: string
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["pos-products", warehouseId],
     queryFn: async (): Promise<ProductLookupItem[]> => {
-      const [catalog, stock] = await Promise.all([inventoryApi.listProducts(), inventoryApi.listStock()]);
+      const [catalog, stock] = await Promise.all([
+        inventoryApi.listProducts(),
+        inventoryApi.listStock({ warehouseId }),
+      ]);
       return catalog
         .filter((p) => p.status === "active")
         .map((p) => {
           const stockByWarehouse: Record<string, number> = {};
+          const damagedByWarehouse: Record<string, number> = {};
           for (const row of stock) {
-            if (row.productId === p.id) stockByWarehouse[row.warehouseId] = row.quantity;
+            if (row.productId === p.id) {
+              stockByWarehouse[row.warehouseId] = row.quantity;
+              damagedByWarehouse[row.warehouseId] = row.damagedQuantity;
+            }
           }
           return {
             id: p.id,
@@ -34,6 +45,7 @@ export function ProductSearchPanel({ warehouseId, onAdd }: { warehouseId: string
             price: p.price,
             taxRate: p.taxRate ?? 5,
             stockByWarehouse,
+            damagedByWarehouse,
           };
         });
     },
@@ -67,7 +79,13 @@ export function ProductSearchPanel({ warehouseId, onAdd }: { warehouseId: string
 
       <div className="grid grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 lg:grid-cols-2 min-[1440px]:grid-cols-3">
         {filtered.map((product) => (
-          <ProductTile key={product.id} product={product} stock={stockAt(product, warehouseId)} onAdd={() => onAdd(product)} />
+          <ProductTile
+            key={product.id}
+            product={product}
+            stock={stockAt(product, warehouseId)}
+            damaged={damagedAt(product, warehouseId)}
+            onAdd={() => onAdd(product)}
+          />
         ))}
       </div>
     </div>

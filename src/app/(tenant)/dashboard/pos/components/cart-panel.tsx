@@ -2,9 +2,9 @@
 
 import { ShoppingCart, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { fmtMoney } from "@/lib/format";
 import type { CartLine, CartTotals } from "../types";
 import { CartLineRow } from "./cart-line-row";
+import { useFmtMoney } from "../use-fmt-money";
 
 export function CartPanel({
   lines,
@@ -23,6 +23,7 @@ export function CartPanel({
   onCheckout: () => void;
   canCheckout: boolean;
 }) {
+  const money = useFmtMoney();
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto">
@@ -51,26 +52,26 @@ export function CartPanel({
         <div className="flex flex-col gap-1 text-[12.5px] text-text-2">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span>{fmtMoney(totals.subtotal)}</span>
+            <span>{money(totals.subtotal)}</span>
           </div>
           {totals.discount > 0 && (
             <div className="flex justify-between text-green">
               <span>Discount</span>
-              <span>−{fmtMoney(totals.discount)}</span>
+              <span>−{money(totals.discount)}</span>
             </div>
           )}
           <div className="flex justify-between">
             <span>VAT</span>
-            <span>{fmtMoney(totals.tax)}</span>
+            <span>{money(totals.tax)}</span>
           </div>
           <div className="mt-1 flex justify-between border-t border-border pt-1.5 text-[15px] font-extrabold text-text">
             <span>Total</span>
-            <span>{fmtMoney(totals.total)}</span>
+            <span>{money(totals.total)}</span>
           </div>
         </div>
 
         <Button size="lg" className="mt-3 w-full" onClick={onCheckout} disabled={!canCheckout}>
-          Checkout — {fmtMoney(totals.total)}
+          Checkout — {money(totals.total)}
         </Button>
       </div>
     </div>

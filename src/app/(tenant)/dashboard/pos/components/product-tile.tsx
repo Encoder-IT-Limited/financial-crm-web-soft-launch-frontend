@@ -1,19 +1,22 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { fmtMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ProductLookupItem } from "../../invoices/mock/product-lookup-seed";
+import { useFmtMoney } from "../use-fmt-money";
 
 export function ProductTile({
   product,
   stock,
+  damaged = 0,
   onAdd,
 }: {
   product: ProductLookupItem;
   stock: number;
+  damaged?: number;
   onAdd: () => void;
 }) {
+  const money = useFmtMoney();
   const outOfStock = stock <= 0;
   return (
     <Card
@@ -29,11 +32,12 @@ export function ProductTile({
       <div className="line-clamp-2 text-[12.5px] font-semibold text-text">{product.name}</div>
       <div className="text-[11px] text-text-3">{product.sku}</div>
       <div className="mt-1 flex items-center justify-between">
-        <span className="text-[13px] font-bold text-blue">{fmtMoney(product.price)}</span>
+        <span className="text-[13px] font-bold text-blue">{money(product.price)}</span>
         <span className={cn("text-[11px]", outOfStock ? "text-red" : "text-text-3")}>
           {outOfStock ? "Out of stock" : `${stock} in stock`}
         </span>
       </div>
+      {damaged > 0 && <div className="text-[11px] text-amber">{damaged} damaged</div>}
     </Card>
   );
 }

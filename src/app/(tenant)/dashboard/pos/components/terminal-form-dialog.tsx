@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -58,6 +58,11 @@ export function TerminalFormDialog({
     setErrors({});
   }
 
+  useEffect(() => {
+    if (open) reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, terminal?.id]);
+
   function handleSubmit() {
     const schema = terminal ? terminalEditFormSchema : terminalFormSchema;
     const result = schema.safeParse(form);
@@ -92,7 +97,7 @@ export function TerminalFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { onOpenChange(next); if (next) reset(); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>{terminal ? "Edit Terminal" : "New Terminal"}</DialogTitle>

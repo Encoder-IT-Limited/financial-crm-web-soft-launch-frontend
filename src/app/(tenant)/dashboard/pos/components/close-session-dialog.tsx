@@ -14,12 +14,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
-import { fmtMoney } from "@/lib/format";
 import { closeSessionSchema } from "../schemas";
 import { expectedCashForSession, round2, type PosSession } from "../types";
 import { posSessionsApi } from "../api/sessions.service";
 import { posSalesApi } from "../api/sales.service";
 import { FormField } from "../../invoices/components/form-field";
+import { useFmtMoney } from "../use-fmt-money";
 
 export function CloseSessionDialog({
   session,
@@ -33,7 +33,8 @@ export function CloseSessionDialog({
   onClosed: () => void;
 }) {
   const queryClient = useQueryClient();
-  const { data: sales = [] } = useQuery({ queryKey: ["pos-sales"], queryFn: posSalesApi.list, enabled: open });
+  const money = useFmtMoney();
+  const { data: sales = [] } = useQuery({ queryKey: ["pos-sales"], queryFn: () => posSalesApi.list(), enabled: open });
   const { data: refunds = [] } = useQuery({ queryKey: ["pos-refunds"], queryFn: () => posSalesApi.listRefunds(), enabled: open });
 
   const [counted, setCounted] = useState("");
@@ -79,7 +80,7 @@ export function CloseSessionDialog({
 
         <div className="flex flex-col gap-3">
           <div className="rounded-lg bg-surface-subtle p-3 text-[12.5px] text-text-2">
-            Expected cash: <span className="font-bold text-text">{fmtMoney(expected)}</span>
+            Expected cash: <span className="font-bold text-text">{money(expected)}</span>
           </div>
 
           <FormField label="Counted cash" error={errors.closingCashCounted}>
@@ -97,7 +98,7 @@ export function CloseSessionDialog({
           {counted !== "" && (
             <div className={cn("text-[12.5px] font-semibold", variance === 0 ? "text-green" : variance > 0 ? "text-blue" : "text-red")}>
               Variance: {variance > 0 ? "+" : ""}
-              {fmtMoney(variance)}
+              {money(variance)}
             </div>
           )}
         </div>

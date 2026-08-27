@@ -32,7 +32,7 @@ import { TablePagination } from "@/components/shared/table-pagination";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import type { Product, ProductStatus } from "../types";
-import { useProducts } from "../hooks/use-inventory";
+import { useProducts, useStock } from "../hooks/use-inventory";
 import { ProductsToolbar, type SortPreset } from "./products-toolbar";
 import { ProductsEmptyState } from "./products-empty-state";
 import { ProductThumbnail, getStockTone } from "./product-thumbnail";
@@ -77,6 +77,16 @@ function exportProductsCsv(rows: Product[]) {
 
 export function ProductsPage() {
   const { data: items = [], isLoading } = useProducts();
+  const { data: stock = [] } = useStock();
+  const damagedByProduct = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const row of stock) {
+      if (row.damagedQuantity > 0) {
+        map.set(row.productId, (map.get(row.productId) ?? 0) + row.damagedQuantity);
+      }
+    }
+    return map;
+  }, [stock]);
   const [filters, setFilters] = useState<Filters>({ search: "", category: "all", status: "all" });
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 10 });
@@ -178,6 +188,15 @@ export function ProductsPage() {
         },
       },
       {
+        id: "damaged",
+        header: "Damaged",
+        cell: ({ row }) => {
+          const qty = damagedByProduct.get(row.original.id) ?? 0;
+          if (qty <= 0) return <span className="text-[12.5px] text-text-4">—</span>;
+          return <span className="tabular-nums text-[12.5px] font-semibold text-amber">{qty}</span>;
+        },
+      },
+      {
         accessorKey: "minimumStock",
         header: "Min",
         cell: ({ row }) => <span className="tabular-nums text-[12.5px]">{row.original.minimumStock}</span>,
@@ -212,7 +231,7 @@ export function ProductsPage() {
         ),
       },
     ],
-    []
+    [damagedByProduct]
   );
 
   const table = useReactTable({

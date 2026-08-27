@@ -8,7 +8,17 @@ import {
   toApiRefund,
   type ApiPosSale,
 } from "./mappers";
+import { compactParams } from "./params";
 import { posSessionsApi } from "./sessions.service";
+
+export type PosSaleListParams = {
+  posSessionId?: string;
+  terminalId?: string;
+  customerId?: string;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+};
 
 async function productMetaMap() {
   const products = await inventoryApi.listProducts();
@@ -22,21 +32,17 @@ async function productMetaMap() {
 
 async function hydrateSale(row: ApiPosSale): Promise<PosSale> {
   const meta = await productMetaMap();
-  let terminalId = "";
+  let terminalId = row.terminalId ?? "";
   let createdBy = "Cashier";
   if (row.posSessionId) {
     try {
-      const sessions = await posSessionsApi.list();
-      const session = sessions.find((s) => s.id === row.posSessionId);
-      if (session) {
-        terminalId = session.terminalId;
-        createdBy = session.openedBy;
-      }
+      const session = await posSessionsApi.get(row.posSessionId);
+      terminalId = terminalId || session.terminalId;
+      createdBy = session.openedBy;
     } catch {
       // list may fail on permission — leave defaults
     }
   }
-  // Prefer payments from getSale; list may omit them
   let full = row;
   if (!row.payments) {
     full = await apiGet<ApiPosSale>(`/pos/sales/${row.id}`);
@@ -45,19 +51,15 @@ async function hydrateSale(row: ApiPosSale): Promise<PosSale> {
 }
 
 export const posSalesApi = {
-  list: async (): Promise<PosSale[]> => {
-    const rows = await apiGet<ApiPosSale[]>("/pos/sales");
+  list: async (params?: PosSaleListParams): Promise<PosSale[]> => {
+    const rows = await apiGet<ApiPosSale[]>("/pos/sales", { params: compactParams(params) });
     const meta = await productMetaMap();
-    const sessions = await posSessionsApi.list().catch(() => []);
-    const sessionById = new Map(sessions.map((s) => [s.id, s]));
-    return rows.map((row) => {
-      const session = row.posSessionId ? sessionById.get(row.posSessionId) : undefined;
-      return mapSale(row, {
-        terminalId: session?.terminalId,
+    return rows.map((row) =>
+      mapSale(row, {
+        terminalId: row.terminalId ?? undefined,
         productMeta: meta,
-        createdBy: session?.openedBy,
-      });
-    });
+      }),
+    );
   },
 
   get: async (id: string): Promise<PosSale | undefined> => {
@@ -109,7 +111,6 @@ export const posSalesApi = {
     );
     const returns = mapReturns(input.saleId, result.sale.returns);
     if (returns[0]) return returns[0];
-    // Fallback if returns not included on nested sale
     const refreshed = await apiGet<ApiPosSale>(`/pos/sales/${input.saleId}`);
     return mapReturns(input.saleId, refreshed.returns)[0]!;
   },

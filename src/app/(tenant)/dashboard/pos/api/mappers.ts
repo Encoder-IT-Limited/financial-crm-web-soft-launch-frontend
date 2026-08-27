@@ -56,6 +56,8 @@ export type ApiPayment = {
   id?: string;
   paymentMethod: string;
   amount: number | string;
+  tenderedAmount?: number | string | null;
+  currency?: string | null;
 };
 
 export type ApiSaleReturn = {
@@ -89,6 +91,7 @@ export type ApiPosSale = {
   payments?: ApiPayment[];
   returns?: ApiSaleReturn[];
   invoiceId?: string | null;
+  terminalId?: string | null;
 };
 
 const PAYMENT_TO_API: Record<PosPaymentMethod, string> = {
@@ -183,13 +186,17 @@ export function mapSale(
     id: row.id,
     number: row.transactionNumber,
     sessionId: row.posSessionId ?? "",
-    terminalId: opts.terminalId ?? "",
+    terminalId: opts.terminalId ?? row.terminalId ?? "",
     warehouseId: row.warehouseId,
     customerId: row.customerId ?? undefined,
     lines,
     payments: (row.payments ?? [])
       .filter((p) => n(p.amount) > 0)
-      .map((p) => ({ method: mapPaymentMethod(p.paymentMethod), amount: n(p.amount) })),
+      .map((p) => ({
+        method: mapPaymentMethod(p.paymentMethod),
+        amount: n(p.amount),
+        tenderedAmount: p.tenderedAmount != null ? n(p.tenderedAmount) : undefined,
+      })),
     subtotal: n(row.subtotal),
     discount: n(row.discount),
     tax: n(row.tax),
@@ -259,11 +266,10 @@ export function toApiCreateSale(
   posSessionId: string;
   customerId?: string;
   items: { productId: string; quantity: number; unitPrice: number; discount: number }[];
-  payments: { paymentMethod: string; amount: number }[];
+  payments: { paymentMethod: string; amount: number; tenderedAmount?: number }[];
   managerPin?: string;
 } {
   const lines = distributeCartDiscount(input.lines, input.cartDiscount);
-  // Clamp cash overpay so BE exact-match passes (change stays FE-only).
   const due = round2(
     lines.reduce((sum, l) => {
       const gross = l.quantity * l.unitPrice;
@@ -275,13 +281,18 @@ export function toApiCreateSale(
   let payments = input.payments.map((p) => ({
     paymentMethod: PAYMENT_TO_API[p.method],
     amount: p.amount,
+    tenderedAmount: p.tenderedAmount,
   }));
   const paid = round2(payments.reduce((s, p) => s + p.amount, 0));
   if (paid > due + 0.009) {
     const cashIdx = payments.findIndex((p) => p.paymentMethod === "CASH");
     if (cashIdx >= 0) {
       const over = round2(paid - due);
-      payments = payments.map((p, i) => (i === cashIdx ? { ...p, amount: round2(p.amount - over) } : p));
+      payments = payments.map((p, i) =>
+        i === cashIdx
+          ? { ...p, tenderedAmount: p.tenderedAmount ?? p.amount, amount: round2(p.amount - over) }
+          : p,
+      );
     }
   }
 
@@ -294,7 +305,13 @@ export function toApiCreateSale(
       unitPrice: l.unitPrice,
       discount: l.discountAmount ?? 0,
     })),
-    payments,
+    payments: payments.map((p) => ({
+      paymentMethod: p.paymentMethod,
+      amount: p.amount,
+      ...(p.tenderedAmount != null && p.tenderedAmount > p.amount + 0.009
+        ? { tenderedAmount: p.tenderedAmount }
+        : {}),
+    })),
     managerPin,
   };
 }
