@@ -31,13 +31,17 @@ export function TerminalsList() {
     queryKey: ["pos-terminals", statusFilter],
     queryFn: () => posTerminalsApi.list(statusFilter === "all" ? undefined : statusFilter),
   });
-  const { data: warehouses = [] } = useQuery({ queryKey: ["pos-warehouses"], queryFn: inventoryApi.listWarehouses });
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ["pos-warehouses"],
+    queryFn: inventoryApi.listWarehouses,
+  });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [pinOpen, setPinOpen] = useState(false);
   const [editing, setEditing] = useState<PosTerminal | null>(null);
 
-  const warehouseName = (id: string) => warehouses.find((w) => w.id === id)?.name ?? id;
+  const warehouseName = (id: string) =>
+    warehouses.find((w) => w.id === id)?.name ?? id;
 
   function toggleStatus(terminal: PosTerminal) {
     const next = terminal.status === "active" ? "inactive" : "active";
@@ -54,7 +58,13 @@ export function TerminalsList() {
 
   const columns = useMemo<AnyColumnDef<PosTerminal>[]>(
     () => [
-      { accessorKey: "name", header: "Terminal", cell: ({ row }) => <span className="font-bold text-text">{row.original.name}</span> },
+      {
+        accessorKey: "name",
+        header: "Terminal",
+        cell: ({ row }) => (
+          <span className="font-bold text-text">{row.original.name}</span>
+        ),
+      },
       { accessorKey: "code", header: "Code" },
       {
         id: "warehouse",
@@ -64,7 +74,11 @@ export function TerminalsList() {
       {
         id: "status",
         header: "Status",
-        cell: ({ row }) => <Badge tone={row.original.status === "active" ? "green" : "neutral"}>{row.original.status}</Badge>,
+        cell: ({ row }) => (
+          <Badge tone={row.original.status === "active" ? "green" : "neutral"}>
+            {row.original.status}
+          </Badge>
+        ),
       },
       {
         id: "actions",
@@ -72,10 +86,18 @@ export function TerminalsList() {
         enableSorting: false,
         cell: ({ row }) => (
           <div className="flex justify-end gap-2">
-            <Button variant="outline" size="sm" onClick={() => setEditing(row.original)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setEditing(row.original)}
+            >
               Edit
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => toggleStatus(row.original)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => toggleStatus(row.original)}
+            >
               {row.original.status === "active" ? "Deactivate" : "Activate"}
             </Button>
           </div>

@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { Invoice } from "../types";
 
@@ -47,9 +48,13 @@ export function SortableHeader<TData>({
 export function InvoicesTable({
   table,
   onRowClick,
+  loading = false,
+  error,
 }: {
   table: TanstackTable<Invoice>;
   onRowClick: (invoice: Invoice) => void;
+  loading?: boolean;
+  error?: string;
 }) {
   const rows = table.getRowModel().rows;
   const columnCount = table.getAllLeafColumns().length;
@@ -76,28 +81,50 @@ export function InvoicesTable({
         ))}
       </TableHeader>
       <TableBody>
-        {rows.map((row) => (
-          <TableRow
-            key={row.id}
-            data-state={row.getIsSelected() ? "selected" : undefined}
-            onClick={() => onRowClick(row.original)}
-            className="cursor-pointer transition-colors hover:bg-surface-subtle"
-          >
-            {row.getVisibleCells().map((cell) => (
-              <TableCell
-                key={cell.id}
-                className={cn(
-                  "px-5 py-3",
-                  cell.column.id === "select" && "w-10 px-4",
-                  ["amount", "paid", "balance"].includes(cell.column.id) && "pr-5 text-right",
-                )}
-              >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </TableCell>
-            ))}
+        {loading &&
+          Array.from({ length: 5 }).map((_, i) => (
+            <TableRow key={`skeleton-${i}`}>
+              {Array.from({ length: columnCount }).map((_, colIndex) => (
+                <TableCell key={colIndex} className="px-5 py-[18px]">
+                  <Skeleton className="h-4 w-full max-w-32" />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+
+        {!loading && error && (
+          <TableRow>
+            <TableCell colSpan={columnCount} className="h-28 text-center text-[13px] text-red">
+              {error}
+            </TableCell>
           </TableRow>
-        ))}
-        {rows.length === 0 && (
+        )}
+
+        {!loading &&
+          !error &&
+          rows.map((row) => (
+            <TableRow
+              key={row.id}
+              data-state={row.getIsSelected() ? "selected" : undefined}
+              onClick={() => onRowClick(row.original)}
+              className="cursor-pointer transition-colors hover:bg-surface-subtle"
+            >
+              {row.getVisibleCells().map((cell) => (
+                <TableCell
+                  key={cell.id}
+                  className={cn(
+                    "px-5 py-3",
+                    cell.column.id === "select" && "w-10 px-4",
+                    ["amount", "paid", "balance"].includes(cell.column.id) && "pr-5 text-right",
+                  )}
+                >
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+
+        {!loading && !error && rows.length === 0 && (
           <TableRow>
             <TableCell colSpan={columnCount} className="h-28 text-center text-[13px] text-text-4">
               No invoices match your filters.

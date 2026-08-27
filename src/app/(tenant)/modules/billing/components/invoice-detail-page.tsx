@@ -196,10 +196,10 @@ export function InvoiceDetailPage() {
       <div className="mb-4 flex items-center gap-2">
         <InvoiceStatusBadge status={status} />
         {fulfillmentStatus !== "not-applicable" && (
-          <span className="text-[11.5px] capitalize text-text-3">{fulfillmentStatus.replace(/-/g, " ")}</span>
+          <span className="text-[11px] capitalize text-text-3">{fulfillmentStatus.replace(/-/g, " ")}</span>
         )}
         {invoice.lastReminderAt && status === "overdue" && (
-          <span className="text-[11.5px] text-text-3">Last reminder {fmtDateTime(invoice.lastReminderAt)}</span>
+          <span className="text-[11px] text-text-3">Last reminder {fmtDateTime(invoice.lastReminderAt)}</span>
         )}
       </div>
 

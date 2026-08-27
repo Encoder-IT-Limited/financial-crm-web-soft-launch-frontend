@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { inventoryApi } from "@/app/(tenant)/modules/inventory/api/inventory.service";
-import type { ProductLookupItem } from "../../invoices/mock/product-lookup-seed";
+import type { ProductLookupItem } from "../mock/product-lookup-seed";
 import { ProductTile } from "./product-tile";
 
 function stockAt(item: ProductLookupItem, warehouseId: string): number {
@@ -19,7 +19,13 @@ function damagedAt(item: ProductLookupItem, warehouseId: string): number {
 /** Search box (also where a barcode scanner's fast text input lands —
  * scanners just "type" the code into whatever's focused) + a tap-to-add
  * product grid. Catalog comes from live inventory; stock is per warehouse. */
-export function ProductSearchPanel({ warehouseId, onAdd }: { warehouseId: string; onAdd: (product: ProductLookupItem) => void }) {
+export function ProductSearchPanel({
+  warehouseId,
+  onAdd,
+}: {
+  warehouseId: string;
+  onAdd: (product: ProductLookupItem) => void;
+}) {
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["pos-products", warehouseId],
     queryFn: async (): Promise<ProductLookupItem[]> => {
@@ -55,7 +61,9 @@ export function ProductSearchPanel({ warehouseId, onAdd }: { warehouseId: string
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     if (!needle) return products;
-    return products.filter((p) => `${p.name} ${p.sku}`.toLowerCase().includes(needle));
+    return products.filter((p) =>
+      `${p.name} ${p.sku}`.toLowerCase().includes(needle),
+    );
   }, [products, search]);
 
   return (
@@ -71,10 +79,16 @@ export function ProductSearchPanel({ warehouseId, onAdd }: { warehouseId: string
         />
       </div>
 
-      {isLoading && <div className="p-8 text-center text-[13px] text-text-4">Loading products…</div>}
+      {isLoading && (
+        <div className="p-8 text-center text-[13px] text-text-4">
+          Loading products…
+        </div>
+      )}
 
       {!isLoading && filtered.length === 0 && (
-        <div className="p-8 text-center text-[13px] text-text-4">No products match &ldquo;{search}&rdquo;.</div>
+        <div className="p-8 text-center text-[13px] text-text-4">
+          No products match &ldquo;{search}&rdquo;.
+        </div>
       )}
 
       <div className="grid grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 lg:grid-cols-2 min-[1440px]:grid-cols-3">

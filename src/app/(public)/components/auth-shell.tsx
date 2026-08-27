@@ -26,12 +26,14 @@ function DefaultLeftFooter() {
           key={card.label}
           className={cn(
             "absolute flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3.5 py-2.5 shadow-lg backdrop-blur-sm",
-            card.offset
+            card.offset,
           )}
           style={{ zIndex: FLOATING_CARDS.length - i }}
         >
           <card.icon className="size-3.5 text-white/80" />
-          <span className="text-[11px] font-semibold text-white/80">{card.label}</span>
+          <span className="text-[11px] font-semibold text-white/80">
+            {card.label}
+          </span>
         </div>
       ))}
     </div>
@@ -40,11 +42,15 @@ function DefaultLeftFooter() {
 
 /** Split-screen shell shared by every auth page — a beautifully branded
  * panel on the left, form content (passed as children) on the right. */
-export function AuthShell({ children, leftFooter, contentClassName }: AuthShellProps) {
+export function AuthShell({
+  children,
+  leftFooter,
+  contentClassName,
+}: AuthShellProps) {
   return (
     <div className="grid min-h-dvh lg:grid-cols-2">
       {/* Brand panel */}
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-navy p-10 text-white lg:flex">
+      <div className="relative hidden flex-col justify-center gap-10 overflow-hidden bg-navy p-10 text-white lg:flex">
         <div
           aria-hidden
           className="pointer-events-none absolute top-[-160px] right-[-120px] h-[420px] w-[420px] rounded-full bg-blue/30 blur-[120px]"
@@ -58,12 +64,12 @@ export function AuthShell({ children, leftFooter, contentClassName }: AuthShellP
           className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)] [background-size:26px_26px] [mask-image:radial-gradient(ellipse_75%_65%_at_25%_15%,#000_35%,transparent_100%)]"
         />
 
-        <Link href="/" className="relative flex items-center gap-2.5">
+        {/* <Link href="/" className="relative flex items-center gap-2.5">
           <div className="flex size-9 items-center justify-center rounded-lg bg-linear-to-br from-blue to-purple text-base font-extrabold text-white shadow-sm shadow-blue/30">
             M
           </div>
           <span className="text-base font-bold">MRM Portal</span>
-        </Link>
+        </Link> */}
 
         <div className="relative max-w-sm">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/80 backdrop-blur-sm">
@@ -78,17 +84,19 @@ export function AuthShell({ children, leftFooter, contentClassName }: AuthShellP
             in one place.
           </p>
           <p className="mt-4 text-[13.5px] text-white/60">
-            Accounting, invoicing, inventory, banking, and CRM for growing teams — one
-            platform instead of six disconnected tools.
+            Accounting, invoicing, inventory, banking, and CRM for growing teams
+            — one platform instead of six disconnected tools.
           </p>
         </div>
 
-        <div className="relative">{leftFooter ?? <DefaultLeftFooter />}</div>
+        {/* <div className="relative">{leftFooter ?? <DefaultLeftFooter />}</div> */}
       </div>
 
       {/* Form panel */}
-      <div className="flex items-center justify-center bg-background px-5 py-16 sm:px-8">
-        <div className={cn("w-full max-w-sm", contentClassName)}>{children}</div>
+      <div className="flex-1 flex items-center justify-center bg-background px-5 py-16 sm:px-8">
+        <div className={cn("w-full max-w-sm", contentClassName)}>
+          {children}
+        </div>
       </div>
     </div>
   );

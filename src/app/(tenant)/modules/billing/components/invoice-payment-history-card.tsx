@@ -15,7 +15,7 @@ export function InvoicePaymentHistoryCard({
     <Card className="gap-0 p-0">
       <div className="border-b border-border px-5 py-3 text-sm font-bold text-text">Payment history</div>
       {payments.length === 0 ? (
-        <div className="px-5 py-6 text-center text-[12px] text-text-4">No payments recorded yet.</div>
+        <div className="px-5 py-6 text-center text-[12.5px] text-text-4">No payments recorded yet.</div>
       ) : (
         <div className="flex flex-col divide-y divide-border">
           {payments.map((payment) => (
@@ -27,7 +27,7 @@ export function InvoicePaymentHistoryCard({
                   {payment.reference ? ` · ${payment.reference}` : ""}
                 </div>
               </div>
-              <span className="text-[11.5px] text-text-4">{fmtDate(payment.date)}</span>
+              <span className="text-[11px] text-text-4">{fmtDate(payment.date)}</span>
             </div>
           ))}
         </div>

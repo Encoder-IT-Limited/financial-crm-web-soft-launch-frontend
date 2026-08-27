@@ -75,7 +75,7 @@ export function InvoicesPage() {
     status: filters.status === "all" ? undefined : filters.status,
     customerId: filters.customer === "all" ? undefined : filters.customer,
   };
-  const { data: page } = useQuery({
+  const { data: page, isLoading: invoicesLoading, isError: invoicesError } = useQuery({
     queryKey: billingKeys.invoicesPage(listParams),
     queryFn: () => invoiceApi.listPage(listParams),
     placeholderData: (previous) => previous,
@@ -349,8 +349,18 @@ export function InvoicesPage() {
               onSendReminders={sendRemindersToSelected}
               onClear={() => setRowSelection({})}
             />
-            <InvoicesTable table={table} onRowClick={(inv) => router.push(`/dashboard/invoices/${inv.id}`)} />
-            <InvoicesMobileList invoices={rows.map((r) => r.original)} customerName={customerName} />
+            <InvoicesTable
+              table={table}
+              onRowClick={(inv) => router.push(`/dashboard/invoices/${inv.id}`)}
+              loading={invoicesLoading}
+              error={invoicesError ? "Couldn't load invoices. Try refreshing the page." : undefined}
+            />
+            <InvoicesMobileList
+              invoices={rows.map((r) => r.original)}
+              customerName={customerName}
+              loading={invoicesLoading}
+              error={invoicesError ? "Couldn't load invoices. Try refreshing the page." : undefined}
+            />
             <div className="border-t border-border px-3">
               <TablePagination table={table} totalCount={filteredTotal} pageSizeOptions={[10, 25, 50]} />
             </div>

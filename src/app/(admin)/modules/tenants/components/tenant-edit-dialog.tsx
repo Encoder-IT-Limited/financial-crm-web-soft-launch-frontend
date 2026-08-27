@@ -153,7 +153,7 @@ export function TenantEditDialog({
       <div className="grid grid-cols-2 gap-3">
         <FormField label="Plan" error={errors.planId}>
           <Select value={form.planId} onValueChange={(v) => v && set("planId", v)}>
-            <SelectTrigger className={cn(errors.planId && "border-red")}>
+            <SelectTrigger className={cn("w-full", errors.planId && "border-red")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

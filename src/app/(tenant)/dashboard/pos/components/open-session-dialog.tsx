@@ -12,7 +12,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { ApiError } from "@/lib/api/errors";
@@ -45,7 +51,10 @@ export function OpenSessionDialog({
 }) {
   const queryClient = useQueryClient();
   const { data: me } = useMe();
-  const { data: terminals = [] } = useQuery({ queryKey: ["pos-terminals"], queryFn: () => posTerminalsApi.list() });
+  const { data: terminals = [] } = useQuery({
+    queryKey: ["pos-terminals"],
+    queryFn: () => posTerminalsApi.list(),
+  });
   const activeTerminals = terminals.filter((t) => t.status === "active");
 
   const [terminalId, setTerminalId] = useState(defaultTerminalId ?? "");
@@ -71,9 +80,21 @@ export function OpenSessionDialog({
 
   function handleSubmit() {
     const selectedTerminalId = terminalId || activeTerminals[0]?.id || "";
-    const result = openSessionSchema.safeParse({ terminalId: selectedTerminalId, cashierName, accessCode, openingCash });
+    const result = openSessionSchema.safeParse({
+      terminalId: selectedTerminalId,
+      cashierName,
+      accessCode,
+      openingCash,
+    });
     if (!result.success) {
-      setErrors(Object.fromEntries(result.error.issues.map((issue) => [issue.path.join("."), issue.message])));
+      setErrors(
+        Object.fromEntries(
+          result.error.issues.map((issue) => [
+            issue.path.join("."),
+            issue.message,
+          ]),
+        ),
+      );
       return;
     }
 
@@ -98,7 +119,8 @@ export function OpenSessionDialog({
         onOpenChange(false);
       })
       .catch((err: unknown) => {
-        const message = err instanceof Error ? err.message : "Could not start shift";
+        const message =
+          err instanceof Error ? err.message : "Could not start shift";
         const code = err instanceof ApiError ? err.code : undefined;
         if (code === "INVALID_ACCESS_CODE") {
           setErrors({ accessCode: "Incorrect access code for this terminal" });
@@ -110,16 +132,27 @@ export function OpenSessionDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (next) reset();
+      }}
+    >
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Start Shift</DialogTitle>
-          <DialogDescription>Log in to a terminal and count the cash in the drawer to begin.</DialogDescription>
+          <DialogDescription>
+            Log in to a terminal and count the cash in the drawer to begin.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-3">
           <FormField label="Terminal" error={errors.terminalId}>
-            <Select value={terminalId || activeTerminals[0]?.id} onValueChange={(v) => setTerminalId(v ?? terminalId)}>
+            <Select
+              value={terminalId || activeTerminals[0]?.id}
+              onValueChange={(v) => setTerminalId(v ?? terminalId)}
+            >
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Select a terminal" />
               </SelectTrigger>
@@ -171,7 +204,10 @@ export function OpenSessionDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={saving || activeTerminals.length === 0}>
+          <Button
+            onClick={handleSubmit}
+            disabled={saving || activeTerminals.length === 0}
+          >
             {saving ? "Starting..." : "Start Shift"}
           </Button>
         </DialogFooter>

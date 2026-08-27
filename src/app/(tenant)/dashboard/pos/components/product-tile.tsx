@@ -2,7 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { ProductLookupItem } from "../../invoices/mock/product-lookup-seed";
+import type { ProductLookupItem } from "../mock/product-lookup-seed";
 import { useFmtMoney } from "../use-fmt-money";
 
 export function ProductTile({

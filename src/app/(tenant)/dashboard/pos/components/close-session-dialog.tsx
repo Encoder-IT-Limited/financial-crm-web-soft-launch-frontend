@@ -18,7 +18,7 @@ import { closeSessionSchema } from "../schemas";
 import { expectedCashForSession, round2, type PosSession } from "../types";
 import { posSessionsApi } from "../api/sessions.service";
 import { posSalesApi } from "../api/sales.service";
-import { FormField } from "../../invoices/components/form-field";
+import { FormField } from "../../../modules/billing/components/form-field";
 import { useFmtMoney } from "../use-fmt-money";
 
 export function CloseSessionDialog({

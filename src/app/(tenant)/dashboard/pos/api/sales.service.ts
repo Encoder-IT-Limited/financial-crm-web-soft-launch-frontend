@@ -1,6 +1,11 @@
 import { apiGet, apiSend } from "@/lib/api/envelope";
 import { inventoryApi } from "@/app/(tenant)/modules/inventory/api/inventory.service";
-import type { NewPosSaleInput, NewRefundInput, PosRefund, PosSale } from "../types";
+import type {
+  NewPosSaleInput,
+  NewRefundInput,
+  PosRefund,
+  PosSale,
+} from "../types";
 import {
   mapReturns,
   mapSale,
@@ -54,12 +59,17 @@ export const posSalesApi = {
   list: async (params?: PosSaleListParams): Promise<PosSale[]> => {
     const rows = await apiGet<ApiPosSale[]>("/pos/sales", { params: compactParams(params) });
     const meta = await productMetaMap();
-    return rows.map((row) =>
-      mapSale(row, {
-        terminalId: row.terminalId ?? undefined,
+    const sessions = await posSessionsApi.list().catch(() => []);
+    const sessionById = new Map(sessions.map((s) => [s.id, s]));
+    return rows.map((row) => {
+      const session = row.posSessionId
+        ? sessionById.get(row.posSessionId)
+        : undefined;
+      return mapSale(row, {
+        terminalId: row.terminalId ?? session?.terminalId,
         productMeta: meta,
-      }),
-    );
+      });
+    });
   },
 
   get: async (id: string): Promise<PosSale | undefined> => {
@@ -94,21 +104,24 @@ export const posSalesApi = {
     return row.number;
   },
 
-  create: async (input: NewPosSaleInput & { managerPin?: string }): Promise<PosSale> => {
+  create: async (
+    input: NewPosSaleInput & { managerPin?: string },
+  ): Promise<PosSale> => {
     const payload = toApiCreateSale(input, input.managerPin);
     const row = await apiSend<ApiPosSale>("post", "/pos/sales", payload);
     return hydrateSale(row);
   },
 
-  refund: async (input: NewRefundInput & { managerPin: string }): Promise<PosRefund> => {
+  refund: async (
+    input: NewRefundInput & { managerPin: string },
+  ): Promise<PosRefund> => {
     const sale = await posSalesApi.get(input.saleId);
     if (!sale) throw new Error("Sale not found");
     const body = toApiRefund(input, sale, input.managerPin);
-    const result = await apiSend<{ sale: ApiPosSale; saleReturn?: ApiSaleReturnLike }>(
-      "post",
-      `/pos/sales/${input.saleId}/refund`,
-      body,
-    );
+    const result = await apiSend<{
+      sale: ApiPosSale;
+      saleReturn?: ApiSaleReturnLike;
+    }>("post", `/pos/sales/${input.saleId}/refund`, body);
     const returns = mapReturns(input.saleId, result.sale.returns);
     if (returns[0]) return returns[0];
     const refreshed = await apiGet<ApiPosSale>(`/pos/sales/${input.saleId}`);
@@ -122,5 +135,10 @@ type ApiSaleReturnLike = {
   reason?: string | null;
   approvedBy?: string | null;
   createdAt: string;
-  items: { productId: string; quantity: number | string; unitPrice: number | string; condition: string }[];
+  items: {
+    productId: string;
+    quantity: number | string;
+    unitPrice: number | string;
+    condition: string;
+  }[];
 };

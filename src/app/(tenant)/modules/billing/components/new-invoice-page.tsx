@@ -29,7 +29,7 @@ export function NewInvoicePage() {
 
   const { data: customers = [] } = useCustomers();
   const { data: retainers = [] } = useQuery({ queryKey: billingKeys.retainers(), queryFn: retainersApi.list });
-  const { data: editingInvoice } = useQuery({
+  const { data: editingInvoice, isLoading: editingInvoiceLoading } = useQuery({
     queryKey: billingKeys.invoice(editId ?? ""),
     queryFn: () => invoiceApi.get(editId!),
     enabled: Boolean(editId),
@@ -140,6 +140,14 @@ export function NewInvoicePage() {
     }),
     [customers, customerId, currency, dueDate, issueDate, lines, nextNumber, notes, discountPct, totals],
   );
+
+  if (editId && editingInvoiceLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center text-[13px] text-text-4">
+        Loading invoice…
+      </div>
+    );
+  }
 
   function validate(): boolean {
     const result = invoiceFormSchema.safeParse({

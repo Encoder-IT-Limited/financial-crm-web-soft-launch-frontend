@@ -195,7 +195,7 @@ export function AdjustmentFormDialog({
             />
             <span>
               <span className="block text-[13px] font-semibold text-text">Physical return — restock inventory</span>
-              <span className="text-[11.5px] text-text-3">
+              <span className="text-[11px] text-text-3">
                 Restocks the warehouse when this credit note is issued. Requires a warehouse and return quantities.
               </span>
             </span>
@@ -245,7 +245,7 @@ export function AdjustmentFormDialog({
                   </div>
                 </FormField>
               ) : (
-                <p className="text-[11.5px] text-amber">
+                <p className="text-[11px] text-amber">
                   {invoiceId === NO_INVOICE
                     ? "Link an invoice that has product lines so we know what to restock."
                     : "This invoice has no product lines — restock needs a product-linked invoice."}

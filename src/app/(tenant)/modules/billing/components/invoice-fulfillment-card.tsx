@@ -66,7 +66,7 @@ export function InvoiceFulfillmentCard({ invoice }: { invoice: Invoice }) {
         <FulfillmentStatusBadge status={status} />
       </div>
       {fulfillments.length === 0 ? (
-        <div className="px-5 py-6 text-center text-[12px] text-text-4">No shipments recorded yet.</div>
+        <div className="px-5 py-6 text-center text-[12.5px] text-text-4">No shipments recorded yet.</div>
       ) : (
         <div className="flex flex-col divide-y divide-border">
           {fulfillments.map((f) => (
@@ -98,7 +98,7 @@ export function InvoiceFulfillmentCard({ invoice }: { invoice: Invoice }) {
                 {f.lines.map((line) => {
                   const desc = invoice.lines.find((l) => l.id === line.invoiceLineId)?.description ?? "—";
                   return (
-                    <div key={line.id} className="flex items-center justify-between gap-2 text-[12px]">
+                    <div key={line.id} className="flex items-center justify-between gap-2 text-[12.5px]">
                       <span className="text-text-2">{desc}</span>
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-text">{fmtQty(line.quantityFulfilled)}</span>
