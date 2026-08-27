@@ -12,6 +12,7 @@ import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { planApi } from "../api/plans.service";
 import { planSchema, type PlanFormValues } from "../schemas";
+import { usePublicSettings } from "@/app/(public)/modules/settings/hooks/use-public-settings";
 
 const EMPTY_FORM: PlanFormValues = {
   name: "",
@@ -20,6 +21,9 @@ const EMPTY_FORM: PlanFormValues = {
   baseSeats: 1,
   additionalSeatPrice: 0,
   trialDays: 14,
+  minSeats: 1,
+  maxSeats: null,
+  salesAssisted: false,
   modules: [],
   popular: false,
 };
@@ -32,6 +36,8 @@ type PlanFormDialogProps = {
 export function PlanFormDialog(props: PlanFormDialogProps) {
   const { open, onOpenChange, mode } = props;
   const queryClient = useQueryClient();
+  const { data: platformSettings } = usePublicSettings();
+  const currency = (platformSettings?.currency ?? "AED").toUpperCase();
   const [form, setForm] = useState<PlanFormValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(mode === "edit");
@@ -54,6 +60,9 @@ export function PlanFormDialog(props: PlanFormDialogProps) {
         baseSeats: plan.baseSeats,
         additionalSeatPrice: plan.additionalSeatPrice,
         trialDays: plan.trialDays,
+        minSeats: plan.minSeats ?? plan.baseSeats,
+        maxSeats: plan.maxSeats ?? null,
+        salesAssisted: plan.salesAssisted ?? false,
         modules: plan.modules,
         popular: plan.popular ?? false,
       });
@@ -84,8 +93,11 @@ export function PlanFormDialog(props: PlanFormDialogProps) {
         toast.success(`${result.data.name} plan updated`);
       }
       queryClient.invalidateQueries({ queryKey: ["plans"] });
+      queryClient.invalidateQueries({ queryKey: ["public-plans"] });
       queryClient.invalidateQueries({ queryKey: ["audit"] });
       onOpenChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save plan");
     } finally {
       setSaving(false);
     }
@@ -121,7 +133,7 @@ export function PlanFormDialog(props: PlanFormDialogProps) {
               />
             </FormField>
 
-            <FormField label="Monthly price (AED)" error={errors.priceMonthly}>
+            <FormField label={`Monthly price (${currency})`} error={errors.priceMonthly}>
               <Input
                 type="number"
                 min={0}
@@ -131,7 +143,7 @@ export function PlanFormDialog(props: PlanFormDialogProps) {
                 className={cn(errors.priceMonthly && "border-red")}
               />
             </FormField>
-            <FormField label="Yearly price (AED)" error={errors.priceYearly}>
+            <FormField label={`Yearly price (${currency})`} error={errors.priceYearly}>
               <Input
                 type="number"
                 min={0}
@@ -152,7 +164,7 @@ export function PlanFormDialog(props: PlanFormDialogProps) {
                 className={cn(errors.baseSeats && "border-red")}
               />
             </FormField>
-            <FormField label="Price per additional seat (AED)" error={errors.additionalSeatPrice}>
+            <FormField label={`Price per additional seat (${currency})`} error={errors.additionalSeatPrice}>
               <Input
                 type="number"
                 min={0}
@@ -173,7 +185,28 @@ export function PlanFormDialog(props: PlanFormDialogProps) {
                 className={cn(errors.trialDays && "border-red")}
               />
             </FormField>
-            <div className="flex items-end pb-2">
+            <FormField label="Minimum seats" error={errors.minSeats}>
+              <Input
+                type="number"
+                min={1}
+                value={form.minSeats ?? form.baseSeats}
+                onChange={(e) => set("minSeats", Number(e.target.value))}
+                aria-invalid={!!errors.minSeats}
+                className={cn(errors.minSeats && "border-red")}
+              />
+            </FormField>
+            <FormField label="Maximum seats" error={errors.maxSeats}>
+              <Input
+                type="number"
+                min={1}
+                value={form.maxSeats ?? ""}
+                onChange={(e) => set("maxSeats", e.target.value === "" ? null : Number(e.target.value))}
+                placeholder="Unlimited"
+                aria-invalid={!!errors.maxSeats}
+                className={cn(errors.maxSeats && "border-red")}
+              />
+            </FormField>
+            <div className="flex flex-col gap-3 pb-2 sm:col-span-2">
               <label htmlFor="plan-popular" className="flex items-center gap-2.5 text-[12.5px] text-text-2">
                 <Checkbox
                   id="plan-popular"
@@ -182,6 +215,16 @@ export function PlanFormDialog(props: PlanFormDialogProps) {
                 />
                 <Label htmlFor="plan-popular" className="cursor-pointer">
                   Mark as &quot;Most popular&quot; on the pricing page
+                </Label>
+              </label>
+              <label htmlFor="plan-sales-assisted" className="flex items-center gap-2.5 text-[12.5px] text-text-2">
+                <Checkbox
+                  id="plan-sales-assisted"
+                  checked={form.salesAssisted}
+                  onCheckedChange={(checked) => set("salesAssisted", checked === true)}
+                />
+                <Label htmlFor="plan-sales-assisted" className="cursor-pointer">
+                  Sales-assisted — route visitors to /contact instead of self-serve signup
                 </Label>
               </label>
             </div>

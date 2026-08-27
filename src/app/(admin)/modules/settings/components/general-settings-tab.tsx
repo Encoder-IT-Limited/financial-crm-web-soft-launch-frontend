@@ -75,6 +75,13 @@ export function GeneralSettingsTab({
               onChange={(e) => onChange({ contactEmail: e.target.value })}
             />
           </FormField>
+          <FormField label="Currency" error={errors.currency}>
+            <Input
+              value={value.currency}
+              onChange={(e) => onChange({ currency: e.target.value.toUpperCase() })}
+              placeholder="AED"
+            />
+          </FormField>
         </div>
       </SettingsSection>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -48,14 +48,16 @@ export function SignupFlow({ initialPlanId }: SignupFlowProps) {
       ];
 
   const [stepIndex, setStepIndex] = useState(0);
-  const [plan, setPlan] = useState<Plan | null>(preselectedPlan);
+  const [plan, setPlan] = useState<Plan | null>(null);
   const [info, setInfo] = useState<InfoValues>(emptyInfo);
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  if (!plan && preselectedPlan) setPlan(preselectedPlan);
+  useEffect(() => {
+    if (preselectedPlan) setPlan(preselectedPlan);
+  }, [preselectedPlan]);
 
   const step = steps[stepIndex].key;
 

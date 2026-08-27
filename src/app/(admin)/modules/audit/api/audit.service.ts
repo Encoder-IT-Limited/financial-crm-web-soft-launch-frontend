@@ -1,7 +1,18 @@
-import { apiGet, apiSend } from "@/lib/api/envelope";
+import { apiGet, apiGetPage } from "@/lib/api/envelope";
 import type { AuditAction, AuditLogEntry } from "../types";
 
 type NewAuditLogInput = Omit<AuditLogEntry, "id" | "timestamp" | "userName" | "userEmail" | "ipAddress">;
+
+export type AuditListParams = {
+  tenantId?: string;
+  module?: string;
+  action?: string;
+  q?: string;
+  from?: string;
+  to?: string;
+  page?: number;
+  pageSize?: number;
+};
 
 function toEntry(row: AuditLogEntry): AuditLogEntry {
   return {
@@ -16,7 +27,13 @@ function toEntry(row: AuditLogEntry): AuditLogEntry {
 }
 
 export const auditApi = {
-  list: async (): Promise<AuditLogEntry[]> => (await apiGet<AuditLogEntry[]>("/admin/audit")).map(toEntry),
+  list: async (params?: Omit<AuditListParams, "page" | "pageSize">): Promise<AuditLogEntry[]> =>
+    (await apiGet<AuditLogEntry[]>("/admin/audit", { params })).map(toEntry),
+
+  listPage: async (params: AuditListParams) => {
+    const page = await apiGetPage<AuditLogEntry>("/admin/audit", params);
+    return { ...page, items: page.items.map(toEntry) };
+  },
 
   listForTenant: async (tenantId: string): Promise<AuditLogEntry[]> =>
     (await apiGet<AuditLogEntry[]>("/admin/audit", { params: { tenantId } })).map(toEntry),

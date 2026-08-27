@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { z } from "zod";
 import { CheckCircle2 } from "lucide-react";
+import { apiSend } from "@/lib/api/envelope";
+import { ApiError } from "@/lib/api/errors";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -21,6 +23,7 @@ export function ContactForm() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   function setField<K extends keyof FormValues>(key: K, value: FormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -40,12 +43,21 @@ export function ContactForm() {
     }
 
     setErrors({});
+    setFormError(null);
     setSubmitting(true);
-    // TEMPORARY: no backend/contact service yet — simulates a submit so the
-    // form is usable end-to-end. Wire to a real endpoint once one exists.
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setSubmitting(false);
-    setSubmitted(true);
+    try {
+      await apiSend("post", "/contact", {
+        name: result.data.name,
+        email: result.data.email,
+        company: result.data.company || undefined,
+        message: result.data.message,
+      });
+      setSubmitted(true);
+    } catch (error) {
+      setFormError(error instanceof ApiError ? error.message : "Couldn't send your message. Try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (submitted) {
@@ -105,6 +117,8 @@ export function ContactForm() {
         />
         {errors.message && <p className="mt-1 text-[11px] text-red">{errors.message}</p>}
       </div>
+
+      {formError && <p className="text-[12px] text-red">{formError}</p>}
 
       <button
         type="submit"

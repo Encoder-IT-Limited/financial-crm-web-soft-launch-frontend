@@ -81,6 +81,9 @@ export function TenantEditDialog({
         queryClient.invalidateQueries({ queryKey: ["audit"] });
         onOpenChange(false);
       })
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : "Could not update tenant");
+      })
       .finally(() => setSaving(false));
   }
 

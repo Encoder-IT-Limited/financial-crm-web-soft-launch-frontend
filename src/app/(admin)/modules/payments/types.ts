@@ -1,8 +1,4 @@
-/* ------------------------------------------------------------------ */
-/* Payments — domain model. Frontend-only mock (docs/Public-           */
-/* SuperAdmin-Plan.md §3.3). Read-only: invoice/receipt generation and */
-/* any refund action come from the backend later, not built here.     */
-/* ------------------------------------------------------------------ */
+/* Platform billing transactions returned by GET /admin/payments. */
 
 export type PaymentTransactionType = "subscription_charge" | "additional_seat" | "refund";
 export type PaymentMethod = "card" | "bank" | "paypal";

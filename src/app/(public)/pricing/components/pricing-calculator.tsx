@@ -6,23 +6,24 @@ import { cn } from "@/lib/utils";
 import { usePublicPlans } from "@/app/(public)/modules/plans/hooks/use-public-plans";
 import { PLANS } from "../../components/plans-data";
 import { TierCard } from "./tier-card";
-import { incrementalModules, type BillingPeriod } from "./pricing-utils";
+import { incrementalModules, lowestMinSeats, type BillingPeriod } from "./pricing-utils";
+import { usePlatformCurrency } from "@/app/(public)/modules/settings/hooks/use-public-settings";
 
 const BILLING_OPTIONS: { key: BillingPeriod; label: string }[] = [
   { key: "monthly", label: "Monthly" },
   { key: "yearly", label: "Yearly" },
 ];
 
-const MIN_SEATS = 1;
-
 export function PricingCalculator() {
   const { data: livePlans } = usePublicPlans();
+  const currency = usePlatformCurrency();
   const plans = livePlans?.length ? livePlans : PLANS;
+  const minSeats = lowestMinSeats(plans);
   const [seats, setSeats] = useState(10);
   const [billing, setBilling] = useState<BillingPeriod>("monthly");
 
   function setClampedSeats(next: number) {
-    setSeats(Number.isFinite(next) ? Math.max(MIN_SEATS, Math.round(next)) : MIN_SEATS);
+    setSeats(Number.isFinite(next) ? Math.max(minSeats, Math.round(next)) : minSeats);
   }
 
   return (
@@ -65,9 +66,10 @@ export function PricingCalculator() {
             <input
               type="number"
               inputMode="numeric"
-              min={MIN_SEATS}
+              min={minSeats}
               value={seats}
               onChange={(e) => setClampedSeats(Number(e.target.value))}
+              onFocus={(e) => e.currentTarget.select()}
               className="h-9 w-20 rounded-lg border border-border bg-surface text-center text-[15px] font-bold text-text outline-none focus:border-blue xl:h-10 xl:w-24 xl:text-base 3xl:h-11 3xl:w-28 3xl:text-lg [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               aria-label="Number of seats"
             />
@@ -93,6 +95,7 @@ export function PricingCalculator() {
             billing={billing}
             incrementalModuleKeys={incrementalModules(plans, index)}
             previousPlanName={index > 0 ? plans[index - 1].name : undefined}
+            currency={currency}
           />
         ))}
       </div>

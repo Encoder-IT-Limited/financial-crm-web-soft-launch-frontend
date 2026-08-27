@@ -89,6 +89,14 @@ export const tenantsApi = {
     await apiSend("post", `/admin/tenants/${id}/seats`, { count });
   },
 
+  removeSeats: async (id: string, count: number): Promise<void> => {
+    await apiSend("post", `/admin/tenants/${id}/seats/remove`, { count });
+  },
+
+  cancel: async (id: string): Promise<void> => {
+    await apiSend("post", `/admin/tenants/${id}/cancel`);
+  },
+
   update: async (id: string, input: TenantEditValues): Promise<void> => {
     const current = await tenantsApi.get(id);
     await apiSend("patch", `/admin/tenants/${id}`, {
@@ -103,6 +111,8 @@ export const tenantsApi = {
 
     if (current && input.extraSeatsPurchased > current.extraSeatsPurchased) {
       await tenantsApi.addSeats(id, input.extraSeatsPurchased - current.extraSeatsPurchased);
+    } else if (current && input.extraSeatsPurchased < current.extraSeatsPurchased) {
+      await tenantsApi.removeSeats(id, current.extraSeatsPurchased - input.extraSeatsPurchased);
     }
 
     if (current && input.status !== current.status) {
@@ -110,6 +120,8 @@ export const tenantsApi = {
       else if (input.status === "active") await tenantsApi.reactivate(id);
       else if (input.status === "pending-deletion") {
         await apiSend("post", `/admin/tenants/${id}/pending-deletion`);
+      } else if (input.status === "cancelled") {
+        await tenantsApi.cancel(id);
       }
     }
   },

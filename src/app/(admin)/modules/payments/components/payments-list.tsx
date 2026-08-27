@@ -48,8 +48,12 @@ export function PaymentsList() {
     });
   }, [payments, filters]);
 
-  function handleDownload(payment: PaymentTransaction) {
-    toast.info(`${payment.reference} — invoice download will be available once the billing backend is connected`);
+  async function handleDownload(payment: PaymentTransaction) {
+    try {
+      await paymentsApi.downloadInvoice(payment.id, payment.reference);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not download invoice");
+    }
   }
 
   const columns = useMemo<AnyColumnDef<PaymentTransaction>[]>(

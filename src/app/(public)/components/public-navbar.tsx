@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowRight, Menu } from "lucide-react";
-import { PLATFORM_SETTINGS } from "@/config/platform-settings";
+import { usePublicSettings } from "../modules/settings/hooks/use-public-settings";
 import { PlatformLogo } from "@/components/shared/platform-logo";
 import {
   Sheet,
@@ -21,19 +21,22 @@ const NAV_LINKS = [
 
 export function PublicNavbar() {
   const [open, setOpen] = useState(false);
+  const { data } = usePublicSettings();
+  const platformName = data?.platformName ?? "";
+  const logoUrl = data?.logoUrl ?? "";
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-surface/75 backdrop-blur-md">
       <div className="mx-auto grid max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-5 py-4 sm:px-8 ">
         <Link href="/" className="flex items-center gap-2.5 justify-self-start">
           <PlatformLogo
-            logoUrl={PLATFORM_SETTINGS.general.logoUrl}
-            platformName={PLATFORM_SETTINGS.general.platformName}
+            logoUrl={logoUrl}
+            platformName={platformName}
             size="size-9"
             className="text-base"
           />
           <span className="text-base font-bold text-text">
-            {PLATFORM_SETTINGS.general.platformName}
+            {platformName}
           </span>
         </Link>
         <div className="">
@@ -82,13 +85,13 @@ export function PublicNavbar() {
                     onClick={() => setOpen(false)}
                   >
                     <PlatformLogo
-                      logoUrl={PLATFORM_SETTINGS.general.logoUrl}
-                      platformName={PLATFORM_SETTINGS.general.platformName}
+                      logoUrl={logoUrl}
+                      platformName={platformName}
                       size="size-8"
                       className="text-sm"
                     />
                     <span className="text-sm font-bold text-text">
-                      {PLATFORM_SETTINGS.general.platformName}
+                      {platformName}
                     </span>
                   </Link>
                 </SheetTitle>

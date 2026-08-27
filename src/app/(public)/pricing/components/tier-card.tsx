@@ -3,7 +3,7 @@ import { Check } from "lucide-react";
 import { MODULE_LABELS, type ModuleKey } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import type { Plan } from "@/types/plan";
-import { computePlanTotal, type BillingPeriod } from "./pricing-utils";
+import { clampSeatsForPlan, computePlanTotal, type BillingPeriod } from "./pricing-utils";
 
 type TierCardProps = {
   plan: Plan;
@@ -11,16 +11,16 @@ type TierCardProps = {
   billing: BillingPeriod;
   incrementalModuleKeys: ModuleKey[];
   previousPlanName?: string;
+  currency: string;
 };
 
-export function TierCard({ plan, seats, billing, incrementalModuleKeys, previousPlanName }: TierCardProps) {
-  // Enterprise stays sales-assisted even though it now shows an indicative
-  // price — decoupled from priceMonthly so a future zero-priced plan
-  // wouldn't accidentally get routed to self-serve signup.
-  const isSalesAssisted = plan.id === "enterprise";
+export function TierCard({ plan, seats, billing, incrementalModuleKeys, previousPlanName, currency }: TierCardProps) {
+  const isSalesAssisted = Boolean(plan.salesAssisted);
   const isCustom = plan.priceMonthly === 0;
   const isPopular = Boolean(plan.popular);
-  const total = computePlanTotal(plan, seats, billing);
+  const pricedSeats = clampSeatsForPlan(plan, seats);
+  const total = computePlanTotal(plan, pricedSeats, billing);
+  const clampedAway = pricedSeats !== seats;
 
   return (
     <div
@@ -51,7 +51,7 @@ export function TierCard({ plan, seats, billing, incrementalModuleKeys, previous
               isPopular ? "text-white" : "text-text"
             )}
           >
-            AED {total.toLocaleString()}
+            {currency} {total.toLocaleString()}
           </span>
           <span className={cn("text-[12px] xl:text-sm 3xl:text-base", isPopular ? "text-white/70" : "text-text-4")}>
             /{billing === "monthly" ? "mo" : "yr"}
@@ -60,9 +60,14 @@ export function TierCard({ plan, seats, billing, incrementalModuleKeys, previous
       )}
       <div className={cn("mt-1 text-[11.5px] xl:text-[13px] 3xl:text-sm", isPopular ? "text-white/60" : "text-text-4")}>
         {plan.baseSeats > 0
-          ? `${plan.baseSeats} seats included · AED ${plan.additionalSeatPrice}/extra seat`
+          ? `${plan.baseSeats} seats included · ${currency} ${plan.additionalSeatPrice}/extra seat`
           : "Seats tailored to your team"}
       </div>
+      {clampedAway && (
+        <div className={cn("mt-1 text-[11px] xl:text-[12px]", isPopular ? "text-white/55" : "text-text-4")}>
+          Priced for {pricedSeats} seats — this plan&apos;s {pricedSeats < seats ? "maximum" : "minimum"}
+        </div>
+      )}
 
       <Link
         href={isSalesAssisted ? "/contact" : `/signup?plan=${plan.id}`}

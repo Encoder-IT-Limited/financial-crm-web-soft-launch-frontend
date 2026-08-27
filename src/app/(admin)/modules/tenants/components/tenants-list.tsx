@@ -14,7 +14,7 @@ import { SeatMeter } from "@/components/shared/seat-meter";
 import { StatusBadge, type TenantStatus } from "@/components/shared/status-badge";
 import { fmtDate, fmtMoney } from "@/lib/format";
 import { planApi } from "../../plans/api/plans.service";
-import { tenantsApi } from "../api/tenants.service";
+import { tenantsApi, RETENTION_DAYS } from "../api/tenants.service";
 import { seatUsage, tenantMrr, type Tenant } from "../types";
 import { TenantDetailsDialog } from "./tenant-details-dialog";
 import { TenantEditDialog } from "./tenant-edit-dialog";
@@ -209,7 +209,7 @@ export function TenantsList() {
           open={!!deleteId}
           onOpenChange={(open) => !open && setDeleteId(null)}
           title={`Delete ${deleteTenant.name}?`}
-          description="This permanently removes the tenant account and all its data. This cannot be undone."
+          description={`This marks the tenant for deletion. The account stays recoverable for ${RETENTION_DAYS} days, then data is removed. You can reactivate it from the tenant details while it is pending deletion.`}
           confirmLabel="Delete tenant"
           destructive
           onConfirm={async () => {
