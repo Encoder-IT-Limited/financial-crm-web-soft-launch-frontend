@@ -136,11 +136,16 @@ export function PurchaseOrdersPage() {
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Total</TableHead>
                   <TableHead>Items</TableHead>
+                  <TableHead className="text-right">Received</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.map((po) => (
+                {orders.map((po) => {
+                  const received = po.items.reduce((sum, i) => sum + i.receivedQuantity, 0);
+                  const ordered = po.items.reduce((sum, i) => sum + i.quantity, 0);
+                  const complete = ordered > 0 && received >= ordered;
+                  return (
                   <TableRow key={po.id}>
                     <TableCell className="font-semibold tabular-nums">{po.poNumber}</TableCell>
                     <TableCell>{supplierById.get(po.supplierId)?.name ?? po.supplierId.slice(0, 8)}</TableCell>
@@ -149,6 +154,15 @@ export function PurchaseOrdersPage() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{fmtMoney(po.total)}</TableCell>
                     <TableCell className="text-[12px] text-text-2">{po.items.length} line(s)</TableCell>
+                    <TableCell className="text-right tabular-nums">
+                      {received === 0 && ordered === 0 ? (
+                        <span className="text-text-4">—</span>
+                      ) : (
+                        <span className={complete ? "font-semibold text-green" : received > 0 ? "font-semibold text-amber" : "text-text-3"}>
+                          {received} of {ordered}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {po.status === "DRAFT" && (
@@ -179,7 +193,8 @@ export function PurchaseOrdersPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

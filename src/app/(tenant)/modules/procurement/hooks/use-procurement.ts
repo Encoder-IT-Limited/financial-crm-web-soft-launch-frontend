@@ -26,6 +26,14 @@ export function useSuppliers() {
   });
 }
 
+export function useGoodsReceipts(purchaseOrderId: string) {
+  return useQuery({
+    queryKey: procurementKeys.goodsReceipts(purchaseOrderId),
+    queryFn: () => procurementApi.listGoodsReceipts(purchaseOrderId),
+    enabled: Boolean(purchaseOrderId),
+  });
+}
+
 export function useCreateGoodsReceipt() {
   const qc = useQueryClient();
   return useMutation({

@@ -116,7 +116,16 @@ export type PosSale = {
    * this is non-null. Always set on create; optional only for the type
    * to stay honest about the moment before that call resolves. */
   fulfillmentId?: string;
+  /** Free-text "Your name" typed at Start Shift for the session this sale
+   * belongs to — not a verified identity. Only set when the sale was
+   * loaded via a single-sale fetch that also resolved its session
+   * (`posSalesApi.get()`); list results default this to "Cashier". */
   createdBy: string;
+  /** The session's real, authenticated `cashierId`, when known — lets the
+   * UI verify `createdBy` against the current viewer the same way
+   * Sessions/Terminals do (see use-cashier-display.ts). Same "Cashier"-
+   * default caveat as `createdBy` above. */
+  createdByCashierId?: string;
   createdAt: string;
 };
 

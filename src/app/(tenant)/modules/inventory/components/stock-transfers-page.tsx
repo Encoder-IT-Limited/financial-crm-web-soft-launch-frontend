@@ -459,11 +459,29 @@ export function StockTransfersPage() {
         ) : (
           <div className="flex flex-col gap-2 text-[12.5px]">
             <DetailLine label="Reference" value={detail.id} />
-            <DetailLine label="Source" value={detail.fromWarehouseName ?? detail.fromWarehouseId} />
-            <DetailLine label="Destination" value={detail.toWarehouseName ?? detail.toWarehouseId} />
+            <DetailLine
+              label="Source"
+              value={
+                detail.fromWarehouseCode
+                  ? `${detail.fromWarehouseName ?? detail.fromWarehouseId} (${detail.fromWarehouseCode})`
+                  : (detail.fromWarehouseName ?? detail.fromWarehouseId)
+              }
+            />
+            <DetailLine
+              label="Destination"
+              value={
+                detail.toWarehouseCode
+                  ? `${detail.toWarehouseName ?? detail.toWarehouseId} (${detail.toWarehouseCode})`
+                  : (detail.toWarehouseName ?? detail.toWarehouseId)
+              }
+            />
             <DetailLine label="Status" value={detail.status} />
             <DetailLine label="Created by" value={detail.createdBy ?? "—"} />
             <DetailLine label="Created" value={new Date(detail.createdAt).toLocaleString()} />
+            <DetailLine label="Requested by" value={detail.requestedBy?.slice(0, 8) ?? "—"} />
+            <DetailLine label="Approved by" value={detail.approvedBy?.slice(0, 8) ?? "—"} />
+            <DetailLine label="Dispatched" value={detail.dispatchedAt ? new Date(detail.dispatchedAt).toLocaleString() : "—"} />
+            <DetailLine label="Received" value={detail.receivedAt ? new Date(detail.receivedAt).toLocaleString() : "—"} />
             <div className="mt-2 border-t border-border pt-2">
               <p className="mb-1 font-semibold text-text">Items</p>
               {detail.items.map((i) => (

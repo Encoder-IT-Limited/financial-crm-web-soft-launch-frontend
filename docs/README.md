@@ -95,9 +95,8 @@ that discipline is what keeps them trustworthy instead of stale.
 **Known gap**: an `Inventory-Implementation-Plan.md` covering Products, Warehouses,
 Stock Movement/Transfer, Goods Receipt, Adjustments, Batches, Reorder, and Valuation was
 never written — the Inventory module's actual state is tracked only in
-`qa/missing-inventory.md` and `qa/unused-apis.md`, not in a dedicated plan doc. Worth
-writing one if Inventory keeps evolving; not fabricated here since it'd need real
-authorship, not a file move.
+`qa/open-issues.md`, not in a dedicated plan doc. Worth writing one if Inventory keeps
+evolving; not fabricated here since it'd need real authorship, not a file move.
 
 ## `qa/`
 
@@ -109,18 +108,11 @@ no checklist.
 
 - **[bugs-report.md](qa/bugs-report.md)** — tenant portal and app-wide (cross-portal)
   issues.
-- **[missing-admin-public.md](qa/missing-admin-public.md)** — Super Admin portal + public
-  site issues, UI and API together.
-- **[missing-sales-invoice.md](qa/missing-sales-invoice.md)** — Sales & Invoicing API
-  gaps (Invoices, Retainers).
-- **[missing-reports.md](qa/missing-reports.md)** — the Reports module has no dedicated
-  API at all; every tab computes everything client-side from full-dataset fetches.
-- **[missing-inventory.md](qa/missing-inventory.md)** — Inventory API gaps (currently:
-  one live backend bug on Stock Transfers' `search` param).
-- **[missing-pos.md](qa/missing-pos.md)** — POS module API gaps.
-- **[unused-apis.md](qa/unused-apis.md)** — the opposite problem: backend fields/
-  endpoints that already exist and work, but nothing in the frontend reads or calls them
-  yet. Not bugs — enrichment opportunities with no backend work needed.
+- **[open-issues.md](qa/open-issues.md)** — consolidated open issues across every
+  module (POS, Reports, Admin Portal, Public Site — Sales & Invoicing and Inventory
+  currently have none). Replaces the old one-file-per-module
+  `missing-sales-invoice.md`/`missing-reports.md`/`missing-inventory.md`/`missing-pos.md`/
+  `missing-admin-public.md` docs, merged here once each had shrunk to a handful of items.
 
 ## `backend/`
 

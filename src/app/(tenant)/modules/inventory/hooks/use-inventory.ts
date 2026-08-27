@@ -47,7 +47,11 @@ export function useWarehouse(id: string) {
 }
 
 export function useStock() {
-  return useQuery({ queryKey: inventoryKeys.stock(), queryFn: inventoryApi.listStock });
+  // Passing listStock directly as queryFn made TanStack Query infer
+  // `unknown` instead of StockBalance[] — it accepts an optional params
+  // arg that doesn't match QueryFunctionContext's shape. Wrapping it fixes
+  // the inference without changing behavior (no params passed here).
+  return useQuery({ queryKey: inventoryKeys.stock(), queryFn: () => inventoryApi.listStock() });
 }
 
 export function useMovements() {

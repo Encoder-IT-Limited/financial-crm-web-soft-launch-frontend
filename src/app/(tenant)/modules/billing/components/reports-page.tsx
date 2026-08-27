@@ -15,6 +15,7 @@ import { InvoiceStatusBadge } from "./invoice-status-badge";
 import { fmtDate, fmtMoney } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
 import { cn } from "@/lib/utils";
+import { useTenantCurrency } from "@/lib/use-tenant-currency";
 import { customersApi } from "../../crm/api/customers.service";
 import { invoiceApi } from "../api/invoices.service";
 import { billingKeys } from "../query-keys";
@@ -52,6 +53,7 @@ export function ReportsPage() {
 }
 
 function SalesReport() {
+  const currency = useTenantCurrency();
   const { data, isLoading } = useQuery({
     queryKey: billingKeys.invoiceSummary(12),
     queryFn: () => invoiceApi.summary(12),
@@ -74,9 +76,9 @@ function SalesReport() {
     <div className="flex flex-col gap-4">
       <StatTiles
         tiles={[
-          { label: "Total Invoiced", value: fmtMoney(totals.invoiced), tone: "blue" },
-          { label: "Total Collected", value: fmtMoney(totals.collected), tone: "green" },
-          { label: "Outstanding", value: fmtMoney(totals.outstanding), tone: "amber" },
+          { label: "Total Invoiced", value: fmtMoney(totals.invoiced, currency), tone: "blue" },
+          { label: "Total Collected", value: fmtMoney(totals.collected, currency), tone: "green" },
+          { label: "Outstanding", value: fmtMoney(totals.outstanding, currency), tone: "amber" },
         ]}
       />
 
@@ -100,8 +102,8 @@ function SalesReport() {
               {months.map((m) => (
                 <tr key={m.key} className="border-t border-border">
                   <td className="px-5 py-2.5 text-text-2">{m.label}</td>
-                  <td className="px-5 py-2.5 text-right font-semibold text-text">{fmtMoney(m.invoiced)}</td>
-                  <td className="px-5 py-2.5 text-right font-semibold text-green">{fmtMoney(m.collected)}</td>
+                  <td className="px-5 py-2.5 text-right font-semibold text-text">{fmtMoney(m.invoiced, currency)}</td>
+                  <td className="px-5 py-2.5 text-right font-semibold text-green">{fmtMoney(m.collected, currency)}</td>
                 </tr>
               ))}
             </tbody>
@@ -114,10 +116,21 @@ function SalesReport() {
 
 function InvoiceReport() {
   const [status, setStatus] = useState<"all" | InvoiceDisplayStatus>("all");
-  const { data: invoices = [], isLoading } = useQuery({
+  const { data: fetched = [], isLoading } = useQuery({
     queryKey: billingKeys.invoicesPage({ status, report: true }),
-    queryFn: () => invoiceApi.list({ status: status === "all" ? undefined : status }),
+    // "overdue" isn't a stored invoice status — the backend computes it as
+    // its own boolean param instead of a `status` value (see
+    // InvoiceListParams.overdue), and live-testing found that param
+    // unreliable (`?overdue=true` and `?overdue=false` both sometimes
+    // return the full unfiltered list). Ask for it as a best-effort
+    // narrowing, but don't depend on it — see the client-side filter below,
+    // which is what actually guarantees a correct result either way.
+    queryFn: () =>
+      invoiceApi.list(
+        status === "all" ? {} : status === "overdue" ? { overdue: true } : { status }
+      ),
   });
+  const invoices = status === "overdue" ? fetched.filter((inv) => invoiceDisplayStatus(inv) === "overdue") : fetched;
   const { data: customers = [] } = useQuery({ queryKey: crmKeys.customers(), queryFn: customersApi.list });
 
   const customerName = (id: string) => customers.find((c) => c.id === id)?.name ?? "—";

@@ -163,6 +163,7 @@ export function mapSale(
     terminalId?: string;
     productMeta?: Map<string, { name: string; sku: string; taxRate: number }>;
     createdBy?: string;
+    createdByCashierId?: string;
   } = {},
 ): PosSale {
   const meta = opts.productMeta ?? new Map();
@@ -205,6 +206,7 @@ export function mapSale(
     status: mapSaleStatus(row.status),
     fulfillmentId: row.invoiceId ?? undefined,
     createdBy: opts.createdBy ?? "Cashier",
+    createdByCashierId: opts.createdByCashierId,
     createdAt: row.createdAt,
   };
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Undo2 } from "lucide-react";
+import { ArrowLeft, Printer, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,9 @@ import { posSalesApi } from "../api/sales.service";
 import { posTerminalsApi } from "../api/terminals.service";
 import { customersApi } from "../../../modules/crm/api/customers.service";
 import { RefundDialog } from "./refund-dialog";
+import { ReceiptDialog } from "./receipt-dialog";
 import { useFmtMoney } from "../use-fmt-money";
+import { useCashierDisplay } from "../use-cashier-display";
 
 const STATUS_TONE: Record<PosSaleStatus, "green" | "amber" | "red"> = {
   completed: "green",
@@ -27,11 +29,16 @@ export function SaleDetail() {
   const router = useRouter();
   const money = useFmtMoney();
   const [refundOpen, setRefundOpen] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   const { data: sale, isLoading } = useQuery({ queryKey: ["pos-sale", params.saleId], queryFn: () => posSalesApi.get(params.saleId) });
   const { data: refunds = [] } = useQuery({ queryKey: ["pos-refunds", params.saleId], queryFn: () => posSalesApi.listRefunds(params.saleId) });
   const { data: terminals = [] } = useQuery({ queryKey: ["pos-terminals"], queryFn: () => posTerminalsApi.list() });
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
+  // Called unconditionally (Rules of Hooks) — falls back to an empty shape
+  // before `sale` has loaded, which just resolves to the unverified branch
+  // until the real query result arrives.
+  const cashier = useCashierDisplay({ cashierId: sale?.createdByCashierId ?? "", openedBy: sale?.createdBy ?? "Cashier" });
 
   if (isLoading || !sale) {
     return <div className="flex h-64 items-center justify-center text-[13px] text-text-4">{isLoading ? "Loading sale…" : "Sale not found"}</div>;
@@ -51,6 +58,9 @@ export function SaleDetail() {
           <>
             <Button variant="outline" size="sm" onClick={() => router.push("/dashboard/pos/sales")}>
               <ArrowLeft /> Back
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setReceiptOpen(true)}>
+              <Printer /> Receipt
             </Button>
             {canRefund && (
               <Button size="sm" onClick={() => setRefundOpen(true)}>
@@ -134,7 +144,7 @@ export function SaleDetail() {
             <div className="border-b border-border px-5 py-3 text-sm font-bold text-text">Details</div>
             <div className="flex flex-col gap-2 px-5 py-3 text-[12.5px]">
               <Row label="Customer" value={customer?.name ?? "Walk-in"} />
-              <Row label="Cashier" value={sale.createdBy} />
+              <Row label="Cashier" value={cashier.verified ? cashier.name : `${cashier.name} (unverified)`} />
             </div>
           </Card>
 
@@ -158,6 +168,7 @@ export function SaleDetail() {
       </div>
 
       <RefundDialog sale={sale} refunds={refunds} open={refundOpen} onOpenChange={setRefundOpen} />
+      <ReceiptDialog sale={sale} open={receiptOpen} onOpenChange={setReceiptOpen} />
     </div>
   );
 }

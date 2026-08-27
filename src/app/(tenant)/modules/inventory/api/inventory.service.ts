@@ -72,10 +72,16 @@ type ApiTransfer = {
   toWarehouseId: string;
   fromWarehouseName?: string | null;
   toWarehouseName?: string | null;
+  fromWarehouseCode?: string | null;
+  toWarehouseCode?: string | null;
   status: string;
   createdBy?: string;
   createdAt: string;
   itemCount?: number;
+  requestedBy?: string | null;
+  approvedBy?: string | null;
+  dispatchedAt?: string | null;
+  receivedAt?: string | null;
   items: Array<{
     id: string;
     productId: string;
@@ -198,9 +204,15 @@ function mapTransfer(r: ApiTransfer): StockTransfer {
     toWarehouseId: r.toWarehouseId,
     fromWarehouseName: r.fromWarehouseName,
     toWarehouseName: r.toWarehouseName,
+    fromWarehouseCode: r.fromWarehouseCode,
+    toWarehouseCode: r.toWarehouseCode,
     status: r.status as StockTransferStatus,
     createdBy: r.createdBy,
     createdAt: r.createdAt,
+    requestedBy: r.requestedBy,
+    approvedBy: r.approvedBy,
+    dispatchedAt: r.dispatchedAt,
+    receivedAt: r.receivedAt,
     itemCount: r.itemCount ?? r.items.length,
     items: r.items.map((i) => ({
       id: i.id,
@@ -246,6 +258,7 @@ export const inventoryApi = {
         warehouseId: string;
         quantity: unknown;
         damagedQuantity?: unknown;
+        reservedQuantity?: unknown;
         averageCost: unknown;
       }>
     >("/inventory/stock", params?.warehouseId ? { params: { warehouseId: params.warehouseId } } : undefined);
@@ -255,6 +268,7 @@ export const inventoryApi = {
         warehouseId: r.warehouseId,
         quantity: Number(r.quantity),
         damagedQuantity: Number(r.damagedQuantity ?? 0),
+        reservedQuantity: Number(r.reservedQuantity ?? 0),
         averageCost: Number(r.averageCost),
       }),
     );
@@ -271,6 +285,9 @@ export const inventoryApi = {
         unitCost: unknown;
         movementDate: string;
         note?: string | null;
+        batchId?: string | null;
+        referenceType?: string | null;
+        referenceId?: string | null;
       }>
     >("/inventory/movements");
     return rows.map(
@@ -283,6 +300,9 @@ export const inventoryApi = {
         unitCost: Number(r.unitCost),
         movementDate: r.movementDate,
         note: r.note ?? null,
+        batchId: r.batchId ?? null,
+        referenceType: r.referenceType ?? null,
+        referenceId: r.referenceId ?? null,
       }),
     );
   },

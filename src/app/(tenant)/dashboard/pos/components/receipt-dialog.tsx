@@ -7,9 +7,14 @@ import { fmtDateTime } from "@/lib/format";
 import { POS_PAYMENT_METHOD_LABELS, paymentChange, type PosSale } from "../types";
 import { useFmtMoney } from "../use-fmt-money";
 
-/** Post-sale receipt preview — mirrors invoice-pdf.tsx's rendering
- * approach (a styled preview, "print" simulated via window.print()),
- * POS-styled (narrow, monospace-ish) instead of A4. */
+/** Receipt preview — mirrors invoice-pdf.tsx's rendering approach (a
+ * styled preview, "print" simulated via window.print()), POS-styled
+ * (narrow, monospace-ish) instead of A4.
+ *
+ * Doubles as both the post-checkout receipt (`onNewSale` supplied, from
+ * register-screen.tsx) and a reprint of a past sale looked up from Sale
+ * Detail (`onNewSale` omitted — "New Sale" doesn't make sense there, so
+ * the footer just offers Print + Close instead). */
 export function ReceiptDialog({
   sale,
   open,
@@ -19,7 +24,7 @@ export function ReceiptDialog({
   sale: PosSale | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onNewSale: () => void;
+  onNewSale?: () => void;
 }) {
   const money = useFmtMoney();
   if (!sale) return null;
@@ -29,7 +34,7 @@ export function ReceiptDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xs">
         <DialogHeader>
-          <DialogTitle>Sale Complete</DialogTitle>
+          <DialogTitle>{onNewSale ? "Sale Complete" : "Receipt"}</DialogTitle>
         </DialogHeader>
 
         <div className="rounded-lg border border-dashed border-border bg-surface-subtle p-4 font-mono text-[11.5px] text-text-2">
@@ -82,9 +87,15 @@ export function ReceiptDialog({
           <Button variant="outline" className="flex-1" onClick={() => window.print()}>
             <Printer /> Print
           </Button>
-          <Button className="flex-1" onClick={onNewSale}>
-            New Sale
-          </Button>
+          {onNewSale ? (
+            <Button className="flex-1" onClick={onNewSale}>
+              New Sale
+            </Button>
+          ) : (
+            <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          )}
         </div>
       </DialogContent>
     </Dialog>

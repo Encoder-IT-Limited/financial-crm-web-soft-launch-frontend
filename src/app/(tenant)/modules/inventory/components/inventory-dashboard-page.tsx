@@ -141,6 +141,9 @@ export function InventoryDashboardPage() {
                       <div className="h-2 overflow-hidden rounded-full bg-surface-subtle">
                         <div className="h-full rounded-full bg-blue" style={{ width: `${Math.min(100, w.pct)}%` }} />
                       </div>
+                      {w.damagedOnHand > 0 && (
+                        <span className="text-[11px] text-amber">{w.damagedOnHand} damaged units included above</span>
+                      )}
                     </div>
                   ))}
                 </div>

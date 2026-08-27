@@ -57,6 +57,7 @@ export type StockBalance = {
   warehouseId: string;
   quantity: number;
   damagedQuantity: number;
+  reservedQuantity: number;
   averageCost: number;
 };
 
@@ -69,6 +70,14 @@ export type StockMovement = {
   unitCost: number;
   movementDate: string;
   note?: string | null;
+  /** Which batch this movement drew from/added to — set only for
+   * batch-tracked products. */
+  batchId?: string | null;
+  /** The document that caused this movement (invoice, purchase order,
+   * transfer, etc.) — absent for manual adjustments, which have no source
+   * document by nature. */
+  referenceType?: string | null;
+  referenceId?: string | null;
 };
 
 export type StockTransferStatus = "PENDING" | "APPROVED" | "DISPATCHED" | "RECEIVED" | "CANCELLED";
@@ -88,11 +97,20 @@ export type StockTransfer = {
   toWarehouseId: string;
   fromWarehouseName?: string | null;
   toWarehouseName?: string | null;
+  fromWarehouseCode?: string | null;
+  toWarehouseCode?: string | null;
   status: StockTransferStatus;
   items: StockTransferItem[];
   itemCount?: number;
   createdBy?: string;
   createdAt: string;
+  /** Who requested the transfer — a raw user id; no user directory exists
+   * yet to resolve it to a name (same limitation as POS's cashier id). */
+  requestedBy?: string | null;
+  /** Who approved it — same raw-id caveat as `requestedBy`. */
+  approvedBy?: string | null;
+  dispatchedAt?: string | null;
+  receivedAt?: string | null;
 };
 
 export type TransferListParams = {

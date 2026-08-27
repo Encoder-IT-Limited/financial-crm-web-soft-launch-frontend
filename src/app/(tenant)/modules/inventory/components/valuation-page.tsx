@@ -13,18 +13,32 @@ import {
 } from "@/components/ui/table";
 import { PageHeading } from "@/components/shared/page-heading";
 import { fmtMoney } from "@/lib/format";
-import { useValuation } from "../hooks/use-inventory";
+import { useStock, useValuation } from "../hooks/use-inventory";
 
 /** Phase 1 valuation is weighted-average cost only (matches backend stock balances). */
 export function ValuationPage() {
   const { data, isLoading: loading } = useValuation();
-  const rows = data?.rows ?? [];
+  const { data: stock = [] } = useStock();
   const total = data?.totalValue ?? 0;
 
   const tableRows = useMemo(
-    () => rows.map((r) => ({ ...r, key: `${r.productId}-${r.warehouseId}` })),
-    [rows],
+    () => (data?.rows ?? []).map((r) => ({ ...r, key: `${r.productId}-${r.warehouseId}` })),
+    [data],
   );
+
+  // Valuation's own rows don't carry damaged/reserved units — cross-reference
+  // the separately-fetched stock balances (same productId+warehouseId join
+  // key) to break out how much of the total value above is damaged or
+  // reserved stock, valued at that row's own average cost.
+  const { damagedValue, reservedValue } = useMemo(() => {
+    let damaged = 0;
+    let reserved = 0;
+    for (const s of stock) {
+      if (s.damagedQuantity > 0) damaged += s.damagedQuantity * s.averageCost;
+      if (s.reservedQuantity > 0) reserved += s.reservedQuantity * s.averageCost;
+    }
+    return { damagedValue: damaged, reservedValue: reserved };
+  }, [stock]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -36,6 +50,14 @@ export function ValuationPage() {
       <Card className="p-5">
         <div className="mb-4 text-[13px] text-text-2">
           Total stock value: <span className="font-bold text-text">{fmtMoney(total)}</span>
+          {(damagedValue > 0 || reservedValue > 0) && (
+            <div className="mt-1 text-[11.5px] text-text-4">
+              of which
+              {damagedValue > 0 && <span className="text-amber"> {fmtMoney(damagedValue)} damaged</span>}
+              {damagedValue > 0 && reservedValue > 0 && ","}
+              {reservedValue > 0 && <span className="text-blue"> {fmtMoney(reservedValue)} reserved</span>}
+            </div>
+          )}
         </div>
         {loading ? (
           <Skeleton className="h-40 w-full" />

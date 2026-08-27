@@ -12,6 +12,9 @@ export type PurchaseOrderItem = {
   id: string;
   productId: string;
   quantity: number;
+  /** How much of `quantity` has been received so far across one or more
+   * goods receipts — partial-receipt tracking the backend already does. */
+  receivedQuantity: number;
   unitCost: number;
   tax: number;
   discount: number;
@@ -34,6 +37,8 @@ export type GoodsReceipt = {
   receiptNumber: string;
   purchaseOrderId: string;
   warehouseId: string;
+  receiptDate: string;
+  status: string;
   createdAt: string;
 };
 
@@ -65,6 +70,7 @@ function mapPo(row: {
     id: string;
     productId: string;
     quantity: unknown;
+    receivedQuantity?: unknown;
     unitCost: unknown;
     tax: unknown;
     discount: unknown;
@@ -83,11 +89,32 @@ function mapPo(row: {
       id: i.id,
       productId: i.productId,
       quantity: Number(i.quantity),
+      receivedQuantity: Number(i.receivedQuantity ?? 0),
       unitCost: Number(i.unitCost),
       tax: Number(i.tax),
       discount: Number(i.discount),
       total: Number(i.total),
     })),
+  };
+}
+
+function mapGoodsReceipt(row: {
+  id: string;
+  receiptNumber: string;
+  purchaseOrderId: string;
+  warehouseId: string;
+  receiptDate?: string | Date | null;
+  status?: string | null;
+  createdAt: string;
+}): GoodsReceipt {
+  return {
+    id: row.id,
+    receiptNumber: row.receiptNumber,
+    purchaseOrderId: row.purchaseOrderId,
+    warehouseId: row.warehouseId,
+    receiptDate: row.receiptDate ? String(row.receiptDate).slice(0, 10) : row.createdAt.slice(0, 10),
+    status: row.status ?? "COMPLETED",
+    createdAt: row.createdAt,
   };
 }
 
@@ -131,8 +158,12 @@ export const procurementApi = {
   submitPurchaseOrder: (id: string) => apiSend("post", `/procurement/purchase-orders/${id}/submit`),
   approvePurchaseOrder: (id: string) => apiSend("post", `/procurement/purchase-orders/${id}/approve`),
 
-  listGoodsReceipts: (purchaseOrderId: string) =>
-    apiGet<GoodsReceipt[]>(`/procurement/purchase-orders/${purchaseOrderId}/goods-receipts`),
+  listGoodsReceipts: async (purchaseOrderId: string) =>
+    (
+      await apiGet<Parameters<typeof mapGoodsReceipt>[0][]>(
+        `/procurement/purchase-orders/${purchaseOrderId}/goods-receipts`,
+      )
+    ).map(mapGoodsReceipt),
 
   createGoodsReceipt: (
     purchaseOrderId: string,

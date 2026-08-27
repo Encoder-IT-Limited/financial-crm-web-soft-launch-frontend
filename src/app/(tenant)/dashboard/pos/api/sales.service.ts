@@ -39,11 +39,13 @@ async function hydrateSale(row: ApiPosSale): Promise<PosSale> {
   const meta = await productMetaMap();
   let terminalId = row.terminalId ?? "";
   let createdBy = "Cashier";
+  let createdByCashierId: string | undefined;
   if (row.posSessionId) {
     try {
       const session = await posSessionsApi.get(row.posSessionId);
       terminalId = terminalId || session.terminalId;
       createdBy = session.openedBy;
+      createdByCashierId = session.cashierId;
     } catch {
       // list may fail on permission — leave defaults
     }
@@ -52,7 +54,7 @@ async function hydrateSale(row: ApiPosSale): Promise<PosSale> {
   if (!row.payments) {
     full = await apiGet<ApiPosSale>(`/pos/sales/${row.id}`);
   }
-  return mapSale(full, { terminalId, productMeta: meta, createdBy });
+  return mapSale(full, { terminalId, productMeta: meta, createdBy, createdByCashierId });
 }
 
 export const posSalesApi = {

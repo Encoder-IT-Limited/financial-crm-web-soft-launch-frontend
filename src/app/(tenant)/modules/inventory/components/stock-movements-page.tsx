@@ -14,16 +14,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { PageHeading } from "@/components/shared/page-heading";
-import { useMovements, useProducts, useWarehouses } from "../hooks/use-inventory";
+import { useBatches, useMovements, useProducts, useWarehouses } from "../hooks/use-inventory";
+
+const REFERENCE_LABELS: Record<string, string> = {
+  INVOICE: "Invoice",
+  PURCHASE_ORDER: "Purchase Order",
+  GOODS_RECEIPT: "Goods Receipt",
+  TRANSFER: "Transfer",
+  POS_SALE: "POS Sale",
+};
 
 export function StockMovementsPage() {
   const { data: movements = [], isLoading } = useMovements();
   const { data: products = [] } = useProducts();
   const { data: warehouses = [] } = useWarehouses();
+  const { data: batches = [] } = useBatches();
   const [search, setSearch] = useState("");
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
   const warehouseById = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
+  const batchById = useMemo(() => new Map(batches.map((b) => [b.id, b])), [batches]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -63,12 +73,15 @@ export function StockMovementsPage() {
                   <TableHead>Warehouse</TableHead>
                   <TableHead>Qty</TableHead>
                   <TableHead>Unit Cost</TableHead>
+                  <TableHead>Batch</TableHead>
+                  <TableHead>Source</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((m) => {
                   const product = productById.get(m.productId);
                   const warehouse = warehouseById.get(m.warehouseId);
+                  const batch = m.batchId ? batchById.get(m.batchId) : undefined;
                   return (
                     <TableRow key={m.id}>
                       <TableCell className="tabular-nums text-text-2">
@@ -86,6 +99,19 @@ export function StockMovementsPage() {
                         {m.quantity}
                       </TableCell>
                       <TableCell className="tabular-nums">{m.unitCost.toFixed(2)}</TableCell>
+                      <TableCell className="text-text-2">
+                        {batch?.batchNumber ?? (m.batchId ? m.batchId.slice(0, 8) : <span className="text-text-4">—</span>)}
+                      </TableCell>
+                      <TableCell className="text-text-2">
+                        {m.referenceType ? (
+                          <span className="whitespace-nowrap">
+                            {REFERENCE_LABELS[m.referenceType] ?? m.referenceType}
+                            {m.referenceId && <span className="text-text-4"> · {m.referenceId.slice(0, 8)}</span>}
+                          </span>
+                        ) : (
+                          <span className="text-text-4">—</span>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })}

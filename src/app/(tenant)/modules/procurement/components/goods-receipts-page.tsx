@@ -38,6 +38,17 @@ import { ApiError } from "@/lib/api/errors";
 import { useProducts, useWarehouses } from "@/app/(tenant)/modules/inventory/hooks/use-inventory";
 import { useCreateGoodsReceipt, usePurchaseOrders, useSuppliers } from "../hooks/use-procurement";
 import type { PurchaseOrder } from "../api/procurement.service";
+import { ReceiptHistoryDialog } from "./receipt-history-dialog";
+
+/** Ordered vs. received across every line on a PO — "3 of 5" style, not a
+ * per-line breakdown (the table row doesn't have room for that; the receipt
+ * history dialog is where per-receipt detail lives). */
+function receivedProgress(po: PurchaseOrder): { received: number; ordered: number } {
+  return po.items.reduce(
+    (acc, i) => ({ received: acc.received + i.receivedQuantity, ordered: acc.ordered + i.quantity }),
+    { received: 0, ordered: 0 },
+  );
+}
 
 export function GoodsReceiptsPage() {
   const { data: orders = [], isLoading } = usePurchaseOrders();
@@ -45,8 +56,10 @@ export function GoodsReceiptsPage() {
   const { data: warehouses = [] } = useWarehouses();
   const { data: products = [] } = useProducts();
   const [open, setOpen] = useState(false);
+  const [historyPoId, setHistoryPoId] = useState<string | null>(null);
 
   const approved = useMemo(() => orders.filter((o) => o.status === "APPROVED"), [orders]);
+  const historyPo = orders.find((o) => o.id === historyPoId) ?? null;
 
   const supplierName = (id: string) => suppliers.find((s) => s.id === id)?.name ?? id.slice(0, 8);
   const warehouseName = (id: string) => warehouses.find((w) => w.id === id)?.name ?? id.slice(0, 8);
@@ -89,20 +102,38 @@ export function GoodsReceiptsPage() {
                   <TableHead>Warehouse</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Lines</TableHead>
+                  <TableHead className="text-right">Received</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.map((po) => (
-                  <TableRow key={po.id}>
-                    <TableCell className="font-semibold tabular-nums">{po.poNumber}</TableCell>
-                    <TableCell>{supplierName(po.supplierId)}</TableCell>
-                    <TableCell>{warehouseName(po.warehouseId)}</TableCell>
-                    <TableCell>
-                      <Badge tone={po.status === "APPROVED" ? "green" : "neutral"}>{po.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{po.items.length}</TableCell>
-                  </TableRow>
-                ))}
+                {orders.map((po) => {
+                  const { received, ordered } = receivedProgress(po);
+                  const complete = ordered > 0 && received >= ordered;
+                  return (
+                    <TableRow
+                      key={po.id}
+                      className="cursor-pointer"
+                      onClick={() => setHistoryPoId(po.id)}
+                    >
+                      <TableCell className="font-semibold tabular-nums">{po.poNumber}</TableCell>
+                      <TableCell>{supplierName(po.supplierId)}</TableCell>
+                      <TableCell>{warehouseName(po.warehouseId)}</TableCell>
+                      <TableCell>
+                        <Badge tone={po.status === "APPROVED" ? "green" : "neutral"}>{po.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">{po.items.length}</TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {ordered === 0 ? (
+                          <span className="text-text-4">—</span>
+                        ) : (
+                          <span className={complete ? "font-semibold text-green" : received > 0 ? "font-semibold text-amber" : "text-text-3"}>
+                            {received} of {ordered}
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -114,6 +145,14 @@ export function GoodsReceiptsPage() {
         onOpenChange={setOpen}
         purchaseOrders={approved}
         productLabel={productName}
+      />
+
+      <ReceiptHistoryDialog
+        open={!!historyPoId}
+        onOpenChange={(next) => !next && setHistoryPoId(null)}
+        purchaseOrderId={historyPoId ?? ""}
+        poNumber={historyPo?.poNumber ?? ""}
+        warehouseName={historyPo ? warehouseName(historyPo.warehouseId) : ""}
       />
     </div>
   );

@@ -244,6 +244,11 @@ export type InvoiceListParams = {
   search?: string;
   status?: string;
   customerId?: string;
+  /** "Overdue" isn't a stored `status` value — the backend computes it as
+   * its own boolean field/param instead (`GET /invoices?overdue=true`), so
+   * it can't be combined with `status` in the same request. Callers filtering
+   * on the display status "overdue" must send this instead of `status`. */
+  overdue?: boolean;
 };
 
 export type InvoiceStats = {
