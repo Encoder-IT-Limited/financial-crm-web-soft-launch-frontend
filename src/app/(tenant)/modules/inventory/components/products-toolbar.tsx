@@ -32,6 +32,7 @@ export type ProductsToolbarProps = {
   onSortChange: (value: SortPreset) => void;
   selectedCount: number;
   onClearSelection: () => void;
+  onReset: () => void;
 };
 
 const triggerClass = "h-9 w-[130px] border-border text-[12.5px]";
@@ -48,6 +49,7 @@ export function ProductsToolbar({
   onSortChange,
   selectedCount,
   onClearSelection,
+  onReset,
 }: ProductsToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2.5">
@@ -118,12 +120,7 @@ export function ProductsToolbar({
         variant="outline"
         size="sm"
         className="h-9"
-        onClick={() => {
-          onSearchChange("");
-          onCategoryChange("all");
-          onStatusChange("all");
-          onSortChange("featured");
-        }}
+        onClick={onReset}
       >
         Reset
       </Button>
