@@ -6,7 +6,7 @@ import type { NewInvoiceInput, RecordPaymentInput } from "../types";
 import { billingKeys } from "../query-keys";
 
 export function useInvoices() {
-  return useQuery({ queryKey: billingKeys.invoices(), queryFn: invoiceApi.list });
+  return useQuery({ queryKey: billingKeys.invoices(), queryFn: () => invoiceApi.list() });
 }
 
 export function useInvoice(id: string) {

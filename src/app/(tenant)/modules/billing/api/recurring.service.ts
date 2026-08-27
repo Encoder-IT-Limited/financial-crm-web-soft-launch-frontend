@@ -92,6 +92,18 @@ export const recurringApi = {
     return page.items.map(mapTemplate);
   },
 
+  listPage: async (params?: { page?: number; pageSize?: number }) => {
+    const page = await apiGetPage<ApiTemplate>("/recurring-templates", params);
+    const nextRaw = page.meta.nextInvoiceDate;
+    return {
+      ...page,
+      items: page.items.map(mapTemplate),
+      activeCount: Number(page.meta.activeCount ?? 0),
+      nextInvoiceDate:
+        typeof nextRaw === "string" ? nextRaw.slice(0, 10) : nextRaw ? String(nextRaw).slice(0, 10) : null,
+    };
+  },
+
   create: async (input: NewRecurringTemplateInput): Promise<RecurringTemplate> => {
     const row = await apiSend<ApiTemplate>("post", "/recurring-templates", toApiBody(input));
     return mapTemplate(row);

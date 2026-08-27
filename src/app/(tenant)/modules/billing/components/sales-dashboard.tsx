@@ -24,7 +24,7 @@ import { InvoiceStatusBadge, STATUS_CONFIG } from "./invoice-status-badge";
  *  trend, status breakdown, quick actions and recent activity, all derived
  *  from the live billing services. */
 export function SalesDashboard() {
-  const { data: invoices = [], isLoading } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
+  const { data: invoices = [], isLoading } = useQuery({ queryKey: ["invoices"], queryFn: () => invoiceApi.list() });
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
 
   const customerName = (id: string) => customers.find((c) => c.id === id)?.name ?? "—";

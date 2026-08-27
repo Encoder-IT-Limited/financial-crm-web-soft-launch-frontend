@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -10,7 +10,6 @@ import {
   type RowSelectionState,
   type SortingState,
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
@@ -28,13 +27,11 @@ import { cn } from "@/lib/utils";
 import {
   invoiceBalance,
   invoiceDisplayStatus,
-  isInvoiceOverdue,
   type Invoice,
 } from "../types";
 import { invoiceApi } from "../api/invoices.service";
 import { downloadInvoicePdf } from "../lib/invoice-print";
 import { billingKeys } from "../query-keys";
-import { useInvoices } from "../hooks/use-invoices";
 import { useCustomers } from "../../crm/hooks/use-customers";
 import { InvoiceStatusBadge } from "./invoice-status-badge";
 import { StatTiles } from "./stat-tiles";
@@ -52,31 +49,46 @@ type Filters = InvoiceFilters;
 export function InvoicesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { data: invoices = [] } = useInvoices();
   const { data: customers = [] } = useCustomers();
   const { data: org } = useQuery({ queryKey: ["org-profile"], queryFn: invoiceApi.getOrgProfile, staleTime: Infinity });
+  const { data: stats } = useQuery({
+    queryKey: billingKeys.invoiceStats(),
+    queryFn: invoiceApi.stats,
+  });
   const [filters, setFilters] = useState<Filters>({ search: "", status: "all", customer: "all" });
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [pagination, setPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: 25 });
   const [sendingReminders, setSendingReminders] = useState(false);
 
-  const customerName = (id: string) => customers.find((c) => c.id === id)?.name ?? "—";
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(filters.search.trim()), 300);
+    return () => window.clearTimeout(timer);
+  }, [filters.search]);
 
-  const filtered = useMemo(() => {
-    const needle = filters.search.trim().toLowerCase();
-    return invoices.filter((inv) => {
-      if (filters.status !== "all" && invoiceDisplayStatus(inv) !== filters.status) return false;
-      if (filters.customer !== "all" && inv.customerId !== filters.customer) return false;
-      if (needle) {
-        const haystack = `${inv.number} ${customerName(inv.customerId)} ${inv.notes ?? ""}`.toLowerCase();
-        if (!haystack.includes(needle)) return false;
-      }
-      return true;
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, invoices, customers]);
+  const listParams = {
+    page: pagination.pageIndex + 1,
+    pageSize: pagination.pageSize,
+    search: debouncedSearch || undefined,
+    status: filters.status === "all" ? undefined : filters.status,
+    customerId: filters.customer === "all" ? undefined : filters.customer,
+  };
+  const { data: page } = useQuery({
+    queryKey: billingKeys.invoicesPage(listParams),
+    queryFn: () => invoiceApi.listPage(listParams),
+    placeholderData: (previous) => previous,
+  });
+  const invoices = page?.items ?? [];
+  const filteredTotal = page?.total ?? 0;
+  const { data: previewInvoice } = useQuery({
+    queryKey: billingKeys.invoice(previewId ?? ""),
+    queryFn: () => invoiceApi.get(previewId!),
+    enabled: Boolean(previewId),
+  });
+
+  const customerName = (id: string) => customers.find((c) => c.id === id)?.name ?? "—";
 
   const columns = useMemo<AnyColumnDef<Invoice>[]>(
     () => [
@@ -212,7 +224,7 @@ export function InvoicesPage() {
   );
 
   const table = useReactTable({
-    data: filtered,
+    data: invoices,
     columns,
     state: { sorting, rowSelection, pagination },
     onSortingChange: setSorting,
@@ -220,23 +232,11 @@ export function InvoicesPage() {
     onPaginationChange: setPagination,
     getRowId: (inv) => inv.id,
     enableRowSelection: true,
+    manualPagination: true,
+    pageCount: Math.max(1, Math.ceil(filteredTotal / pagination.pageSize)),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
   });
-
-  const stats = useMemo(() => {
-    const live = invoices.filter((inv) => inv.status !== "cancelled");
-    const outstanding = live.reduce((sum, inv) => sum + invoiceBalance(inv), 0);
-    const overdue = invoices.filter(isInvoiceOverdue).reduce((sum, inv) => sum + invoiceBalance(inv), 0);
-    const drafts = invoices.filter((inv) => inv.status === "draft").length;
-    const paidThisMonth = invoices
-      .filter((inv) => inv.status === "paid" && inv.paidAmount > 0)
-      .reduce((sum, inv) => sum + inv.paidAmount, 0);
-    return { outstanding, overdue, drafts, paidThisMonth };
-  }, [invoices]);
-
-  const previewInvoice = previewId ? invoices.find((inv) => inv.id === previewId) ?? null : null;
 
   const selected = table.getFilteredSelectedRowModel().rows.map((row) => row.original);
   const selectedEligibleForReminder = selected.filter(
@@ -279,6 +279,19 @@ export function InvoicesPage() {
     }
   }
 
+  async function exportFiltered() {
+    try {
+      const rows = await invoiceApi.list({
+        search: debouncedSearch || undefined,
+        status: filters.status === "all" ? undefined : filters.status,
+        customerId: filters.customer === "all" ? undefined : filters.customer,
+      });
+      exportCsv(rows);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not export invoices");
+    }
+  }
+
   const rows = table.getRowModel().rows;
 
   return (
@@ -288,7 +301,7 @@ export function InvoicesPage() {
         subtitle="Create, send and track invoices with QR code & PDF"
         actions={
           <>
-            <Button variant="outline" size="sm" onClick={() => exportCsv(filtered)}>
+            <Button variant="outline" size="sm" onClick={() => void exportFiltered()}>
               <Download /> Excel
             </Button>
             <Link href="/dashboard/invoices/new">
@@ -309,10 +322,10 @@ export function InvoicesPage() {
         <TabsContent value="invoices" className="mt-4">
           <StatTiles
             tiles={[
-              { label: "Outstanding", value: fmtMoney(stats.outstanding), tone: "amber" },
-              { label: "Overdue", value: fmtMoney(stats.overdue), tone: "red", sub: "past due date" },
-              { label: "Collected", value: fmtMoney(stats.paidThisMonth), tone: "green", sub: "all-time paid" },
-              { label: "Drafts", value: String(stats.drafts), tone: "neutral", sub: "not yet sent" },
+              { label: "Outstanding", value: fmtMoney(stats?.outstanding ?? 0), tone: "amber" },
+              { label: "Overdue", value: fmtMoney(stats?.overdue ?? 0), tone: "red", sub: "past due date" },
+              { label: "Collected", value: fmtMoney(stats?.collected ?? 0), tone: "green", sub: "all-time paid" },
+              { label: "Drafts", value: String(stats?.drafts ?? 0), tone: "neutral", sub: "not yet sent" },
             ]}
           />
 
@@ -322,10 +335,11 @@ export function InvoicesPage() {
               onFiltersChange={(next) => {
                 setFilters(next);
                 setPagination((p) => ({ ...p, pageIndex: 0 }));
+                setRowSelection({});
               }}
               customers={customers}
-              filteredCount={filtered.length}
-              totalCount={invoices.length}
+              filteredCount={filteredTotal}
+              totalCount={stats?.total ?? filteredTotal}
             />
             <InvoicesBulkBar
               selectedCount={selected.length}
@@ -338,7 +352,7 @@ export function InvoicesPage() {
             <InvoicesTable table={table} onRowClick={(inv) => router.push(`/dashboard/invoices/${inv.id}`)} />
             <InvoicesMobileList invoices={rows.map((r) => r.original)} customerName={customerName} />
             <div className="border-t border-border px-3">
-              <TablePagination table={table} totalCount={filtered.length} pageSizeOptions={[10, 25, 50]} />
+              <TablePagination table={table} totalCount={filteredTotal} pageSizeOptions={[10, 25, 50]} />
             </div>
           </Card>
         </TabsContent>
@@ -349,7 +363,7 @@ export function InvoicesPage() {
       </Tabs>
 
       <InvoicePreviewDialog
-        invoice={previewInvoice}
+        invoice={previewInvoice ?? null}
         open={previewId !== null}
         onOpenChange={(open) => {
           if (!open) setPreviewId(null);

@@ -14,6 +14,7 @@ export type Page<T> = {
   total: number;
   page: number;
   pageSize: number;
+  meta: Record<string, unknown>;
 };
 
 function unwrap<T>(envelope: Envelope<T>): T {
@@ -55,6 +56,7 @@ export async function apiGetPage<T>(
       total: Number(meta.total ?? res.data.data.length),
       page: Number(meta.page ?? 1),
       pageSize: Number(meta.pageSize ?? res.data.data.length),
+      meta,
     };
   } catch (error) {
     throw toApiError(error);
