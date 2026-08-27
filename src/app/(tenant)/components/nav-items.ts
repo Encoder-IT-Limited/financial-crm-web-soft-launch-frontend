@@ -181,35 +181,35 @@ export const tenantNavSections: SidebarNavSection[] = [
       },
     ],
   },
-  // {
-  //   label: "Purchases",
-  //   items: [
-  //     {
-  //       label: "Bills",
-  //       href: "/dashboard/bills",
-  //       icon: Receipt,
-  //       module: "purchasing",
-  //     },
-  //     {
-  //       label: "Purchase Orders",
-  //       href: "/dashboard/purchase-orders",
-  //       icon: ClipboardList,
-  //       module: "purchasing",
-  //     },
-  //     {
-  //       label: "Expenses",
-  //       href: "/dashboard/expenses",
-  //       icon: Wallet,
-  //       module: "purchasing",
-  //     },
-  //     {
-  //       label: "Budget",
-  //       href: "/dashboard/budget",
-  //       icon: BarChart3,
-  //       module: "purchasing",
-  //     },
-  //   ],
-  // },
+  {
+    label: "Purchases",
+    items: [
+      // {
+      //   label: "Bills",
+      //   href: "/dashboard/bills",
+      //   icon: Receipt,
+      //   module: "purchasing",
+      // },
+      {
+        label: "Purchase Orders",
+        href: "/dashboard/purchase-orders",
+        icon: ClipboardList,
+        module: "purchasing",
+      },
+      // {
+      //   label: "Expenses",
+      //   href: "/dashboard/expenses",
+      //   icon: Wallet,
+      //   module: "purchasing",
+      // },
+      // {
+      //   label: "Budget",
+      //   href: "/dashboard/budget",
+      //   icon: BarChart3,
+      //   module: "purchasing",
+      // },
+    ],
+  },
   {
     label: "Inventory",
     items: [
