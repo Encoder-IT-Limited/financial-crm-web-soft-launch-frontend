@@ -8,6 +8,7 @@ import { posSessionsApi } from "../api/sessions.service";
 import { posSalesApi } from "../api/sales.service";
 import { posTerminalsApi } from "../api/terminals.service";
 import { useFmtMoney } from "../use-fmt-money";
+import { useCashierDisplay } from "../use-cashier-display";
 
 export function SessionDetailsDialog({
   sessionId,
@@ -22,6 +23,10 @@ export function SessionDetailsDialog({
   const { data: sales = [] } = useQuery({ queryKey: ["pos-sales"], queryFn: () => posSalesApi.list(), enabled: open });
   const { data: terminals = [] } = useQuery({ queryKey: ["pos-terminals"], queryFn: () => posTerminalsApi.list(), enabled: open });
   const money = useFmtMoney();
+  // Called unconditionally (Rules of Hooks) — falls back to an empty
+  // session shape before `session` has loaded, which just resolves to the
+  // unverified branch until the real query result arrives.
+  const cashier = useCashierDisplay(session ?? { cashierId: "", openedBy: "" });
 
   if (!session) return null;
 
@@ -34,7 +39,7 @@ export function SessionDetailsDialog({
       open={open}
       onOpenChange={onOpenChange}
       title={terminal?.name ?? "Session"}
-      subtitle={`${session.openedBy} · ${fmtDateTime(session.openedAt)}`}
+      subtitle={`${cashier.name}${cashier.verified ? "" : " (unverified)"} · ${fmtDateTime(session.openedAt)}`}
       statusSlot={<Badge tone={session.status === "open" ? "green" : "neutral"}>{session.status}</Badge>}
     >
       <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-4">

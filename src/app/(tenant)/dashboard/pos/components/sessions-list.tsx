@@ -14,6 +14,7 @@ import { posSessionsApi } from "../api/sessions.service";
 import { posTerminalsApi } from "../api/terminals.service";
 import { SessionDetailsDialog } from "./session-details-dialog";
 import { useFmtMoney } from "../use-fmt-money";
+import { useCashierDisplay } from "../use-cashier-display";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyColumnDef<TData> = ColumnDef<TData, any>;
@@ -51,7 +52,7 @@ export function SessionsList() {
   const columns = useMemo<AnyColumnDef<PosSession>[]>(
     () => [
       { id: "terminal", header: "Terminal", cell: ({ row }) => <span className="font-bold text-text">{terminalName(row.original.terminalId)}</span> },
-      { accessorKey: "openedBy", header: "Cashier" },
+      { id: "cashier", header: "Cashier", cell: ({ row }) => <CashierCell session={row.original} /> },
       { id: "openedAt", header: "Opened", cell: ({ row }) => fmtDateTime(row.original.openedAt) },
       { id: "closedAt", header: "Closed", cell: ({ row }) => (row.original.closedAt ? fmtDateTime(row.original.closedAt) : "—") },
       {
@@ -131,5 +132,15 @@ export function SessionsList() {
 
       {detailsId && <SessionDetailsDialog sessionId={detailsId} open={!!detailsId} onOpenChange={(open) => !open && setDetailsId(null)} />}
     </div>
+  );
+}
+
+function CashierCell({ session }: { session: PosSession }) {
+  const { name, verified } = useCashierDisplay(session);
+  return (
+    <span title={verified ? "Verified — matches the logged-in account" : "Unverified — free text typed at Start Shift"}>
+      {name}
+      {!verified && <span className="ml-1 text-[10px] text-text-4">(unverified)</span>}
+    </span>
   );
 }

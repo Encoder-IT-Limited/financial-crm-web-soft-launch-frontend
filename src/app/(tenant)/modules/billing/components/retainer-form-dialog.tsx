@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FormDialog } from "@/components/shared/form-dialog";
 import { FormField } from "@/components/shared/form-field";
@@ -11,7 +11,7 @@ import { ApiError } from "@/lib/api/errors";
 import { cn } from "@/lib/utils";
 import { useTenantCurrency } from "@/lib/use-tenant-currency";
 import { retainerFormSchema, type RetainerFormValues } from "../schemas";
-import type { RetainerBillingPeriod } from "../types";
+import type { Currency, RetainerBillingPeriod } from "../types";
 import { retainersApi } from "../api/retainers.service";
 import { useRetainers } from "../hooks/use-retainers";
 import { useCustomers } from "../../crm/hooks/use-customers";
@@ -40,14 +40,13 @@ export function RetainerFormDialog({
   const editing = !!retainerId;
   const tenantCurrency = useTenantCurrency();
 
-  const [form, setForm] = useState<RetainerFormValues>(() =>
+  const [form, setForm] = useState<Omit<RetainerFormValues, "currency">>(() =>
     retainer
       ? {
           customerId: retainer.customerId,
           contractAmount: retainer.contractAmount,
           billingPeriod: retainer.billingPeriod,
           billingModel: retainer.billingModel,
-          currency: retainer.currency,
           startDate: retainer.startDate.slice(0, 10),
           expiryDate: retainer.expiryDate?.slice(0, 10) ?? "",
           notes: retainer.notes ?? "",
@@ -57,7 +56,6 @@ export function RetainerFormDialog({
           contractAmount: 0,
           billingPeriod: "monthly",
           billingModel: "one-time",
-          currency: tenantCurrency,
           startDate: new Date().toISOString().slice(0, 10),
           expiryDate: "",
           notes: "",
@@ -66,14 +64,19 @@ export function RetainerFormDialog({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (!editing) setForm((current) => ({ ...current, currency: tenantCurrency }));
-  }, [tenantCurrency, editing]);
+  // This dialog isn't always remounted between opens (the "New Retainer"
+  // instance stays mounted, only toggled via `open`), so a lazy initializer
+  // alone can capture a stale tenantCurrency from before /me resolved. An
+  // override — rather than an effect that re-syncs state — keeps `currency`
+  // always reactive to the latest tenantCurrency until the user picks one
+  // explicitly, with no synchronous setState-in-effect involved.
+  const [currencyOverride, setCurrencyOverride] = useState<Currency | null>(null);
+  const currency = currencyOverride ?? (editing && retainer ? retainer.currency : tenantCurrency);
 
   if (editing && !retainer) return null;
 
   function handleSubmit() {
-    const result = retainerFormSchema.safeParse(form);
+    const result = retainerFormSchema.safeParse({ ...form, currency });
     if (!result.success) {
       setErrors(Object.fromEntries(result.error.issues.map((issue) => [issue.path.join("."), issue.message])));
       return;
@@ -103,7 +106,13 @@ export function RetainerFormDialog({
       <FormField label="Customer" error={errors.customerId}>
         <Select value={form.customerId} onValueChange={(v) => setForm({ ...form, customerId: v ?? "" })}>
           <SelectTrigger className={cn("w-full", errors.customerId && "border-red")}>
-            <SelectValue placeholder="Select customer" />
+            {/* Base UI's Select.Value doesn't auto-derive the label from the
+                matching Select.Item like Radix does — without this render
+                function it prints the raw value (the customer's id) instead
+                of the name. */}
+            <SelectValue placeholder="Select customer">
+              {(value: string | null) => customers.find((c) => c.id === value)?.name ?? "Select customer"}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {customers.map((customer) => (
@@ -116,7 +125,7 @@ export function RetainerFormDialog({
       </FormField>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <FormField label={`Contract amount (${form.currency})`} error={errors.contractAmount}>
+        <FormField label={`Contract amount (${currency})`} error={errors.contractAmount}>
           <Input
             type="number"
             min={0}
@@ -163,8 +172,8 @@ export function RetainerFormDialog({
       <div className="grid gap-3 sm:grid-cols-2">
         <FormField label="Currency">
           <CurrencySelect
-            value={form.currency}
-            onChange={(currency) => setForm({ ...form, currency })}
+            value={currency}
+            onChange={setCurrencyOverride}
             invalid={!!errors.currency}
           />
         </FormField>

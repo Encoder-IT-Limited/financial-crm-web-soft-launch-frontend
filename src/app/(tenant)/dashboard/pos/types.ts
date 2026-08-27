@@ -36,14 +36,17 @@ export type NewPosTerminalInput = {
 
 export type PosSessionStatus = "open" | "closed";
 
-/** One open→close shift on a terminal. `openedBy` is the only link
- * between a terminal and a specific cashier — it exists only for the
- * lifetime of the session, not permanently. Set by the cashier-login
- * step in OpenSessionDialog (username + the terminal's access code),
- * not a hardcoded identity. */
+/** One open→close shift on a terminal. `openedBy` is free text typed into
+ * "Your name" at Start Shift — not verified against who's actually logged
+ * in. `cashierId` is the real, authenticated user id the backend records
+ * for the shift; there's no Employees/HR module yet to resolve an
+ * arbitrary id to a name, so the UI can only verify it against the
+ * current viewer's own id (see session-details-dialog.tsx / sessions-list.tsx) —
+ * a full name lookup for other users' sessions is still out of scope. */
 export type PosSession = {
   id: string;
   terminalId: string;
+  cashierId: string;
   openedBy: string;
   openedAt: string;
   openingCash: number;

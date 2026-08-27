@@ -130,6 +130,7 @@ export function mapSession(row: ApiPosSession): PosSession {
   return {
     id: row.id,
     terminalId: row.terminalId,
+    cashierId: row.cashierId,
     openedBy: row.cashierName?.trim() || "Cashier",
     openedAt: row.openedAt,
     openingCash: n(row.openingCash),
