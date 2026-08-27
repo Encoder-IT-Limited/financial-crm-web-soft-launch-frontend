@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -28,12 +28,11 @@ import { FormField } from "@/components/shared/form-field";
 import { PageHeading } from "@/components/shared/page-heading";
 import { ApiError } from "@/lib/api/errors";
 import { toast } from "@/lib/toast";
-import { useProducts } from "../hooks/use-inventory";
+import { useReorder, useWarehouses } from "../hooks/use-inventory";
 import { useCreatePurchaseOrder, useSuppliers } from "@/app/(tenant)/modules/procurement/hooks/use-procurement";
-import { useWarehouses } from "../hooks/use-inventory";
 
 export function ReorderPage() {
-  const { data: products = [], isLoading } = useProducts();
+  const { data: lowStock = [], isLoading } = useReorder();
   const { data: suppliers = [] } = useSuppliers();
   const { data: warehouses = [] } = useWarehouses();
   const createPo = useCreatePurchaseOrder();
@@ -45,18 +44,10 @@ export function ReorderPage() {
   const [quantity, setQuantity] = useState("");
   const [unitCost, setUnitCost] = useState("");
 
-  const lowStock = useMemo(
-    () =>
-      products
-        .filter((p) => p.status === "active" && p.stock <= Math.max(p.reorderLevel, p.minimumStock))
-        .sort((a, b) => a.stock - b.stock),
-    [products],
-  );
-
   function openFor(productIdValue: string) {
-    const p = products.find((x) => x.id === productIdValue);
+    const p = lowStock.find((x) => x.productId === productIdValue);
     setProductId(productIdValue);
-    setQuantity(String(Math.max(1, (p?.reorderLevel ?? 0) * 2 - (p?.stock ?? 0))));
+    setQuantity(String(p?.suggestedQuantity ?? 1));
     setUnitCost(String(p?.costPrice ?? 0));
     setOpen(true);
   }
@@ -112,15 +103,15 @@ export function ReorderPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {lowStock.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="font-semibold">{p.name}</TableCell>
-                    <TableCell className="tabular-nums text-text-2">{p.sku}</TableCell>
-                    <TableCell className="text-right font-semibold tabular-nums text-red">{p.stock}</TableCell>
-                    <TableCell className="text-right tabular-nums">{p.reorderLevel}</TableCell>
-                    <TableCell className="text-right tabular-nums">{p.minimumStock}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => openFor(p.id)}>
+                  {lowStock.map((p) => (
+                    <TableRow key={p.productId}>
+                      <TableCell className="font-semibold">{p.name}</TableCell>
+                      <TableCell className="tabular-nums text-text-2">{p.sku}</TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums text-red">{p.stock}</TableCell>
+                      <TableCell className="text-right tabular-nums">{p.reorderLevel}</TableCell>
+                      <TableCell className="text-right tabular-nums">{p.minimumStock}</TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => openFor(p.productId)}>
                         <Plus data-icon="inline-start" />
                         Create PO
                       </Button>
@@ -182,7 +173,7 @@ export function ReorderPage() {
         </FormField>
         {productId && (
           <p className="text-[12px] text-text-3">
-            Product: <Badge tone="neutral">{products.find((p) => p.id === productId)?.sku}</Badge>
+            Product: <Badge tone="neutral">{lowStock.find((p) => p.productId === productId)?.sku}</Badge>
           </p>
         )}
       </FormDialog>

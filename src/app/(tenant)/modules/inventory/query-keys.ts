@@ -12,4 +12,7 @@ export const inventoryKeys = {
     [...inventoryKeys.all, "transfers", params ?? {}] as const,
   transfer: (id: string) => [...inventoryKeys.all, "transfer", id] as const,
   batches: () => [...inventoryKeys.all, "batches"] as const,
+  dashboard: () => [...inventoryKeys.all, "dashboard"] as const,
+  reorder: (warehouseId?: string) => [...inventoryKeys.all, "reorder", warehouseId ?? "all"] as const,
+  valuation: (warehouseId?: string) => [...inventoryKeys.all, "valuation", warehouseId ?? "all"] as const,
 };

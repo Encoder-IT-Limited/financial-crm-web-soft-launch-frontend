@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight,
@@ -25,65 +24,26 @@ import {
 import { PageHeading } from "@/components/shared/page-heading";
 import { fmtMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import {
-  useMovements,
-  useProducts,
-  useStock,
-  useWarehouses,
-} from "../hooks/use-inventory";
+import { useInventoryDashboard } from "../hooks/use-inventory";
 
 const headClass = "text-[11px] font-semibold uppercase tracking-wide text-text-3";
 
 export function InventoryDashboardPage() {
-  const { data: products = [], isLoading: productsLoading } = useProducts();
-  const { data: warehouses = [], isLoading: warehousesLoading } = useWarehouses();
-  const { data: stock = [], isLoading: stockLoading } = useStock();
-  const { data: movements = [], isLoading: movementsLoading } = useMovements();
+  const { data, isLoading: loading } = useInventoryDashboard();
 
-  const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
-  const warehouseById = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
-
-  const stockValue = useMemo(
-    () => stock.reduce((sum, row) => sum + row.quantity * row.averageCost, 0),
-    [stock],
-  );
-
-  const warehouseValues = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const row of stock) {
-      map.set(row.warehouseId, (map.get(row.warehouseId) ?? 0) + row.quantity * row.averageCost);
-    }
-    const total = Math.max(stockValue, 1);
-    return [...map.entries()]
-      .map(([warehouseId, value]) => ({
-        warehouseId,
-        name: warehouseById.get(warehouseId)?.name ?? warehouseId.slice(0, 8),
-        value,
-        pct: (value / total) * 100,
-      }))
-      .sort((a, b) => b.value - a.value);
-  }, [stock, stockValue, warehouseById]);
-
-  const adjustments = movements.filter((m) => m.movementType === "ADJUSTMENT").length;
-  const receipts = movements.filter((m) =>
-    ["PURCHASE_RECEIPT", "OPENING", "TRANSFER_IN", "SALES_RETURN"].includes(m.movementType),
-  ).length;
-
-  const lowStock = useMemo(() => {
-    return products
-      .filter((p) => p.status === "active" && p.stock <= Math.max(p.reorderLevel, p.minimumStock))
-      .sort((a, b) => a.stock - b.stock)
-      .slice(0, 8);
-  }, [products]);
-
-  const recent = movements.slice(0, 10);
-  const loading = productsLoading || warehousesLoading || stockLoading || movementsLoading;
+  const stockValue = data?.stockValue ?? 0;
+  const warehouseValues = (data?.stockValueByWarehouse ?? []).map((w) => ({
+    ...w,
+    pct: (w.value / Math.max(stockValue, 1)) * 100,
+  }));
+  const recent = data?.recentMovements ?? [];
+  const lowStock = data?.lowStock ?? [];
 
   const kpis = [
     {
       id: "products",
       label: "Total Products",
-      value: String(products.length),
+      value: String(data?.productCount ?? 0),
       icon: Package,
       tone: "blue",
       note: "active catalog",
@@ -91,7 +51,7 @@ export function InventoryDashboardPage() {
     {
       id: "warehouses",
       label: "Warehouses",
-      value: String(warehouses.length),
+      value: String(data?.warehouseCount ?? 0),
       icon: Warehouse,
       tone: "purple",
       note: "locations",
@@ -107,15 +67,15 @@ export function InventoryDashboardPage() {
     {
       id: "adj",
       label: "Adjustments",
-      value: String(adjustments),
+      value: String(data?.adjustmentCount ?? 0),
       icon: ClipboardCheck,
       tone: "amber",
-      note: "in recent ledger",
+      note: "all movements",
     },
     {
       id: "recv",
       label: "Inbound moves",
-      value: String(receipts),
+      value: String(data?.inboundCount ?? 0),
       icon: PackageSearch,
       tone: "red",
       note: "receipts / returns / in",
@@ -207,24 +167,21 @@ export function InventoryDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recent.map((m) => {
-                      const product = productById.get(m.productId);
-                      return (
-                        <TableRow key={m.id}>
-                          <TableCell className="whitespace-nowrap text-text-2">
-                            {new Date(m.movementDate).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <Badge tone={m.quantity >= 0 ? "green" : "red"}>{m.movementType}</Badge>
-                          </TableCell>
-                          <TableCell>{product?.name ?? m.productId.slice(0, 8)}</TableCell>
-                          <TableCell className="text-right tabular-nums font-semibold">
-                            {m.quantity >= 0 ? "+" : ""}
-                            {m.quantity}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {recent.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell className="whitespace-nowrap text-text-2">
+                          {new Date(m.movementDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge tone={m.quantity >= 0 ? "green" : "red"}>{m.movementType}</Badge>
+                        </TableCell>
+                        <TableCell>{m.productName ?? m.productId.slice(0, 8)}</TableCell>
+                        <TableCell className="text-right tabular-nums font-semibold">
+                          {m.quantity >= 0 ? "+" : ""}
+                          {m.quantity}
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               )}
@@ -253,7 +210,7 @@ export function InventoryDashboardPage() {
                 </TableHeader>
                 <TableBody>
                   {lowStock.map((p) => (
-                    <TableRow key={p.id}>
+                    <TableRow key={p.productId}>
                       <TableCell className="font-medium">{p.name}</TableCell>
                       <TableCell className="tabular-nums text-text-3">{p.sku}</TableCell>
                       <TableCell className="text-right font-semibold tabular-nums text-red">{p.stock}</TableCell>

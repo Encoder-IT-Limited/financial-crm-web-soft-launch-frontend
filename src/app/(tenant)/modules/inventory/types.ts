@@ -23,6 +23,18 @@ export type Product = {
   unitId?: string;
 };
 
+export type WarehouseProduct = {
+  productId: string;
+  name: string;
+  sku: string;
+  barcode?: string | null;
+  status: ProductStatus;
+  quantity: number;
+  damagedQuantity: number;
+  reservedQuantity: number;
+  averageCost: number;
+};
+
 export type Warehouse = {
   id: string;
   name: string;
@@ -32,6 +44,9 @@ export type Warehouse = {
   status: WarehouseStatus;
   productCount: number;
   totalOnHand: number;
+  totalDamaged: number;
+  totalReserved: number;
+  products?: WarehouseProduct[];
 };
 
 export type InventoryCategory = { id: string; name: string; parentId: string | null };
@@ -53,6 +68,7 @@ export type StockMovement = {
   quantity: number;
   unitCost: number;
   movementDate: string;
+  note?: string | null;
 };
 
 export type StockTransferStatus = "PENDING" | "APPROVED" | "DISPATCHED" | "RECEIVED" | "CANCELLED";
@@ -99,4 +115,65 @@ export type InventoryBatch = {
   expiryDate: string | null;
   quantity: number;
   createdAt: string;
+};
+
+export type InventoryDashboard = {
+  productCount: number;
+  warehouseCount: number;
+  stockValue: number;
+  adjustmentCount: number;
+  inboundCount: number;
+  stockValueByWarehouse: {
+    warehouseId: string;
+    name: string;
+    value: number;
+    onHand: number;
+    damagedOnHand: number;
+  }[];
+  recentMovements: {
+    id: string;
+    movementDate: string;
+    movementType: string;
+    quantity: number;
+    productId: string;
+    productName: string | null;
+    warehouseId: string;
+  }[];
+  lowStock: {
+    productId: string;
+    name: string;
+    sku: string;
+    stock: number;
+    reorderLevel: number;
+    minimumStock: number;
+  }[];
+};
+
+export type ReorderItem = {
+  productId: string;
+  name: string;
+  sku: string;
+  stock: number;
+  reorderLevel: number;
+  minimumStock: number;
+  maximumStock: number;
+  suggestedQuantity: number;
+  costPrice: number;
+};
+
+export type ValuationRow = {
+  productId: string;
+  sku: string;
+  name: string;
+  warehouseId: string;
+  warehouseName: string;
+  quantity: number;
+  averageCost: number;
+  value: number;
+};
+
+export type Valuation = {
+  method: "WEIGHTED_AVERAGE";
+  totalValue: number;
+  rows: ValuationRow[];
 };

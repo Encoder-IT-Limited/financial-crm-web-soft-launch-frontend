@@ -45,6 +45,7 @@ export function StockAdjustmentsPage() {
   const [warehouseId, setWarehouseId] = useState("");
   const [direction, setDirection] = useState<"add" | "deduct">("add");
   const [quantity, setQuantity] = useState("");
+  const [note, setNote] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
@@ -62,6 +63,7 @@ export function StockAdjustmentsPage() {
     setWarehouseId("");
     setDirection("add");
     setQuantity("");
+    setNote("");
     setErrors({});
   }
 
@@ -81,6 +83,7 @@ export function StockAdjustmentsPage() {
         productId,
         warehouseId,
         quantityDelta: direction === "add" ? qty : -qty,
+        note: note.trim() || undefined,
       });
       toast.success("Stock adjusted");
       reset();
@@ -119,6 +122,7 @@ export function StockAdjustmentsPage() {
                   <TableHead>Product</TableHead>
                   <TableHead>Warehouse</TableHead>
                   <TableHead>Qty Δ</TableHead>
+                  <TableHead>Reason</TableHead>
                   <TableHead>Unit Cost</TableHead>
                 </TableRow>
               </TableHeader>
@@ -141,6 +145,7 @@ export function StockAdjustmentsPage() {
                           {m.quantity}
                         </Badge>
                       </TableCell>
+                      <TableCell className="max-w-[220px] truncate text-text-2">{m.note || "—"}</TableCell>
                       <TableCell className="tabular-nums">{m.unitCost.toFixed(2)}</TableCell>
                     </TableRow>
                   );
@@ -209,6 +214,15 @@ export function StockAdjustmentsPage() {
             step="any"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
+            className="h-9 border-border text-[12.5px]"
+          />
+        </FormField>
+        <FormField label="Reason">
+          <Input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Why is stock changing?"
+            maxLength={500}
             className="h-9 border-border text-[12.5px]"
           />
         </FormField>

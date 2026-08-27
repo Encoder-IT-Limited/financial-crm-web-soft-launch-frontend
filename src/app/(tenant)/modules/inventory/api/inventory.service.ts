@@ -12,6 +12,9 @@ import type {
   TransferListParams,
   Warehouse,
   WarehouseStatus,
+  InventoryDashboard,
+  ReorderItem,
+  Valuation,
 } from "../types";
 
 export type ApiProduct = {
@@ -38,6 +41,18 @@ export type ApiProduct = {
   createdAt: string;
 };
 
+type ApiWarehouseProduct = {
+  productId: string;
+  name: string;
+  sku: string;
+  barcode?: string | null;
+  status: string;
+  quantity: unknown;
+  damagedQuantity?: unknown;
+  reservedQuantity?: unknown;
+  averageCost?: unknown;
+};
+
 type ApiWarehouse = {
   id: string;
   name: string;
@@ -46,6 +61,9 @@ type ApiWarehouse = {
   status: string;
   productCount?: number;
   totalOnHand?: number;
+  totalDamaged?: number;
+  totalReserved?: number;
+  products?: ApiWarehouseProduct[];
 };
 
 type ApiTransfer = {
@@ -110,6 +128,7 @@ export type AdjustStockInput = {
   productId: string;
   warehouseId: string;
   quantityDelta: number;
+  note?: string;
 };
 
 export type CreateTransferInput = {
@@ -156,6 +175,19 @@ export function mapWarehouse(row: ApiWarehouse): Warehouse {
     status,
     productCount: Number(row.productCount ?? 0),
     totalOnHand: Number(row.totalOnHand ?? 0),
+    totalDamaged: Number(row.totalDamaged ?? 0),
+    totalReserved: Number(row.totalReserved ?? 0),
+    products: row.products?.map((p) => ({
+      productId: p.productId,
+      name: p.name,
+      sku: p.sku,
+      barcode: p.barcode ?? null,
+      status: mapProductStatus(p.status),
+      quantity: Number(p.quantity),
+      damagedQuantity: Number(p.damagedQuantity ?? 0),
+      reservedQuantity: Number(p.reservedQuantity ?? 0),
+      averageCost: Number(p.averageCost ?? 0),
+    })),
   };
 }
 
@@ -238,6 +270,7 @@ export const inventoryApi = {
         quantity: unknown;
         unitCost: unknown;
         movementDate: string;
+        note?: string | null;
       }>
     >("/inventory/movements");
     return rows.map(
@@ -249,6 +282,7 @@ export const inventoryApi = {
         quantity: Number(r.quantity),
         unitCost: Number(r.unitCost),
         movementDate: r.movementDate,
+        note: r.note ?? null,
       }),
     );
   },
@@ -303,4 +337,16 @@ export const inventoryApi = {
   approveTransfer: (id: string) => apiSend("post", `/inventory/transfers/${id}/approve`),
   dispatchTransfer: (id: string) => apiSend("post", `/inventory/transfers/${id}/dispatch`),
   receiveTransfer: (id: string) => apiSend("post", `/inventory/transfers/${id}/receive`),
+
+  getDashboard: () => apiGet<InventoryDashboard>("/inventory/dashboard"),
+  listReorder: async (warehouseId?: string) =>
+    apiGet<ReorderItem[]>(
+      "/inventory/reorder",
+      warehouseId ? { params: { warehouseId } } : undefined,
+    ),
+  getValuation: async (warehouseId?: string) =>
+    apiGet<Valuation>(
+      "/inventory/valuation",
+      warehouseId ? { params: { warehouseId } } : undefined,
+    ),
 };

@@ -13,40 +13,18 @@ import {
 } from "@/components/ui/table";
 import { PageHeading } from "@/components/shared/page-heading";
 import { fmtMoney } from "@/lib/format";
-import { useProducts, useStock, useWarehouses } from "../hooks/use-inventory";
+import { useValuation } from "../hooks/use-inventory";
 
 /** Phase 1 valuation is weighted-average cost only (matches backend stock balances). */
 export function ValuationPage() {
-  const { data: stock = [], isLoading: stockLoading } = useStock();
-  const { data: products = [], isLoading: productsLoading } = useProducts();
-  const { data: warehouses = [], isLoading: warehousesLoading } = useWarehouses();
+  const { data, isLoading: loading } = useValuation();
+  const rows = data?.rows ?? [];
+  const total = data?.totalValue ?? 0;
 
-  const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
-  const warehouseById = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
-
-  const rows = useMemo(
-    () =>
-      stock
-        .map((s) => {
-          const product = productById.get(s.productId);
-          const warehouse = warehouseById.get(s.warehouseId);
-          const value = s.quantity * s.averageCost;
-          return {
-            key: `${s.productId}-${s.warehouseId}`,
-            sku: product?.sku ?? s.productId.slice(0, 8),
-            name: product?.name ?? "Unknown product",
-            warehouse: warehouse?.name ?? s.warehouseId.slice(0, 8),
-            quantity: s.quantity,
-            averageCost: s.averageCost,
-            value,
-          };
-        })
-        .sort((a, b) => b.value - a.value),
-    [stock, productById, warehouseById],
+  const tableRows = useMemo(
+    () => rows.map((r) => ({ ...r, key: `${r.productId}-${r.warehouseId}` })),
+    [rows],
   );
-
-  const total = rows.reduce((sum, r) => sum + r.value, 0);
-  const loading = stockLoading || productsLoading || warehousesLoading;
 
   return (
     <div className="flex flex-col gap-5">
@@ -61,7 +39,7 @@ export function ValuationPage() {
         </div>
         {loading ? (
           <Skeleton className="h-40 w-full" />
-        ) : rows.length === 0 ? (
+        ) : tableRows.length === 0 ? (
           <p className="py-10 text-center text-[13px] text-text-3">No stock balances to value.</p>
         ) : (
           <div className="overflow-x-auto rounded-[10px] border border-border">
@@ -77,11 +55,11 @@ export function ValuationPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((r) => (
+                {tableRows.map((r) => (
                   <TableRow key={r.key}>
                     <TableCell className="tabular-nums text-text-2">{r.sku}</TableCell>
                     <TableCell className="font-semibold">{r.name}</TableCell>
-                    <TableCell>{r.warehouse}</TableCell>
+                    <TableCell>{r.warehouseName}</TableCell>
                     <TableCell className="text-right tabular-nums">{r.quantity}</TableCell>
                     <TableCell className="text-right tabular-nums">{fmtMoney(r.averageCost)}</TableCell>
                     <TableCell className="text-right font-semibold tabular-nums">{fmtMoney(r.value)}</TableCell>

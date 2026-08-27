@@ -118,12 +118,7 @@ export function useReceiveStock() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: ReceiveStockInput) => inventoryApi.receiveStock(input),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: inventoryKeys.stock() });
-      void qc.invalidateQueries({ queryKey: inventoryKeys.movements() });
-      void qc.invalidateQueries({ queryKey: inventoryKeys.products() });
-      void qc.invalidateQueries({ queryKey: inventoryKeys.warehouses() });
-    },
+    onSuccess: () => invalidateStockViews(qc),
   });
 }
 
@@ -133,6 +128,9 @@ function invalidateStockViews(qc: ReturnType<typeof useQueryClient>) {
   void qc.invalidateQueries({ queryKey: inventoryKeys.products() });
   void qc.invalidateQueries({ queryKey: [...inventoryKeys.all, "transfers"] });
   void qc.invalidateQueries({ queryKey: inventoryKeys.warehouses() });
+  void qc.invalidateQueries({ queryKey: inventoryKeys.dashboard() });
+  void qc.invalidateQueries({ queryKey: [...inventoryKeys.all, "reorder"] });
+  void qc.invalidateQueries({ queryKey: [...inventoryKeys.all, "valuation"] });
 }
 
 export function useAdjustStock() {
@@ -187,5 +185,23 @@ export function useReceiveTransfer() {
   return useMutation({
     mutationFn: (id: string) => inventoryApi.receiveTransfer(id),
     onSuccess: () => invalidateStockViews(qc),
+  });
+}
+
+export function useInventoryDashboard() {
+  return useQuery({ queryKey: inventoryKeys.dashboard(), queryFn: inventoryApi.getDashboard });
+}
+
+export function useReorder(warehouseId?: string) {
+  return useQuery({
+    queryKey: inventoryKeys.reorder(warehouseId),
+    queryFn: () => inventoryApi.listReorder(warehouseId),
+  });
+}
+
+export function useValuation(warehouseId?: string) {
+  return useQuery({
+    queryKey: inventoryKeys.valuation(warehouseId),
+    queryFn: () => inventoryApi.getValuation(warehouseId),
   });
 }

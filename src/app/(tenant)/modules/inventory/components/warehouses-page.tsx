@@ -35,6 +35,7 @@ import {
   useProducts,
   useReceiveStock,
   useUpdateWarehouse,
+  useWarehouse,
   useWarehouses,
 } from "../hooks/use-inventory";
 
@@ -52,7 +53,7 @@ export function WarehousesPage() {
   const [quantity, setQuantity] = useState("");
   const [unitCost, setUnitCost] = useState("");
 
-  const [detail, setDetail] = useState<Warehouse | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [edit, setEdit] = useState<Warehouse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Warehouse | null>(null);
   const [editName, setEditName] = useState("");
@@ -60,6 +61,7 @@ export function WarehousesPage() {
   const [editAddress, setEditAddress] = useState("");
   const [editStatus, setEditStatus] = useState<"active" | "inactive">("active");
 
+  const { data: detail, isLoading: detailLoading } = useWarehouse(detailId ?? "");
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     if (!needle) return items;
@@ -186,7 +188,7 @@ export function WarehousesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon-sm" aria-label="View" onClick={() => setDetail(w)}>
+                        <Button variant="ghost" size="icon-sm" aria-label="View" onClick={() => setDetailId(w.id)}>
                           <Eye />
                         </Button>
                         <Button variant="ghost" size="icon-sm" aria-label="Edit" onClick={() => openEdit(w)}>
@@ -261,24 +263,65 @@ export function WarehousesPage() {
       </FormDialog>
 
       <FormDialog
-        open={!!detail}
+        open={!!detailId}
         onOpenChange={(next) => {
-          if (!next) setDetail(null);
+          if (!next) setDetailId(null);
         }}
         title={detail?.name ?? "Warehouse"}
         description="Warehouse details"
-        onSubmit={() => setDetail(null)}
+        onSubmit={() => setDetailId(null)}
         submitLabel="Close"
       >
-        {detail && (
+        {detailLoading && !detail ? (
+          <Skeleton className="h-32 w-full" />
+        ) : detail ? (
           <>
             <DetailLine label="Code" value={detail.code} />
             <DetailLine label="Location" value={detail.address || "—"} />
             <DetailLine label="Status" value={detail.status} />
             <DetailLine label="Products with stock" value={String(detail.productCount)} />
             <DetailLine label="Total on hand" value={String(detail.totalOnHand)} />
+            <DetailLine label="Damaged" value={String(detail.totalDamaged)} />
+            <DetailLine label="Reserved" value={String(detail.totalReserved)} />
+            <div className="mt-3">
+              <div className="mb-2 text-[12px] font-semibold text-text">Products in this warehouse</div>
+              {!detail.products?.length ? (
+                <p className="py-4 text-center text-[12.5px] text-text-3">No stock in this warehouse.</p>
+              ) : (
+                <div className="overflow-x-auto rounded-[10px] border border-border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-surface-subtle hover:bg-surface-subtle">
+                        <TableHead>Product</TableHead>
+                        <TableHead>SKU</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Damaged</TableHead>
+                        <TableHead className="text-right">Reserved</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {detail.products.map((p) => (
+                        <TableRow key={p.productId}>
+                          <TableCell className="font-medium">{p.name}</TableCell>
+                          <TableCell className="tabular-nums text-text-2">{p.sku}</TableCell>
+                          <TableCell className="text-right tabular-nums">{p.quantity}</TableCell>
+                          <TableCell className="text-right tabular-nums">{p.damagedQuantity}</TableCell>
+                          <TableCell className="text-right tabular-nums">{p.reservedQuantity}</TableCell>
+                          <TableCell>
+                            <Badge tone={p.status === "active" ? "green" : "neutral"}>
+                              {p.status === "active" ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
           </>
-        )}
+        ) : null}
       </FormDialog>
 
       <FormDialog
