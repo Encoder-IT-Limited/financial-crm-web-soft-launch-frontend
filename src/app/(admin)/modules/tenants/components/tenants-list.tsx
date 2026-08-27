@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { PageHeading } from "@/components/shared/page-heading";
@@ -18,6 +18,7 @@ import { tenantsApi, RETENTION_DAYS } from "../api/tenants.service";
 import { seatUsage, tenantMrr, type Tenant } from "../types";
 import { TenantDetailsDialog } from "./tenant-details-dialog";
 import { TenantEditDialog } from "./tenant-edit-dialog";
+import { TenantCreateDialog } from "./tenant-create-dialog";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyColumnDef<TData> = ColumnDef<TData, any>;
@@ -42,6 +43,7 @@ export function TenantsList() {
   const [detailsId, setDetailsId] = useState<string | null>(() => searchParams.get("tenant"));
   const [editId, setEditId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
   const deleteTenant = tenants.find((t) => t.id === deleteId);
 
   const planName = (planId: string) => plans.find((p) => p.id === planId)?.name ?? "—";
@@ -136,7 +138,15 @@ export function TenantsList() {
 
   return (
     <div>
-      <PageHeading title="All Clients" subtitle="Manage every tenant account on the platform" />
+      <PageHeading
+        title="All Clients"
+        subtitle="Manage every tenant account on the platform"
+        actions={
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus /> New tenant
+          </Button>
+        }
+      />
 
       <FilterableTable
         columns={columns}
@@ -179,6 +189,8 @@ export function TenantsList() {
         }
         onClearFilters={() => setFilters({ search: "", status: "all", planId: "all" })}
       />
+
+      {createOpen && <TenantCreateDialog open={createOpen} onOpenChange={setCreateOpen} />}
 
       {detailsId && (
         <TenantDetailsDialog

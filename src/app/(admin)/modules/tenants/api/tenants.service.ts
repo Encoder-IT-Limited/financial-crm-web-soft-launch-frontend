@@ -1,6 +1,6 @@
 import { apiGet, apiSend } from "@/lib/api/envelope";
 import type { TenantStatus } from "@/components/shared/status-badge";
-import type { TenantEditValues } from "../schemas";
+import type { TenantEditValues, TenantCreateValues } from "../schemas";
 import type { BillingCycle, Tenant, TenantUser, TenantUserRole } from "../types";
 
 type ApiTenantUser = { id: string; name: string; email: string; role: string };
@@ -76,6 +76,21 @@ export const tenantsApi = {
       return undefined;
     }
   },
+
+  create: async (input: TenantCreateValues): Promise<Tenant> =>
+    mapTenant(
+      await apiSend<ApiTenant>("post", "/admin/tenants", {
+        name: input.name,
+        subdomain: input.subdomain,
+        ownerName: input.ownerName,
+        ownerEmail: input.ownerEmail,
+        ownerPassword: input.ownerPassword,
+        legalName: input.legalName || undefined,
+        country: input.country || undefined,
+        planId: input.planId || undefined,
+        billingCycle: input.billingCycle,
+      }),
+    ),
 
   suspend: async (id: string): Promise<void> => {
     await apiSend("post", `/admin/tenants/${id}/suspend`);

@@ -14,3 +14,22 @@ export const tenantEditSchema = z.object({
 });
 
 export type TenantEditValues = z.infer<typeof tenantEditSchema>;
+
+export const tenantCreateSchema = z.object({
+  name: z.string().trim().min(2, "Tenant name is required"),
+  subdomain: z
+    .string()
+    .trim()
+    .min(1, "Subdomain is required")
+    .max(63, "Subdomain must be 63 characters or less")
+    .regex(/^[a-z0-9-]+$/, "Use lowercase letters, digits, and hyphens only"),
+  ownerName: z.string().trim().min(2, "Owner name is required"),
+  ownerEmail: z.string().trim().email("Enter a valid email"),
+  ownerPassword: z.string().min(8, "Password must be at least 8 characters"),
+  legalName: z.string().trim().optional(),
+  country: z.string().trim().optional(),
+  planId: z.string().optional(),
+  billingCycle: z.enum(["monthly", "yearly"]),
+});
+
+export type TenantCreateValues = z.infer<typeof tenantCreateSchema>;
