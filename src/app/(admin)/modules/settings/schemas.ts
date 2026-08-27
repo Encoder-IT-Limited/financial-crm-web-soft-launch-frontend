@@ -5,6 +5,7 @@ export const generalSettingsSchema = z.object({
   logoUrl: z.string(),
   tagline: z.string().trim().min(1, "Tagline is required").max(120, "Keep it under 120 characters"),
   contactEmail: z.string().trim().email("Enter a valid email"),
+  currency: z.string().trim().min(3, "Currency is required").max(8),
   maintenanceEnabled: z.boolean(),
   maintenanceMessage: z.string().trim().max(240, "Keep it under 240 characters"),
 });

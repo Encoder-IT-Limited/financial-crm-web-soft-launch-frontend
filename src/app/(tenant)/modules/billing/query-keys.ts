@@ -1,9 +1,12 @@
 export const billingKeys = {
   all: ["billing"] as const,
   invoices: () => [...billingKeys.all, "invoices"] as const,
+  invoicesPage: (params: Record<string, unknown>) => [...billingKeys.invoices(), "page", params] as const,
+  invoiceStats: () => [...billingKeys.invoices(), "stats"] as const,
   invoice: (id: string) => [...billingKeys.invoices(), id] as const,
   nextNumber: () => [...billingKeys.all, "invoice-next-number"] as const,
   recurring: () => [...billingKeys.all, "recurring"] as const,
+  recurringPage: (page: number, pageSize: number) => [...billingKeys.recurring(), "page", page, pageSize] as const,
   adjustments: () => [...billingKeys.all, "adjustments"] as const,
   /** Alias — same cache as adjustments() */
   creditNotes: () => [...billingKeys.adjustments()] as const,

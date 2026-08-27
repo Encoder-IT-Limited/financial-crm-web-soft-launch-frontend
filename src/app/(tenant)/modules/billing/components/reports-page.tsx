@@ -51,7 +51,7 @@ export function ReportsPage() {
 }
 
 function SalesReport() {
-  const { data: invoices = [], isLoading } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
+  const { data: invoices = [], isLoading } = useQuery({ queryKey: ["invoices"], queryFn: () => invoiceApi.list() });
 
   const months = useMemo(() => {
     const now = new Date();
@@ -138,7 +138,7 @@ function SalesReport() {
 }
 
 function InvoiceReport() {
-  const { data: invoices = [], isLoading } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
+  const { data: invoices = [], isLoading } = useQuery({ queryKey: ["invoices"], queryFn: () => invoiceApi.list() });
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
   const [status, setStatus] = useState<"all" | InvoiceDisplayStatus>("all");
 
@@ -232,7 +232,7 @@ type StatementRow = {
 
 function CustomerStatement() {
   const { data: customers = [] } = useQuery({ queryKey: ["customers"], queryFn: customersApi.list });
-  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: invoiceApi.list });
+  const { data: invoices = [] } = useQuery({ queryKey: ["invoices"], queryFn: () => invoiceApi.list() });
   const { data: adjustments = [] } = useQuery({ queryKey: billingKeys.adjustments(), queryFn: adjustmentsApi.list });
   const [customerId, setCustomerId] = useState("");
 

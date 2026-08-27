@@ -6,10 +6,13 @@ import {
   toApiTerminalUpdate,
   type ApiPosTerminal,
 } from "./mappers";
+import { compactParams } from "./params";
 
 export const posTerminalsApi = {
-  list: async (): Promise<PosTerminal[]> => {
-    const rows = await apiGet<ApiPosTerminal[]>("/pos/terminals");
+  list: async (status?: PosTerminal["status"]): Promise<PosTerminal[]> => {
+    const rows = await apiGet<ApiPosTerminal[]>("/pos/terminals", {
+      params: compactParams({ status: status === "active" ? "ACTIVE" : status === "inactive" ? "INACTIVE" : undefined }),
+    });
     return rows.map(mapTerminal);
   },
 
@@ -28,8 +31,13 @@ export const posTerminalsApi = {
   },
 
   setStatus: async (id: string, status: PosTerminal["status"]): Promise<void> => {
-    await apiSend("patch", `/pos/terminals/${id}`, {
-      status: status === "active" ? "ACTIVE" : "INACTIVE",
-    });
+    if (status === "inactive") {
+      await apiSend("delete", `/pos/terminals/${id}`);
+      return;
+    }
+    await apiSend("patch", `/pos/terminals/${id}`, { status: "ACTIVE" });
   },
+
+  setManagerPin: (pin: string, currentPin?: string) =>
+    apiSend("post", "/pos/manager-pin", { pin, currentPin }),
 };

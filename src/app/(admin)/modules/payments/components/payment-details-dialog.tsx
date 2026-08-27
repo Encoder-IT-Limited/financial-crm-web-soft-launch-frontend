@@ -34,18 +34,47 @@ export function PaymentDetailsDialog({
   paymentId: string;
 }) {
   const queryClient = useQueryClient();
-  const { data: payments = [] } = useQuery({ queryKey: ["payments"], queryFn: paymentsApi.list });
-  const payment = payments.find((p) => p.id === paymentId);
+  const { data: payment } = useQuery({
+    queryKey: ["payments", paymentId],
+    queryFn: () => paymentsApi.get(paymentId),
+    enabled: open,
+  });
 
   if (!payment) return null;
 
   function handleStatusChange(status: PaymentStatus) {
-    if (!payment || status === payment.status) return;
-    paymentsApi.updateStatus(payment.id, status).then(() => {
-      toast.success(`${payment.reference} marked ${status}`);
+    if (status === payment.status) return;
+    paymentsApi
+      .updateStatus(payment.id, status)
+      .then(() => {
+        toast.success(`${payment.reference} marked ${status}`);
+        queryClient.invalidateQueries({ queryKey: ["payments"] });
+        queryClient.invalidateQueries({ queryKey: ["audit"] });
+        queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
+      })
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : "Could not update payment");
+      });
+  }
+
+  async function handleDownload() {
+    try {
+      await paymentsApi.downloadInvoice(payment.id, payment.reference);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not download invoice");
+    }
+  }
+
+  async function handleRefund() {
+    try {
+      await paymentsApi.refund(payment.id);
+      toast.success(`${payment.reference} refunded`);
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["audit"] });
-    });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not refund payment");
+    }
   }
 
   return (
@@ -68,7 +97,7 @@ export function PaymentDetailsDialog({
           />
           <Field label="Reference" value={payment.reference} />
           <Field label="Plan/Subscription" value={payment.planName} />
-          <Field label="Type" value={PAYMENT_TYPE_LABELS[payment.type]} />
+          <Field label="Type" value={PAYMENT_TYPE_LABELS[payment.type] ?? payment.type} />
           <Field label="Amount" value={fmtMoney(payment.amount)} />
           <Field label="Method" value={<span className="uppercase">{payment.method}</span>} />
           <Field label="Date" value={fmtDateTime(payment.date)} />
@@ -91,14 +120,16 @@ export function PaymentDetailsDialog({
           />
         </Card>
 
-        <Button
-          type="button"
-          variant="outline"
-          className="w-fit"
-          onClick={() => toast.info("Invoice download will be available once the billing backend is connected")}
-        >
-          <Download /> Download invoice
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" className="w-fit" onClick={handleDownload}>
+            <Download /> Download invoice
+          </Button>
+          {payment.status !== "refunded" && (
+            <Button type="button" variant="outline" className="w-fit" onClick={handleRefund}>
+              Refund
+            </Button>
+          )}
+        </div>
       </div>
     </EntityDetailsDialog>
   );

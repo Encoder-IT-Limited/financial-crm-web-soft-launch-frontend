@@ -2,8 +2,8 @@
 
 import { Minus, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { fmtMoney } from "@/lib/format";
 import type { CartLine } from "../types";
+import { useFmtMoney } from "../use-fmt-money";
 
 export function CartLineRow({
   line,
@@ -14,6 +14,7 @@ export function CartLineRow({
   onQuantityChange: (quantity: number) => void;
   onRemove: () => void;
 }) {
+  const money = useFmtMoney();
   const lineTotal = line.quantity * line.unitPrice - (line.discountAmount ?? 0);
 
   return (
@@ -21,7 +22,7 @@ export function CartLineRow({
       <div className="min-w-0 flex-1">
         <div className="truncate text-[12.5px] font-semibold text-text">{line.name}</div>
         <div className="text-[11px] text-text-3">
-          {fmtMoney(line.unitPrice)} {line.discountAmount ? `· −${fmtMoney(line.discountAmount)} discount` : ""}
+          {money(line.unitPrice)} {line.discountAmount ? `· −${money(line.discountAmount)} discount` : ""}
         </div>
       </div>
 
@@ -40,7 +41,7 @@ export function CartLineRow({
         </Button>
       </div>
 
-      <span className="w-16 shrink-0 text-right text-[12.5px] font-bold text-text">{fmtMoney(lineTotal)}</span>
+      <span className="w-16 shrink-0 text-right text-[12.5px] font-bold text-text">{money(lineTotal)}</span>
 
       <Button variant="ghost" size="icon-sm" onClick={onRemove} aria-label="Remove line" className="shrink-0 text-red">
         <X />

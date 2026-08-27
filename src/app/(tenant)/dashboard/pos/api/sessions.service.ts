@@ -1,10 +1,24 @@
 import { apiGet, apiSend } from "@/lib/api/envelope";
 import type { NewPosSessionInput, PosSession } from "../types";
 import { mapSession, type ApiPosSession } from "./mappers";
+import { compactParams } from "./params";
+
+export type PosSessionListParams = {
+  status?: "open" | "closed";
+  terminalId?: string;
+  startDate?: string;
+  endDate?: string;
+};
 
 export const posSessionsApi = {
-  list: async (): Promise<PosSession[]> => {
-    const rows = await apiGet<ApiPosSession[]>("/pos/sessions");
+  list: async (params?: PosSessionListParams): Promise<PosSession[]> => {
+    const query = compactParams({
+      status: params?.status === "open" ? "OPEN" : params?.status === "closed" ? "CLOSED" : undefined,
+      terminalId: params?.terminalId,
+      startDate: params?.startDate,
+      endDate: params?.endDate,
+    });
+    const rows = await apiGet<ApiPosSession[]>("/pos/sessions", { params: query });
     return rows.map(mapSession);
   },
 

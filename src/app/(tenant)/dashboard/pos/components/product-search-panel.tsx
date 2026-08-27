@@ -5,11 +5,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { inventoryApi } from "@/app/(tenant)/modules/inventory/api/inventory.service";
-import type { ProductLookupItem } from "../../invoices/mock/product-lookup-seed";
+import type { ProductLookupItem } from "../mock/product-lookup-seed";
 import { ProductTile } from "./product-tile";
 
 function stockAt(item: ProductLookupItem, warehouseId: string): number {
   return item.stockByWarehouse[warehouseId] ?? 0;
+}
+
+function damagedAt(item: ProductLookupItem, warehouseId: string): number {
+  return item.damagedByWarehouse?.[warehouseId] ?? 0;
 }
 
 /** Search box (also where a barcode scanner's fast text input lands —
@@ -27,15 +31,18 @@ export function ProductSearchPanel({
     queryFn: async (): Promise<ProductLookupItem[]> => {
       const [catalog, stock] = await Promise.all([
         inventoryApi.listProducts(),
-        inventoryApi.listStock(),
+        inventoryApi.listStock({ warehouseId }),
       ]);
       return catalog
         .filter((p) => p.status === "active")
         .map((p) => {
           const stockByWarehouse: Record<string, number> = {};
+          const damagedByWarehouse: Record<string, number> = {};
           for (const row of stock) {
-            if (row.productId === p.id)
+            if (row.productId === p.id) {
               stockByWarehouse[row.warehouseId] = row.quantity;
+              damagedByWarehouse[row.warehouseId] = row.damagedQuantity;
+            }
           }
           return {
             id: p.id,
@@ -44,6 +51,7 @@ export function ProductSearchPanel({
             price: p.price,
             taxRate: p.taxRate ?? 5,
             stockByWarehouse,
+            damagedByWarehouse,
           };
         });
     },
@@ -89,6 +97,7 @@ export function ProductSearchPanel({
             key={product.id}
             product={product}
             stock={stockAt(product, warehouseId)}
+            damaged={damagedAt(product, warehouseId)}
             onAdd={() => onAdd(product)}
           />
         ))}

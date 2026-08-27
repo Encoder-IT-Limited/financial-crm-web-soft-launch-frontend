@@ -41,6 +41,7 @@ export type StockBalance = {
   productId: string;
   warehouseId: string;
   quantity: number;
+  damagedQuantity: number;
   averageCost: number;
 };
 

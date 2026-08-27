@@ -17,6 +17,21 @@ export function computePlanTotal(plan: Plan, seats: number, billing: BillingPeri
   return plan.priceYearly + extraSeats * extraSeatYearly;
 }
 
+export function minSeatsForPlan(plan: Plan): number {
+  return plan.minSeats ?? plan.baseSeats ?? 1;
+}
+
+export function clampSeatsForPlan(plan: Plan, seats: number): number {
+  const min = minSeatsForPlan(plan);
+  const max = plan.maxSeats ?? Number.POSITIVE_INFINITY;
+  return Math.min(max, Math.max(min, seats));
+}
+
+export function lowestMinSeats(plans: Plan[]): number {
+  if (!plans.length) return 1;
+  return Math.min(...plans.map(minSeatsForPlan));
+}
+
 /** Modules newly introduced at this tier vs. the previous one — lets each
  * card read "Everything in X, plus…" instead of repeating the full list. */
 export function incrementalModules(plans: Plan[], index: number): ModuleKey[] {

@@ -9,7 +9,7 @@ import { PLANS } from "../components/plans-data";
 export const metadata = pageMetadata({
   title: "Pricing",
   description:
-    "Transparent AED pricing for Starter, Growth, and Enterprise plans. 14-day free trial, no hidden fees — compare modules and seats.",
+    "Transparent pricing for every team size. Free trial, no hidden fees — compare modules and seats.",
   path: "/pricing",
 });
 

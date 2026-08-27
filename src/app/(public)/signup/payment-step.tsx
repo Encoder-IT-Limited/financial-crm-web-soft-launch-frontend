@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Lock } from "lucide-react";
 import { z } from "zod";
 import type { Plan } from "@/types/plan";
+import { usePlatformCurrency } from "../modules/settings/hooks/use-public-settings";
 
 const paymentSchema = z.object({
   cardName: z.string().min(1, "Cardholder name is required"),
@@ -25,6 +26,7 @@ type PaymentStepProps = {
 };
 
 export function PaymentStep({ plan, submitting, formError, onSubmit }: PaymentStepProps) {
+  const currency = usePlatformCurrency();
   const [payment, setPayment] = useState<PaymentValues>(emptyPayment);
   const [errors, setErrors] = useState<PaymentErrors>({});
 
@@ -49,7 +51,7 @@ export function PaymentStep({ plan, submitting, formError, onSubmit }: PaymentSt
       <div className="mt-6 flex items-center justify-between rounded-xl border border-border bg-surface-subtle px-4 py-3 text-[12.5px]">
         <span className="text-text-3">{plan.name} plan</span>
         <span className="font-semibold text-text">
-          {plan.priceMonthly > 0 ? `AED ${plan.priceMonthly.toLocaleString()}/mo` : "Custom"}
+          {plan.priceMonthly > 0 ? `${currency} ${plan.priceMonthly.toLocaleString()}/mo` : "Custom"}
         </span>
       </div>
 

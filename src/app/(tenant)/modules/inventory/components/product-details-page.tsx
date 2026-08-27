@@ -12,7 +12,7 @@ import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { ApiError } from "@/lib/api/errors";
 import { fmtMoney } from "@/lib/format";
 import { toast } from "@/lib/toast";
-import { useDeleteProduct, useProduct, useUpdateProduct } from "../hooks/use-inventory";
+import { useDeleteProduct, useProduct, useStock, useUpdateProduct } from "../hooks/use-inventory";
 import { ProductEditDialog } from "./product-edit-dialog";
 import { ProductThumbnail, STOCK_TONE_LABEL, getStockTone } from "./product-thumbnail";
 
@@ -28,6 +28,10 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
 export function ProductDetailsPage({ productId }: { productId: string }) {
   const router = useRouter();
   const { data: product, isLoading, isError } = useProduct(productId);
+  const { data: stock = [] } = useStock();
+  const damagedQuantity = stock
+    .filter((row) => row.productId === productId)
+    .reduce((sum, row) => sum + row.damagedQuantity, 0);
   const deleteProduct = useDeleteProduct();
   const updateProduct = useUpdateProduct();
   const [editOpen, setEditOpen] = useState(false);
@@ -93,6 +97,10 @@ export function ProductDetailsPage({ productId }: { productId: string }) {
         <Card className="gap-0 p-4">
           <div className="text-[11.5px] text-text-3">On hand</div>
           <div className="mt-1 text-lg font-extrabold">{product.stock}</div>
+        </Card>
+        <Card className="gap-0 p-4">
+          <div className="text-[11.5px] text-text-3">Damaged</div>
+          <div className={damagedQuantity > 0 ? "mt-1 text-lg font-extrabold text-amber" : "mt-1 text-lg font-extrabold"}>{damagedQuantity}</div>
         </Card>
         <Card className="gap-0 p-4">
           <div className="text-[11.5px] text-text-3">Minimum stock</div>

@@ -1,5 +1,6 @@
 import { PublicNavbar } from "./components/public-navbar";
 import { PublicFooter } from "./components/public-footer";
+import { PublicMaintenanceGate } from "./components/public-maintenance-gate";
 import { ReactQueryProvider } from "@/providers/react-query-provider";
 
 export default function PublicLayout({
@@ -11,7 +12,7 @@ export default function PublicLayout({
     <ReactQueryProvider>
       <div className="flex min-h-dvh flex-col bg-background">
         <PublicNavbar />
-        {children}
+        <PublicMaintenanceGate>{children}</PublicMaintenanceGate>
         <PublicFooter />
       </div>
     </ReactQueryProvider>

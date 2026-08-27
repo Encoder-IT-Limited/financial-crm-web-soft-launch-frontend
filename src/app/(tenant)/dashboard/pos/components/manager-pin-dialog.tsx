@@ -58,7 +58,7 @@ export function ManagerPinDialog({
         <Input
           type="password"
           inputMode="numeric"
-          maxLength={4}
+          maxLength={8}
           value={pin}
           onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
           placeholder="••••"

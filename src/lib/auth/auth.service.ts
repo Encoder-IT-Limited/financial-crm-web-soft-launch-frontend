@@ -16,7 +16,13 @@ export const authService = {
     return apiSend<void>("post", "/auth/logout");
   },
   requestPasswordReset: (body: { email: string }) =>
-    apiSend<void>("post", "/auth/forgot-password", body),
+    apiSend<{ accepted: true; otp?: string }>("post", "/auth/forgot-password", body),
+  verifyOtp: (body: { email: string; otp: string }) =>
+    apiSend<{ verified: true }>("post", "/auth/verify-otp", body),
   resetPassword: (body: { email: string; otp: string; newPassword: string }) =>
-    apiSend<void>("post", "/auth/reset-password", body),
+    apiSend<{ reset: true }>("post", "/auth/reset-password", {
+      email: body.email,
+      otp: body.otp,
+      password: body.newPassword,
+    }),
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,13 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X } from "lucide-react";
-import { fmtMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { POS_PAYMENT_METHOD_LABELS, round2, type PosPayment, type PosPaymentMethod } from "../types";
+import { useFmtMoney } from "../use-fmt-money";
 
 /** Checkout — one or more payment methods (split tender). Cash overpaid
- * beyond the total shows a change-due figure, same as a real register
- * telling the cashier what to hand back. */
+ * beyond the total shows a change-due figure; the excess is sent as
+ * tenderedAmount so the backend can record what was handed over. */
 export function PaymentDialog({
   open,
   onOpenChange,
@@ -33,11 +33,12 @@ export function PaymentDialog({
   onConfirm: (payments: PosPayment[]) => void;
   confirming: boolean;
 }) {
+  const money = useFmtMoney();
   const [rows, setRows] = useState<{ method: PosPaymentMethod; amount: string }[]>([{ method: "cash", amount: String(total) }]);
 
-  function reset() {
-    setRows([{ method: "cash", amount: String(total) }]);
-  }
+  useEffect(() => {
+    if (open) setRows([{ method: "cash", amount: String(total) }]);
+  }, [open, total]);
 
   const paid = round2(rows.reduce((sum, r) => sum + (Number(r.amount) || 0), 0));
   const remaining = round2(total - paid);
@@ -56,12 +57,23 @@ export function PaymentDialog({
     setRows(rows.filter((_, i) => i !== index));
   }
 
+  function toPayments(): PosPayment[] {
+    const over = hasCash && paid > total + 0.005 ? round2(paid - total) : 0;
+    return rows.map((r) => {
+      const typed = round2(Number(r.amount) || 0);
+      if (r.method === "cash" && over > 0) {
+        return { method: r.method, amount: round2(typed - over), tenderedAmount: typed };
+      }
+      return { method: r.method, amount: typed };
+    });
+  }
+
   return (
-    <Dialog open={open} onOpenChange={(next) => { onOpenChange(next); if (next) reset(); }}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
           <DialogTitle>Payment</DialogTitle>
-          <DialogDescription>Total due {fmtMoney(total)}</DialogDescription>
+          <DialogDescription>Total due {money(total)}</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-2">
@@ -102,9 +114,9 @@ export function PaymentDialog({
 
         <div className={cn("text-[13px] font-semibold", remaining > 0.005 ? "text-amber" : "text-green")}>
           {remaining > 0.005
-            ? `Remaining: ${fmtMoney(remaining)}`
+            ? `Remaining: ${money(remaining)}`
             : hasCash && paid > total + 0.005
-              ? `Change due: ${fmtMoney(paid - total)}`
+              ? `Change due: ${money(paid - total)}`
               : "Fully covered"}
         </div>
 
@@ -112,19 +124,7 @@ export function PaymentDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            disabled={!canConfirm || confirming}
-            onClick={() =>
-              onConfirm(
-                rows.map((r) => ({
-                  method: r.method,
-                  // A cash overpayment is recorded as exactly the amount owed —
-                  // the excess is change handed back, not part of the sale.
-                  amount: r.method === "cash" && hasCash && paid > total ? round2(Number(r.amount) - (paid - total)) : round2(Number(r.amount) || 0),
-                }))
-              )
-            }
-          >
+          <Button disabled={!canConfirm || confirming} onClick={() => onConfirm(toPayments())}>
             {confirming ? "Processing..." : "Confirm Payment"}
           </Button>
         </DialogFooter>

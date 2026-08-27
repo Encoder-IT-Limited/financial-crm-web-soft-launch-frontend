@@ -15,6 +15,8 @@ export type GeneralSettings = {
   tagline: string;
   /** Shown on the public /contact page. */
   contactEmail: string;
+  /** ISO 4217 code used on public pricing and admin plan labels. */
+  currency: string;
   /** Platform-wide — when enabled, the public site shows a maintenance
    * page instead of normal content. */
   maintenanceEnabled: boolean;
