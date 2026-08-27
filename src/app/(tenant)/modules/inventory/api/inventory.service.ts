@@ -207,15 +207,22 @@ export const inventoryApi = {
   deleteWarehouse: (id: string) =>
     apiSend<{ id: string; deleted: boolean }>("delete", `/inventory/warehouses/${id}`),
 
-  listStock: async () => {
-    const rows = await apiGet<Array<{ productId: string; warehouseId: string; quantity: unknown; averageCost: unknown }>>(
-      "/inventory/stock",
-    );
+  listStock: async (params?: { warehouseId?: string }) => {
+    const rows = await apiGet<
+      Array<{
+        productId: string;
+        warehouseId: string;
+        quantity: unknown;
+        damagedQuantity?: unknown;
+        averageCost: unknown;
+      }>
+    >("/inventory/stock", params?.warehouseId ? { params: { warehouseId: params.warehouseId } } : undefined);
     return rows.map(
       (r): StockBalance => ({
         productId: r.productId,
         warehouseId: r.warehouseId,
         quantity: Number(r.quantity),
+        damagedQuantity: Number(r.damagedQuantity ?? 0),
         averageCost: Number(r.averageCost),
       }),
     );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Pause, Pencil, Play, Plus, RefreshCw, Trash2 } from "lucide-react";
@@ -12,36 +12,35 @@ import { toast } from "@/lib/toast";
 import { fmtDate, fmtMoney } from "@/lib/format";
 import { recurringApi } from "../api/recurring.service";
 import { FREQUENCY_LABELS, type RecurringTemplate } from "../recurring/types";
-import { useInvoices } from "../hooks/use-invoices";
 import { useCustomers } from "../../crm/hooks/use-customers";
 import { billingKeys } from "../query-keys";
 import { RecurringTemplateDialog } from "./recurring-template-dialog";
 
 export function RecurringTemplatesPanel() {
   const queryClient = useQueryClient();
-  const { data: templates = [], isLoading: templatesLoading } = useQuery({
-    queryKey: billingKeys.recurring(),
-    queryFn: recurringApi.list,
-  });
   const { data: customers = [] } = useCustomers();
-  const { data: invoices = [] } = useInvoices();
-
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringTemplate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RecurringTemplate | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
   const pageSize = 10;
 
+  const { data: page, isLoading: templatesLoading } = useQuery({
+    queryKey: billingKeys.recurringPage(pageIndex + 1, pageSize),
+    queryFn: () => recurringApi.listPage({ page: pageIndex + 1, pageSize }),
+    placeholderData: (previous) => previous,
+  });
+  const templates = page?.items ?? [];
+  const total = page?.total ?? 0;
+  const activeCount = page?.activeCount ?? 0;
+  const next = page?.nextInvoiceDate ?? null;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  useEffect(() => {
+    if (pageIndex > 0 && pageIndex >= pageCount) setPageIndex(pageCount - 1);
+  }, [pageIndex, pageCount]);
+
   const customerName = (id: string) => customers.find((c) => c.id === id)?.name ?? "—";
-  const lastInvoice = (template: RecurringTemplate) =>
-    template.lastInvoiceId ? invoices.find((inv) => inv.id === template.lastInvoiceId) : undefined;
-
-  const next = useMemo(() => {
-    return templates.find((t) => t.status === "active")?.nextInvoiceDate;
-  }, [templates]);
-
-  const pageCount = Math.max(1, Math.ceil(templates.length / pageSize));
-  const pageTemplates = templates.slice(pageIndex * pageSize, pageIndex * pageSize + pageSize);
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: billingKeys.recurring() });
@@ -94,7 +93,7 @@ export function RecurringTemplatesPanel() {
           <div>
             <div className="text-sm font-bold text-text">Recurring templates</div>
             <div className="text-[11px] text-text-4">
-              {templates.filter((t) => t.status === "active").length} active
+              {activeCount} active
               {next ? ` · next billing ${fmtDate(next)}` : ""}
             </div>
           </div>
@@ -142,8 +141,7 @@ export function RecurringTemplatesPanel() {
               </tr>
             </thead>
             <tbody>
-              {pageTemplates.map((template) => {
-                const last = lastInvoice(template);
+              {templates.map((template) => {
                 return (
                   <tr key={template.id} className="border-b border-border transition-colors hover:bg-surface-subtle">
                     <td className="px-5 py-3 font-bold text-text">{template.number}</td>
@@ -155,9 +153,9 @@ export function RecurringTemplatesPanel() {
                     <td className="px-5 py-3 text-[12.5px] text-text-2">{FREQUENCY_LABELS[template.frequency]}</td>
                     <td className="px-5 py-3 text-[12.5px] text-text-2">{fmtDate(template.nextInvoiceDate)}</td>
                     <td className="px-5 py-3 text-[12.5px]">
-                      {last ? (
-                        <Link href={`/dashboard/invoices/${last.id}`} className="font-semibold text-blue hover:underline">
-                          {last.number}
+                      {template.lastInvoiceId ? (
+                        <Link href={`/dashboard/invoices/${template.lastInvoiceId}`} className="font-semibold text-blue hover:underline">
+                          View
                         </Link>
                       ) : (
                         <span className="text-text-4">—</span>
@@ -215,7 +213,7 @@ export function RecurringTemplatesPanel() {
                   </tr>
                 );
               })}
-              {templates.length === 0 && (
+              {total === 0 && (
                 <tr>
                   <td colSpan={10} className="h-24 text-center text-[13px] text-text-4">
                     {templatesLoading ? "Loading templates…" : "No recurring templates yet — create one to start billing on a schedule."}
@@ -227,8 +225,7 @@ export function RecurringTemplatesPanel() {
         </div>
 
         <div className="flex flex-col divide-y divide-border lg:hidden">
-          {pageTemplates.map((template) => {
-            const last = lastInvoice(template);
+          {templates.map((template) => {
             return (
               <div key={template.id} className="flex flex-col gap-2 p-4">
                 <div className="flex items-center justify-between gap-2">
@@ -251,12 +248,12 @@ export function RecurringTemplatesPanel() {
                   <Button variant="outline" size="xs" disabled={template.status !== "active"} onClick={() => handleGenerate(template)}>
                     <RefreshCw /> Generate now
                   </Button>
-                  {last && (
+                  {template.lastInvoiceId && (
                     <Link
-                      href={`/dashboard/invoices/${last.id}`}
+                      href={`/dashboard/invoices/${template.lastInvoiceId}`}
                       className="text-[11.5px] font-semibold text-blue underline-offset-2 hover:underline"
                     >
-                      Last: {last.number}
+                      Last invoice
                     </Link>
                   )}
                   <div className="ml-auto flex gap-1">
@@ -288,14 +285,14 @@ export function RecurringTemplatesPanel() {
               </div>
             );
           })}
-          {templates.length === 0 && (
+          {total === 0 && (
             <div className="p-8 text-center text-[13px] text-text-4">
               {templatesLoading ? "Loading templates…" : "No recurring templates yet — create one to start billing on a schedule."}
             </div>
           )}
         </div>
 
-        {templates.length > pageSize && (
+        {total > pageSize && (
           <div className="flex items-center justify-between border-t border-border px-5 py-2.5 text-[12.5px] text-text-3">
             <span>
               Page {pageIndex + 1} of {pageCount}

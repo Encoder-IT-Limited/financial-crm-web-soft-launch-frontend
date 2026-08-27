@@ -40,7 +40,11 @@ if (typeof window !== "undefined") {
       url.startsWith("/admin") ||
       url.startsWith("/auth/signup") ||
       url === "/plans" ||
-      url.startsWith("/plans?");
+      url.startsWith("/plans?") ||
+      url === "/settings" ||
+      url.startsWith("/settings?") ||
+      url === "/contact" ||
+      url.startsWith("/contact?");
 
     if (skipTenantHeader) return config;
 

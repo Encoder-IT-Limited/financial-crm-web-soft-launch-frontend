@@ -3,10 +3,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { EntityDetailsDialog } from "@/components/shared/entity-details-dialog";
-import { fmtDateTime, fmtMoney } from "@/lib/format";
+import { fmtDateTime } from "@/lib/format";
 import { posSessionsApi } from "../api/sessions.service";
 import { posSalesApi } from "../api/sales.service";
 import { posTerminalsApi } from "../api/terminals.service";
+import { useFmtMoney } from "../use-fmt-money";
 
 export function SessionDetailsDialog({
   sessionId,
@@ -18,8 +19,9 @@ export function SessionDetailsDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const { data: session } = useQuery({ queryKey: ["pos-session", sessionId], queryFn: () => posSessionsApi.get(sessionId), enabled: open });
-  const { data: sales = [] } = useQuery({ queryKey: ["pos-sales"], queryFn: posSalesApi.list, enabled: open });
-  const { data: terminals = [] } = useQuery({ queryKey: ["pos-terminals"], queryFn: posTerminalsApi.list, enabled: open });
+  const { data: sales = [] } = useQuery({ queryKey: ["pos-sales"], queryFn: () => posSalesApi.list(), enabled: open });
+  const { data: terminals = [] } = useQuery({ queryKey: ["pos-terminals"], queryFn: () => posTerminalsApi.list(), enabled: open });
+  const money = useFmtMoney();
 
   if (!session) return null;
 
@@ -36,12 +38,12 @@ export function SessionDetailsDialog({
       statusSlot={<Badge tone={session.status === "open" ? "green" : "neutral"}>{session.status}</Badge>}
     >
       <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-4">
-        <Stat label="Opening Cash" value={fmtMoney(session.openingCash)} />
-        <Stat label="Cash Sales" value={fmtMoney(cashTotal)} />
-        <Stat label="Expected" value={session.expectedCash !== undefined ? fmtMoney(session.expectedCash) : "—"} />
+        <Stat label="Opening Cash" value={money(session.openingCash)} />
+        <Stat label="Cash Sales" value={money(cashTotal)} />
+        <Stat label="Expected" value={session.expectedCash !== undefined ? money(session.expectedCash) : "—"} />
         <Stat
           label="Variance"
-          value={session.variance !== undefined ? `${session.variance > 0 ? "+" : ""}${fmtMoney(session.variance)}` : "—"}
+          value={session.variance !== undefined ? `${session.variance > 0 ? "+" : ""}${money(session.variance)}` : "—"}
         />
       </div>
 
@@ -51,7 +53,7 @@ export function SessionDetailsDialog({
           <div key={sale.id} className="flex items-center justify-between px-5 py-2.5 text-[12.5px]">
             <span className="font-semibold text-text">{sale.number}</span>
             <span className="text-text-3">{fmtDateTime(sale.createdAt)}</span>
-            <span className="font-bold text-text">{fmtMoney(sale.total)}</span>
+            <span className="font-bold text-text">{money(sale.total)}</span>
           </div>
         ))}
         {sessionSales.length === 0 && <div className="px-5 py-4 text-[12.5px] text-text-4">No sales recorded during this session.</div>}

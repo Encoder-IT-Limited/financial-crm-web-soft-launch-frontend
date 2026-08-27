@@ -19,6 +19,8 @@ export type ProductLookupItem = {
   sku: string;
   price: number;
   stockByWarehouse: Record<string, number>;
+  damagedByWarehouse?: Record<string, number>;
+  taxRate?: number;
 };
 
 export const PRODUCT_LOOKUP_WAREHOUSES: WarehouseOption[] = [

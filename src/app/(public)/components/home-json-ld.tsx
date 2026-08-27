@@ -1,19 +1,26 @@
-import { PLATFORM_SETTINGS } from "@/config/platform-settings";
+"use client";
+
 import { absoluteUrl, getSiteUrl } from "@/lib/seo";
 import { PLANS } from "@/app/(public)/components/plans-data";
+import { usePublicPlans } from "../modules/plans/hooks/use-public-plans";
+import { usePlatformCurrency, usePublicSettings } from "../modules/settings/hooks/use-public-settings";
 
 /** JSON-LD for the marketing homepage — helps search engines understand the product. */
 export function HomeJsonLd() {
-  const brand = PLATFORM_SETTINGS.general.platformName;
+  const { data: settings } = usePublicSettings();
+  const { data: livePlans } = usePublicPlans();
+  const currency = usePlatformCurrency();
+  const brand = settings?.platformName ?? "MRM Portal";
   const site = getSiteUrl();
+  const plans = livePlans?.length ? livePlans : PLANS;
 
   const organization = {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: brand,
     url: site,
-    email: PLATFORM_SETTINGS.general.contactEmail,
-    description: PLATFORM_SETTINGS.general.tagline,
+    email: settings?.contactEmail ?? "",
+    description: settings?.tagline ?? "",
   };
 
   const software = {
@@ -24,12 +31,12 @@ export function HomeJsonLd() {
     operatingSystem: "Web",
     url: site,
     description:
-      "Multi-tenant accounting, invoicing, inventory, banking, and CRM platform for growing businesses in the UAE.",
-    offers: PLANS.map((plan) => ({
+      "Multi-tenant accounting, invoicing, inventory, banking, and CRM platform for growing businesses.",
+    offers: plans.map((plan) => ({
       "@type": "Offer",
       name: plan.name,
       price: String(plan.priceMonthly),
-      priceCurrency: "AED",
+      priceCurrency: currency,
       url: absoluteUrl("/pricing"),
     })),
   };
@@ -43,18 +50,9 @@ export function HomeJsonLd() {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(software) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organization) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(software) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(website) }} />
     </>
   );
 }

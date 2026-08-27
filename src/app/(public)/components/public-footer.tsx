@@ -1,7 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { PLATFORM_SETTINGS } from "@/config/platform-settings";
 import { PlatformLogo } from "@/components/shared/platform-logo";
+import { usePublicSettings } from "../modules/settings/hooks/use-public-settings";
 
 const PRODUCT_LINKS = [
   { label: "Features", href: "/features" },
@@ -28,6 +30,11 @@ function FooterLink({ label, href }: { label: string; href: string }) {
 }
 
 export function PublicFooter() {
+  const { data } = usePublicSettings();
+  const platformName = data?.platformName ?? "";
+  const logoUrl = data?.logoUrl ?? "";
+  const tagline = data?.tagline ?? "";
+
   return (
     <footer className="relative overflow-hidden border-t border-white/10 bg-navy px-5 py-16 sm:px-8">
       <div
@@ -35,22 +42,18 @@ export function PublicFooter() {
         className="pointer-events-none absolute top-[-180px] left-1/2 h-[360px] w-[600px] -translate-x-1/2 rounded-full bg-blue/15 blur-[120px]"
       />
       <div className="max-w-6xl mx-auto">
-        <div className="relative mx-auto grid  gap-10 sm:grid-cols-[1.3fr_1fr_1fr]">
+        <div className="relative mx-auto grid gap-10 sm:grid-cols-[1.3fr_1fr_1fr]">
           <div className="flex flex-col gap-3">
             <Link href="/" className="flex items-center gap-2.5">
               <PlatformLogo
-                logoUrl={PLATFORM_SETTINGS.general.logoUrl}
-                platformName={PLATFORM_SETTINGS.general.platformName}
+                logoUrl={logoUrl}
+                platformName={platformName}
                 size="size-8"
                 className="text-sm"
               />
-              <span className="text-sm font-bold text-white">
-                {PLATFORM_SETTINGS.general.platformName}
-              </span>
+              <span className="text-sm font-bold text-white">{platformName}</span>
             </Link>
-            <p className="max-w-[220px] text-[12.5px] text-white/50">
-              {PLATFORM_SETTINGS.general.tagline}
-            </p>
+            <p className="max-w-[220px] text-[12.5px] text-white/50">{tagline}</p>
           </div>
 
           <div className="flex flex-col gap-3.5">
@@ -71,9 +74,8 @@ export function PublicFooter() {
             ))}
           </div>
         </div>
-        <div className="relative mt-12  border-t border-white/10 pt-6 text-[12px] text-white/40">
-          © {new Date().getFullYear()} {PLATFORM_SETTINGS.general.platformName}.
-          All rights reserved.
+        <div className="relative mt-12 border-t border-white/10 pt-6 text-[12px] text-white/40">
+          © {new Date().getFullYear()} {platformName}. All rights reserved.
         </div>
       </div>
     </footer>

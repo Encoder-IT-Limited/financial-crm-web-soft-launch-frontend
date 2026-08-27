@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { authService } from "@/lib/auth/auth.service";
 import { ApiError } from "@/lib/api/errors";
+import { toast } from "@/lib/toast";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -29,8 +30,10 @@ export function ForgotPasswordForm() {
     setFormError(null);
     setSubmitting(true);
     try {
-      await authService.requestPasswordReset(result.data);
-      router.push(`/verify-otp?email=${encodeURIComponent(result.data.email)}`);
+      const parsed = result.data;
+      const reset = await authService.requestPasswordReset(parsed);
+      if (reset.otp) toast.info(`Dev OTP: ${reset.otp}`);
+      router.push(`/verify-otp?email=${encodeURIComponent(parsed.email)}`);
     } catch (error) {
       setFormError(error instanceof ApiError ? error.message : "Couldn't send a code. Try again.");
     } finally {

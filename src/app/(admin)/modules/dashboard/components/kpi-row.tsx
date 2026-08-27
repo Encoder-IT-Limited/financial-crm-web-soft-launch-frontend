@@ -2,9 +2,7 @@ import Link from "next/link";
 import { Building2, DollarSign, Clock, UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { fmtMoney } from "@/lib/format";
-import type { Plan } from "@/types/plan";
-import type { Tenant } from "../../tenants/types";
-import { isTrialEndingSoon, newTenantsCount, platformMrr } from "../lib/metrics";
+import type { AdminDashboardKpis } from "../api/dashboard.service";
 
 function StatCard({
   label,
@@ -37,18 +35,23 @@ function StatCard({
   );
 }
 
-export function KpiRow({ tenants, plans }: { tenants: Tenant[]; plans: Plan[] }) {
-  const activeCount = tenants.filter((t) => t.status === "active").length;
-  const mrr = platformMrr(tenants, plans);
-  const trialsEndingCount = tenants.filter((t) => isTrialEndingSoon(t, plans.find((p) => p.id === t.planId))).length;
-  const newTenants30d = newTenantsCount(tenants, 30);
-
+export function KpiRow({ kpis }: { kpis: AdminDashboardKpis }) {
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      <StatCard label="Active tenants" value={`${activeCount} / ${tenants.length}`} icon={Building2} href="/admin/tenants" />
-      <StatCard label="MRR" value={fmtMoney(mrr)} icon={DollarSign} />
-      <StatCard label="Trials ending in 7d" value={String(trialsEndingCount)} icon={Clock} />
-      <StatCard label="New tenants (30d)" value={String(newTenants30d)} icon={UserPlus} href="/admin/tenants" />
+      <StatCard
+        label="Active tenants"
+        value={`${kpis.activeTenants} / ${kpis.totalTenants}`}
+        icon={Building2}
+        href="/admin/tenants"
+      />
+      <StatCard label="MRR" value={fmtMoney(kpis.mrr)} icon={DollarSign} />
+      <StatCard label="Trials ending in 7d" value={String(kpis.trialsEndingIn7Days)} icon={Clock} />
+      <StatCard
+        label="New tenants (30d)"
+        value={String(kpis.newTenantsLast30Days)}
+        icon={UserPlus}
+        href="/admin/tenants"
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Plan } from "@/types/plan";
+import { usePlatformCurrency } from "../modules/settings/hooks/use-public-settings";
 
 type PlanSelectCardProps = {
   plan: Plan;
@@ -14,6 +15,7 @@ type PlanSelectCardProps = {
  * just the essentials needed to pick a plan quickly. Distinct from
  * plan-card.tsx, which is built for the wide /pricing grid. */
 export function PlanSelectCard({ plan, selected, onSelect }: PlanSelectCardProps) {
+  const currency = usePlatformCurrency();
   return (
     <button
       type="button"
@@ -51,7 +53,9 @@ export function PlanSelectCard({ plan, selected, onSelect }: PlanSelectCardProps
       <div className="shrink-0 text-right">
         {plan.priceMonthly > 0 ? (
           <>
-            <div className="text-[14px] font-extrabold text-text">AED {plan.priceMonthly.toLocaleString()}</div>
+            <div className="text-[14px] font-extrabold text-text">
+              {currency} {plan.priceMonthly.toLocaleString()}
+            </div>
             <div className="text-[10px] text-text-4">/month</div>
           </>
         ) : (

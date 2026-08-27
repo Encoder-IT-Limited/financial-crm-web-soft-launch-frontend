@@ -238,18 +238,55 @@ function toApiItems(input: NewInvoiceInput) {
   });
 }
 
+export type InvoiceListParams = {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+  customerId?: string;
+};
+
+export type InvoiceStats = {
+  total: number;
+  outstanding: number;
+  overdue: number;
+  drafts: number;
+  collected: number;
+};
+
+function compactParams(params?: InvoiceListParams): Record<string, unknown> | undefined {
+  if (!params) return undefined;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === "" || value === "all") continue;
+    out[key] = value;
+  }
+  return Object.keys(out).length ? out : undefined;
+}
+
 /**
  * Live invoicing API.
  */
 export const invoiceApi = {
-  list: async (): Promise<Invoice[]> => {
-    const page = await apiGetPage<ApiInvoice>("/invoices");
+  list: async (params?: Omit<InvoiceListParams, "page" | "pageSize">): Promise<Invoice[]> => {
+    const page = await apiGetPage<ApiInvoice>("/invoices", compactParams(params));
     return page.items.map(mapInvoice);
   },
 
-  listPage: async (params?: { page?: number; pageSize?: number }) => {
-    const page = await apiGetPage<ApiInvoice>("/invoices", params);
+  listPage: async (params?: InvoiceListParams) => {
+    const page = await apiGetPage<ApiInvoice>("/invoices", compactParams(params));
     return { ...page, items: page.items.map(mapInvoice) };
+  },
+
+  stats: async (): Promise<InvoiceStats> => {
+    const row = await apiGet<InvoiceStats>("/invoices/stats");
+    return {
+      total: Number(row.total ?? 0),
+      outstanding: Number(row.outstanding ?? 0),
+      overdue: Number(row.overdue ?? 0),
+      drafts: Number(row.drafts ?? 0),
+      collected: Number(row.collected ?? 0),
+    };
   },
 
   get: async (id: string): Promise<Invoice | undefined> => {

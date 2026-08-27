@@ -65,12 +65,11 @@ export function SettingsTabs() {
 
     setSaving(true);
     try {
-      const saved = await settingsApi.updateGeneral(settings.general);
+      const saved = await settingsApi.update(settings);
       setSettings(saved);
       await queryClient.invalidateQueries({ queryKey: settingsKeys.all });
-      toast.success("Settings saved", {
-        description: "General / maintenance fields persist to the API. Legal & social stay local until the backend supports them.",
-      });
+      await queryClient.invalidateQueries({ queryKey: ["public-settings"] });
+      toast.success("Settings saved");
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Could not save settings");
     } finally {

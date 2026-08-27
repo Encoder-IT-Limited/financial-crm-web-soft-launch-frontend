@@ -1,9 +1,7 @@
 /* ------------------------------------------------------------------ */
-/* POS — web register demo (docs/plans/POS-Implementation-Plan.md).    */
-/* Single base currency (AED) for this demo, no per-transaction FX     */
-/* like Invoices' Currency field. Deducts stock via the same           */
-/* fulfillmentsApi.autoFulfillPos() path Fulfillment already exposes — */
-/* this is that function's first real caller.                         */
+/* POS — web register (docs/plans/POS-Implementation-Plan.md).         */
+/* Amounts display in the tenant base currency (see useFmtMoney).      */
+/* Deducts stock via the same autoFulfillPos path invoices use.        */
 /*                                                                      */
 /* "Terminal" (matching the client's own SRS schema, pos_terminals) is */
 /* the physical station; "Session" is one shift on it. Kept as two      */
@@ -82,8 +80,15 @@ export const POS_PAYMENT_METHOD_LABELS: Record<PosPaymentMethod, string> = {
   "mobile-payment": "Mobile Payment",
 };
 
-/** Split tender = more than one entry here. */
-export type PosPayment = { method: PosPaymentMethod; amount: number };
+/** Split tender = more than one entry here.
+ * `amount` is applied to the sale; `tenderedAmount` is cash handed over
+ * when the cashier overpays (change = tendered − amount). */
+export type PosPayment = { method: PosPaymentMethod; amount: number; tenderedAmount?: number };
+
+export function paymentChange(payment: PosPayment): number {
+  if (payment.tenderedAmount == null) return 0;
+  return round2(Math.max(0, payment.tenderedAmount - payment.amount));
+}
 
 export type PosSaleStatus = "completed" | "partially-refunded" | "refunded";
 

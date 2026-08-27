@@ -1,17 +1,14 @@
 import type { PlatformSettings } from "@/app/(admin)/modules/settings/types";
 
-// TEMPORARY: no backend/settingsService yet (see docs/Public-SuperAdmin-Plan.md
-// §3.5). This is the single source both (admin)'s Settings page and (public)'s
-// navbar/footer/legal pages read from, the same pattern plans-data.ts used
-// before Plans & Pricing existed. Editing it here is the only way to change
-// site copy until a real settings API exists — the admin Settings page can't
-// persist back to this file at runtime.
+// Fallback copy for the public site and admin Settings merge when the
+// API has not returned a value yet. Live pages fetch GET /settings.
 export const PLATFORM_SETTINGS: PlatformSettings = {
   general: {
     platformName: "MRM Portal",
     logoUrl: "",
     tagline: "Run your business finances in one place.",
     contactEmail: "support@mrmportal.com",
+    currency: "AED",
     maintenanceEnabled: false,
     maintenanceMessage: "MRM Portal is undergoing scheduled maintenance. We'll be back shortly.",
   },

@@ -10,6 +10,12 @@ export const planSchema = z.object({
   baseSeats: z.coerce.number().int().positive("Base seats must be at least 1"),
   additionalSeatPrice: z.coerce.number().nonnegative("Additional seat price can't be negative"),
   trialDays: z.coerce.number().int().nonnegative("Trial days can't be negative"),
+  minSeats: z.coerce.number().int().positive("Minimum seats must be at least 1").optional(),
+  maxSeats: z.preprocess(
+    (v) => (v === "" || v === null || v === undefined ? null : Number(v)),
+    z.number().int().positive("Maximum seats must be at least 1").nullable(),
+  ),
+  salesAssisted: z.boolean().default(false),
   modules: z.array(z.enum(MODULE_KEYS)).min(1, "Select at least one module"),
   popular: z.boolean().default(false),
 });

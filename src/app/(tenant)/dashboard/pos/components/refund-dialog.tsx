@@ -13,12 +13,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/lib/toast";
-import { fmtMoney } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PosSale, RefundLineCondition, RefundLineInput } from "../types";
 import { saleRefundedAmount, type PosRefund } from "../types";
 import { posSalesApi } from "../api/sales.service";
 import { ManagerPinDialog } from "./manager-pin-dialog";
+import { useFmtMoney } from "../use-fmt-money";
 
 /** Refund/return — always manager-PIN-gated (client-confirmed rule).
  * Per line: how many units are coming back, and whether they're
@@ -35,6 +35,7 @@ export function RefundDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const queryClient = useQueryClient();
+  const money = useFmtMoney();
   const alreadyRefunded = saleRefundedAmount(sale.id, refunds);
   const [quantities, setQuantities] = useState<Record<string, string>>({});
   const [conditions, setConditions] = useState<Record<string, RefundLineCondition>>({});
@@ -64,11 +65,12 @@ export function RefundDialog({
     posSalesApi
       .refund({ saleId: sale.id, lines: selectedLines, reason, approvedBy: "Manager", managerPin })
       .then(() => {
-        toast.success(`Refund of ${fmtMoney(amount)} recorded`);
+        toast.success(`Refund of ${money(amount)} recorded`);
         queryClient.invalidateQueries({ queryKey: ["pos-sale", sale.id] });
         queryClient.invalidateQueries({ queryKey: ["pos-refunds", sale.id] });
         queryClient.invalidateQueries({ queryKey: ["pos-sales"] });
         queryClient.invalidateQueries({ queryKey: ["pos-products"] });
+        queryClient.invalidateQueries({ queryKey: ["inventory"] });
         onOpenChange(false);
       })
       .catch((err: unknown) => {
@@ -83,7 +85,7 @@ export function RefundDialog({
           <DialogHeader>
             <DialogTitle>Refund / Return</DialogTitle>
             <DialogDescription>
-              {sale.number} · {alreadyRefunded > 0 && `${fmtMoney(alreadyRefunded)} already refunded · `}select what&rsquo;s coming back
+              {sale.number} · {alreadyRefunded > 0 && `${money(alreadyRefunded)} already refunded · `}select what&rsquo;s coming back
             </DialogDescription>
           </DialogHeader>
 
@@ -127,7 +129,7 @@ export function RefundDialog({
               className={cn()}
             />
 
-            <div className="text-right text-[14px] font-extrabold text-text">Refund total: {fmtMoney(amount)}</div>
+            <div className="text-right text-[14px] font-extrabold text-text">Refund total: {money(amount)}</div>
           </div>
 
           <DialogFooter>
@@ -145,7 +147,7 @@ export function RefundDialog({
         open={pinOpen}
         onOpenChange={setPinOpen}
         title="Approve refund"
-        description={`Refunding ${fmtMoney(amount)} on ${sale.number} needs manager approval.`}
+        description={`Refunding ${money(amount)} on ${sale.number} needs manager approval.`}
         onApproved={submit}
       />
     </>

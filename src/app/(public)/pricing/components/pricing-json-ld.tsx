@@ -1,5 +1,9 @@
+"use client";
+
 import { PLANS } from "@/app/(public)/components/plans-data";
 import { absoluteUrl } from "@/lib/seo";
+import { usePublicPlans } from "@/app/(public)/modules/plans/hooks/use-public-plans";
+import { usePlatformCurrency } from "@/app/(public)/modules/settings/hooks/use-public-settings";
 
 const FAQS = [
   {
@@ -22,6 +26,10 @@ const FAQS = [
 
 /** Crawlable FAQ + Offer schema for /pricing. */
 export function PricingJsonLd() {
+  const { data: livePlans } = usePublicPlans();
+  const currency = usePlatformCurrency();
+  const plans = livePlans?.length ? livePlans : PLANS;
+
   const faq = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -36,12 +44,12 @@ export function PricingJsonLd() {
     "@context": "https://schema.org",
     "@type": "Product",
     name: "MRM Portal subscription",
-    description: "Multi-tenant accounting and operations platform plans priced in AED.",
-    offers: PLANS.map((plan) => ({
+    description: `Multi-tenant accounting and operations platform plans priced in ${currency}.`,
+    offers: plans.map((plan) => ({
       "@type": "Offer",
       name: plan.name,
       price: String(plan.priceMonthly),
-      priceCurrency: "AED",
+      priceCurrency: currency,
       url: absoluteUrl("/pricing"),
       availability: "https://schema.org/InStock",
     })),

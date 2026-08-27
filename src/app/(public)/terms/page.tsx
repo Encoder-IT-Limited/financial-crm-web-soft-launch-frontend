@@ -1,6 +1,6 @@
-import { LegalPage } from "../components/legal-page";
 import { PLATFORM_SETTINGS } from "@/config/platform-settings";
 import { pageMetadata } from "@/lib/seo";
+import { TermsOfServiceContent } from "./terms-content";
 
 export const metadata = pageMetadata({
   title: "Terms of Service",
@@ -9,10 +9,5 @@ export const metadata = pageMetadata({
 });
 
 export default function TermsOfServicePage() {
-  return (
-    <LegalPage title="Terms of Service" lastUpdated={PLATFORM_SETTINGS.legal.termsLastUpdated}>
-      {/* Admin-authored content from Settings → Site & legal, not user input. */}
-      <div dangerouslySetInnerHTML={{ __html: PLATFORM_SETTINGS.legal.termsBody }} />
-    </LegalPage>
-  );
+  return <TermsOfServiceContent />;
 }

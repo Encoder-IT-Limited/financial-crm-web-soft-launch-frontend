@@ -1,8 +1,7 @@
 import type { Plan } from "@/types/plan";
 
-// TEMPORARY: no backend/plansService yet (see docs/Public-SuperAdmin-Plan.md §2.3).
-// Once Super Admin's Plans & Pricing exists, this should be replaced by a real fetch
-// so /pricing and /signup's plan step both reflect the same source of truth.
+// Fallback plan list if GET /plans has not loaded yet. Live pricing and
+// signup use usePublicPlans() as the source of truth.
 export const PLANS: Plan[] = [
   {
     id: "starter",
@@ -12,6 +11,9 @@ export const PLANS: Plan[] = [
     baseSeats: 3,
     additionalSeatPrice: 39,
     trialDays: 14,
+    minSeats: 3,
+    maxSeats: 10,
+    salesAssisted: false,
     modules: ["accounting", "sales", "purchasing", "banking"],
   },
   {
@@ -22,6 +24,9 @@ export const PLANS: Plan[] = [
     baseSeats: 10,
     additionalSeatPrice: 29,
     trialDays: 14,
+    minSeats: 10,
+    maxSeats: 30,
+    salesAssisted: false,
     modules: ["accounting", "sales", "purchasing", "inventory", "banking", "crm", "reports"],
     popular: true,
   },
@@ -33,6 +38,9 @@ export const PLANS: Plan[] = [
     baseSeats: 25,
     additionalSeatPrice: 19,
     trialDays: 14,
+    minSeats: 30,
+    maxSeats: null,
+    salesAssisted: true,
     modules: [
       "accounting",
       "sales",

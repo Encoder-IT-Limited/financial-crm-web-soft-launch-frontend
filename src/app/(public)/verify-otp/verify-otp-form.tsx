@@ -7,6 +7,7 @@ import { z } from "zod";
 import { ArrowLeft } from "lucide-react";
 import { OtpInput } from "@/components/shared/otp-input";
 import { authService } from "@/lib/auth/auth.service";
+import { ApiError } from "@/lib/api/errors";
 import { toast } from "@/lib/toast";
 
 const schema = z.object({ otp: z.string().length(6, "Enter the 6-digit code") });
@@ -21,14 +22,16 @@ export function VerifyOtpForm({ email }: VerifyOtpFormProps) {
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
   async function handleResend() {
     if (!email || resending) return;
     setResending(true);
     try {
-      await authService.requestPasswordReset({ email });
+      const result = await authService.requestPasswordReset({ email });
       toast.success("Code resent.");
+      if (result.otp) toast.info(`Dev OTP: ${result.otp}`);
     } catch {
       toast.error("Couldn't resend the code. Try again.");
     } finally {
@@ -36,7 +39,7 @@ export function VerifyOtpForm({ email }: VerifyOtpFormProps) {
     }
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const result = schema.safeParse({ otp });
     if (!result.success) {
@@ -44,7 +47,15 @@ export function VerifyOtpForm({ email }: VerifyOtpFormProps) {
       return;
     }
     setError(null);
-    router.push(`/reset-password?email=${encodeURIComponent(email)}&otp=${result.data.otp}`);
+    setSubmitting(true);
+    try {
+      await authService.verifyOtp({ email, otp: result.data.otp });
+      router.push(`/reset-password?email=${encodeURIComponent(email)}&otp=${result.data.otp}`);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Invalid or expired verification code");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -77,9 +88,10 @@ export function VerifyOtpForm({ email }: VerifyOtpFormProps) {
 
         <button
           type="submit"
-          className="mt-1 rounded-lg bg-blue py-2.5 text-[13px] font-semibold text-white transition-all hover:brightness-110"
-        >
-          Verify code
+        disabled={submitting}
+        className="mt-1 rounded-lg bg-blue py-2.5 text-[13px] font-semibold text-white transition-all hover:brightness-110 disabled:opacity-50"
+      >
+        {submitting ? "Verifying..." : "Verify code"}
         </button>
 
         <p className="text-center text-[12px] text-text-3">

@@ -52,6 +52,9 @@ export function AddSeatsDialog({ open, onOpenChange, tenantId, tenantName }: Pro
         setCount("1");
         onOpenChange(false);
       })
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : "Could not add seats");
+      })
       .finally(() => setSaving(false));
   }
 

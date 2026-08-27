@@ -12,6 +12,9 @@ function toPlan(row: Plan & { status?: string }): Plan {
     baseSeats: row.baseSeats,
     additionalSeatPrice: row.additionalSeatPrice,
     trialDays: row.trialDays,
+    minSeats: row.minSeats ?? row.baseSeats,
+    maxSeats: row.maxSeats ?? null,
+    salesAssisted: Boolean(row.salesAssisted),
     modules: row.modules as ModuleKey[],
     popular: row.popular,
   };

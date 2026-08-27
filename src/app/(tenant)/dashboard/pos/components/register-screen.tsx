@@ -44,7 +44,7 @@ export function RegisterScreen() {
     setTerminalId(localStorage.getItem(DEVICE_TERMINAL_KEY) ?? undefined);
   }, []);
 
-  const { data: terminals = [] } = useQuery({ queryKey: ["pos-terminals"], queryFn: posTerminalsApi.list });
+  const { data: terminals = [] } = useQuery({ queryKey: ["pos-terminals"], queryFn: () => posTerminalsApi.list() });
   const terminal = terminals.find((t) => t.id === terminalId);
 
   const { data: session } = useQuery({

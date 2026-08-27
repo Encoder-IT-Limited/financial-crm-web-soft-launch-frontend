@@ -1,6 +1,6 @@
-import { LegalPage } from "../components/legal-page";
 import { PLATFORM_SETTINGS } from "@/config/platform-settings";
 import { pageMetadata } from "@/lib/seo";
+import { PrivacyPolicyContent } from "./privacy-content";
 
 export const metadata = pageMetadata({
   title: "Privacy Policy",
@@ -9,10 +9,5 @@ export const metadata = pageMetadata({
 });
 
 export default function PrivacyPolicyPage() {
-  return (
-    <LegalPage title="Privacy Policy" lastUpdated={PLATFORM_SETTINGS.legal.privacyLastUpdated}>
-      {/* Admin-authored content from Settings → Site & legal, not user input. */}
-      <div dangerouslySetInnerHTML={{ __html: PLATFORM_SETTINGS.legal.privacyBody }} />
-    </LegalPage>
-  );
+  return <PrivacyPolicyContent />;
 }
