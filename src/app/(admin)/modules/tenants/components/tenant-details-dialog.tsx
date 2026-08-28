@@ -36,7 +36,7 @@ export function TenantDetailsDialog({
   const queryClient = useQueryClient();
   const { data: tenants = [] } = useQuery({ queryKey: ["tenants"], queryFn: tenantsApi.list });
   const { data: plans = [] } = useQuery({ queryKey: ["plans"], queryFn: planApi.list });
-  const { data: entries = [] } = useQuery({ queryKey: ["audit"], queryFn: auditApi.list });
+  const { data: entries = [] } = useQuery({ queryKey: ["audit"], queryFn: () => auditApi.list() });
   const tenant = tenants.find((t) => t.id === tenantId);
   const activity = useMemo(() => entries.filter((entry) => entry.tenantId === tenantId), [entries, tenantId]);
   const [suspendOpen, setSuspendOpen] = useState(false);

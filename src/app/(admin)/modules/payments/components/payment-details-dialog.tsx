@@ -41,13 +41,14 @@ export function PaymentDetailsDialog({
   });
 
   if (!payment) return null;
+  const currentPayment = payment;
 
   function handleStatusChange(status: PaymentStatus) {
-    if (status === payment.status) return;
+    if (status === currentPayment.status) return;
     paymentsApi
-      .updateStatus(payment.id, status)
+      .updateStatus(currentPayment.id, status)
       .then(() => {
-        toast.success(`${payment.reference} marked ${status}`);
+        toast.success(`${currentPayment.reference} marked ${status}`);
         queryClient.invalidateQueries({ queryKey: ["payments"] });
         queryClient.invalidateQueries({ queryKey: ["audit"] });
         queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
@@ -59,7 +60,7 @@ export function PaymentDetailsDialog({
 
   async function handleDownload() {
     try {
-      await paymentsApi.downloadInvoice(payment.id, payment.reference);
+      await paymentsApi.downloadInvoice(currentPayment.id, currentPayment.reference);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not download invoice");
     }
@@ -67,8 +68,8 @@ export function PaymentDetailsDialog({
 
   async function handleRefund() {
     try {
-      await paymentsApi.refund(payment.id);
-      toast.success(`${payment.reference} refunded`);
+      await paymentsApi.refund(currentPayment.id);
+      toast.success(`${currentPayment.reference} refunded`);
       queryClient.invalidateQueries({ queryKey: ["payments"] });
       queryClient.invalidateQueries({ queryKey: ["audit"] });
       queryClient.invalidateQueries({ queryKey: ["admin-dashboard"] });
