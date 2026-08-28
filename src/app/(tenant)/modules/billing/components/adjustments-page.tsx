@@ -69,6 +69,23 @@ export function AdjustmentsPage() {
     },
   ];
 
+  const mobileCard = (a: Adjustment) => (
+    <div className="flex flex-col gap-2 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-0.5">
+          <span className="font-bold text-text">{a.number}</span>
+          <span className="text-[12px] text-text-3">{customerName(a.customerId)}</span>
+        </div>
+        <span className="font-semibold text-text">{fmtMoney(a.amount, a.currency)}</span>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <AdjustmentStatusBadge status={a.status} />
+        <span className="text-[11px] text-text-4">Invoice {invoiceNumber(a.invoiceId)}</span>
+        <span className="text-[11px] text-text-4">{fmtDate(a.createdAt)}</span>
+      </div>
+    </div>
+  );
+
   return (
     <div>
       <PageHeading
@@ -102,6 +119,7 @@ export function AdjustmentsPage() {
             onRowClick={(a) => setDetailsId(a.id)}
             rowClassName="cursor-pointer"
             emptyState="No credit notes issued yet."
+            mobileCard={mobileCard}
           />
         </TabsContent>
 
@@ -114,6 +132,7 @@ export function AdjustmentsPage() {
             onRowClick={(a) => setDetailsId(a.id)}
             rowClassName="cursor-pointer"
             emptyState="No debit notes issued yet."
+            mobileCard={mobileCard}
           />
         </TabsContent>
       </Tabs>

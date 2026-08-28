@@ -202,7 +202,9 @@ export function BillsPage() {
         <FormField label="Vendor">
           <Select value={supplierId} onValueChange={(v) => setSupplierId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select vendor" />
+              <SelectValue placeholder="Select vendor">
+                {(v: string | null) => suppliers.find((s) => s.id === v)?.name ?? "Select vendor"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {suppliers.map((s) => (
@@ -216,7 +218,12 @@ export function BillsPage() {
         <FormField label="Purchase order (optional)">
           <Select value={purchaseOrderId} onValueChange={(v) => setPurchaseOrderId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="None" />
+              <SelectValue placeholder="None">
+                {(v: string | null) => {
+                  const po = approvedPos.find((p) => p.id === v);
+                  return po ? `${po.poNumber} · ${fmtMoney(po.total)}` : "None";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {approvedPos.map((po) => (

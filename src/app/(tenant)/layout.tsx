@@ -16,7 +16,12 @@ export default function TenantLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const posMode = pathname === "/dashboard/pos" || pathname.startsWith("/dashboard/pos/");
+  // Only the register screen itself is the full-bleed, no-scroll layout —
+  // Terminals/Sessions/Sales live under /dashboard/pos/* too but are
+  // ordinary padded, scrollable list pages like the rest of the dashboard.
+  // Matching the whole prefix made those three inherit overflow-hidden and
+  // zero padding, clipping their tables with no way to scroll to the rest.
+  const posMode = pathname === "/dashboard/pos";
 
   return (
     <ReactQueryProvider>
@@ -26,17 +31,23 @@ export default function TenantLayout({
           {(me) => (
             <SidebarProvider className="h-dvh overflow-hidden bg-background">
               <TenantSidebar me={me} />
-              <div className="flex h-dvh flex-1 flex-col overflow-hidden">
+              {/* min-h-0 throughout this chain — flex items default to
+                  min-height: auto, which refuses to shrink below content
+                  size even inside an overflow-hidden ancestor. Without it,
+                  `main` (and posMode's h-full register screen inside it)
+                  grows to fit content instead of clipping to the viewport,
+                  which is exactly the old cut-off-with-no-scroll bug. */}
+              <div className="flex h-dvh min-h-0 flex-1 flex-col overflow-hidden">
                 <div
                   className={cn(
-                    "flex flex-1 flex-col overflow-hidden border-border lg:m-[10px] lg:rounded-[10px] lg:border",
+                    "flex min-h-0 flex-1 flex-col overflow-hidden border-border lg:m-[10px] lg:rounded-[10px] lg:border",
                     posMode && "lg:m-2",
                   )}
                 >
                   <Navbar portal="tenant" me={me} />
                   <main
                     className={cn(
-                      "flex-1 overflow-auto p-4 print:overflow-visible print:p-0 lg:p-6",
+                      "min-h-0 flex-1 overflow-auto p-4 print:overflow-visible print:p-0 lg:p-6",
                       posMode && "overflow-hidden p-0 lg:p-0",
                     )}
                   >

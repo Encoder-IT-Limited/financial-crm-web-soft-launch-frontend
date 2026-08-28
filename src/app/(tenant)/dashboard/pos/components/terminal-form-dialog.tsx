@@ -167,7 +167,9 @@ export function TerminalFormDialog({
               }
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a warehouse" />
+                <SelectValue placeholder="Select a warehouse">
+                  {(v: string | null) => warehouses.find((w) => w.id === v)?.name ?? "Select a warehouse"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {warehouses

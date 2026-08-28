@@ -131,7 +131,9 @@ export function ProposalsList() {
         filters={
           <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: (v ?? "all") as Filters["status"] })}>
             <SelectTrigger size="sm">
-              <SelectValue />
+              <SelectValue>
+                {(v: Filters["status"]) => (v === "all" || !v ? "All status" : <ProposalStatusBadge status={v} />)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All status</SelectItem>
@@ -144,6 +146,22 @@ export function ProposalsList() {
           </Select>
         }
         onClearFilters={() => setFilters({ search: "", status: "all" })}
+        mobileCard={(p) => (
+          <div className="flex flex-col gap-2 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="font-bold text-text">{p.number}</span>
+                <span className="text-[12px] text-text-3">{customerName(p.customerId)}</span>
+              </div>
+              <span className="text-[13px] font-semibold text-text">{fmtMoney(p.total, p.currency)}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <ProposalStatusBadge status={proposalDisplayStatus(p)} />
+              <span className="text-[11px] text-text-4">Sent {fmtDate(p.date)}</span>
+              <span className="text-[11px] text-text-4">Expires {fmtDate(p.expiryDate)}</span>
+            </div>
+          </div>
+        )}
       />
     </div>
   );

@@ -148,7 +148,7 @@ export function PaymentsList() {
           <>
             <Select value={filters.tenant} onValueChange={(v) => setFilters({ ...filters, tenant: v ?? "all" })}>
               <SelectTrigger size="sm">
-                <SelectValue />
+                <SelectValue>{(v: string | null) => (v === "all" || !v ? "All tenants" : v)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All tenants</SelectItem>
@@ -164,7 +164,9 @@ export function PaymentsList() {
               onValueChange={(v) => setFilters({ ...filters, status: (v ?? "all") as Filters["status"] })}
             >
               <SelectTrigger size="sm">
-                <SelectValue />
+                <SelectValue>
+                  {(v: Filters["status"]) => (v === "all" || !v ? "All status" : <PaymentStatusBadge status={v} />)}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All status</SelectItem>
@@ -192,6 +194,34 @@ export function PaymentsList() {
           </>
         }
         onClearFilters={() => setFilters({ search: "", tenant: "all", status: "all", from: "", to: "" })}
+        mobileCard={(p) => (
+          <div className="flex flex-col gap-2 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="font-bold text-text">{p.tenantName}</span>
+                <span className="text-[12px] text-text-3">{p.planName}</span>
+              </div>
+              <span className="text-[14px] font-semibold text-text">{fmtMoney(p.amount)}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <PaymentStatusBadge status={p.status} />
+              <span className="text-[11px] text-text-4 uppercase">{p.method}</span>
+              <span className="text-[11px] text-text-4">{fmtDate(p.date)}</span>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Download invoice for ${p.reference}`}
+                className="ml-auto"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDownload(p);
+                }}
+              >
+                <Download />
+              </Button>
+            </div>
+          </div>
+        )}
       />
 
       {detailsId && (

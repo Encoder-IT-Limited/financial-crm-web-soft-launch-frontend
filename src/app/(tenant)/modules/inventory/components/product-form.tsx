@@ -137,7 +137,9 @@ export function ProductForm() {
           <FormField label="Category" hint="Optional — create categories via API if empty.">
             <Select value={values.categoryId} onValueChange={(v) => setField("categoryId", v ?? "")}>
               <SelectTrigger className={`w-full ${inputClass}`}>
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="Select category">
+                  {(v: string | null) => categories.find((c) => c.id === v)?.name ?? "Select category"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (
@@ -151,7 +153,12 @@ export function ProductForm() {
           <FormField label="Unit" error={errors.unitId}>
             <Select value={values.unitId} onValueChange={(v) => setField("unitId", v ?? "")}>
               <SelectTrigger className={`w-full ${inputClass}`} aria-invalid={!!errors.unitId}>
-                <SelectValue placeholder="Select unit" />
+                <SelectValue placeholder="Select unit">
+                  {(v: string | null) => {
+                    const u = units.find((x) => x.id === v);
+                    return u ? `${u.name} (${u.symbol})` : "Select unit";
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {units.map((u) => (

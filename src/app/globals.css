@@ -274,6 +274,39 @@ body.dark ::-webkit-scrollbar-thumb {
   }
 }
 
+/* Dashboard bar-chart entrance — grows the fill in from zero once on
+   mount (tw-animate-css has no directional/axis-only scale utility, only
+   uniform zoom-in, so this is a small hand-written pair). Gated by a real
+   media query rather than Tailwind's motion-safe: variant so it can't be
+   missed: reduced-motion users get the bar at its final size immediately,
+   no animation attribute needed on the element at all. */
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .chart-bar-fill {
+    transform-origin: bottom;
+    animation: grow-y 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  .status-bar-fill {
+    transform-origin: left;
+    animation: grow-x 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

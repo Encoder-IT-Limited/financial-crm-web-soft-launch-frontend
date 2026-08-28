@@ -102,7 +102,9 @@ export function RecurringTemplateDialog({ open, onOpenChange, editing, onSave }:
           <FormField label="Customer *" error={errors.customerId}>
             <Select value={customerId} onValueChange={(v) => setCustomerId(v ?? "")}>
               <SelectTrigger className={cn("w-full", errors.customerId && "border-red")}>
-                <SelectValue placeholder="Select customer" />
+                <SelectValue placeholder="Select customer">
+                  {(v: string | null) => customers.find((c) => c.id === v)?.name ?? "Select customer"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {customers.map((customer) => (

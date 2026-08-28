@@ -171,7 +171,12 @@ export function StockAdjustmentsPage() {
         <FormField label="Product" error={errors.productId}>
           <Select value={productId} onValueChange={(v) => setProductId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select product" />
+              <SelectValue placeholder="Select product">
+                {(v: string | null) => {
+                  const p = products.find((x) => x.id === v);
+                  return p ? `${p.name} (${p.sku})` : "Select product";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {products.map((p) => (
@@ -185,7 +190,9 @@ export function StockAdjustmentsPage() {
         <FormField label="Warehouse" error={errors.warehouseId}>
           <Select value={warehouseId} onValueChange={(v) => setWarehouseId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select warehouse" />
+              <SelectValue placeholder="Select warehouse">
+                {(v: string | null) => warehouses.find((w) => w.id === v)?.name ?? "Select warehouse"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {warehouses.map((w) => (

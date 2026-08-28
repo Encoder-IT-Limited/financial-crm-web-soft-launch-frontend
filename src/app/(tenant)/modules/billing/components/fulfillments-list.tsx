@@ -158,7 +158,9 @@ export function FulfillmentsList() {
             onValueChange={(v) => setFilters((f) => ({ ...f, status: (v ?? "all") as Filters["status"] }))}
           >
             <SelectTrigger size="sm" className="w-[180px]">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder="Status">
+                {(v: Filters["status"]) => (v === "all" || !v ? "All statuses" : v.replace(/-/g, " "))}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
@@ -170,6 +172,26 @@ export function FulfillmentsList() {
             </SelectContent>
           </Select>
         }
+        mobileCard={(inv) => {
+          const ordered = totalOrderedQuantity(inv);
+          const fulfilled = totalFulfilledQuantity(inv);
+          const latest = inv.fulfillments?.[0]?.fulfilledAt;
+          return (
+            <div className="flex flex-col gap-2 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-bold text-text">{inv.number}</span>
+                  <span className="text-[12px] text-text-3">{customerName(inv.customerId)}</span>
+                </div>
+                <FulfillmentStatusBadge status={invoiceFulfillmentStatus(inv)} />
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-text-4">
+                <span>{fmtQty(fulfilled)} / {fmtQty(ordered)} shipped</span>
+                <span>Last shipment: {latest ? fmtDate(latest.slice(0, 10)) : "—"}</span>
+              </div>
+            </div>
+          );
+        }}
       />
 
       <FulfillmentDialog

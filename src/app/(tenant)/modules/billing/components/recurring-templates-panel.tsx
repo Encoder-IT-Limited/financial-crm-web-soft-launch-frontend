@@ -1,20 +1,45 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Pause, Pencil, Play, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { CalendarClock, Pause, Pencil, Play, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { toast } from "@/lib/toast";
 import { fmtDate, fmtMoney } from "@/lib/format";
 import { recurringApi } from "../api/recurring.service";
-import { FREQUENCY_LABELS, type RecurringTemplate } from "../recurring/types";
+import { FREQUENCY_LABELS, type RecurringTemplate, type RecurringTemplateStatus } from "../recurring/types";
 import { useCustomers } from "../../crm/hooks/use-customers";
 import { billingKeys } from "../query-keys";
 import { RecurringTemplateDialog } from "./recurring-template-dialog";
+
+type StatusFilter = "all" | RecurringTemplateStatus;
+
+const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
+  all: "All status",
+  active: "Active",
+  paused: "Paused",
+};
+
+/** `GET /recurring-templates` doesn't support `search`/`status`/`customerId`
+ * query params — live-verified: passing any of them returns the identical
+ * unfiltered set. Following this codebase's own established tradeoff for
+ * that situation (see invoiceApi.list() historically, and
+ * missing-sales-invoice.md): fetch the full list once and do search,
+ * status filtering, and pagination entirely client-side until the backend
+ * adds real filter support.
+ *
+ * `pageSize` itself IS enforced server-side though, capped at 100
+ * (`pageSize: ["Too big: expected number to be <=100"]` — live-verified) —
+ * asking for 1000 in one shot made the request fail validation outright,
+ * which is why templates stopped showing at all. Fetch in pages of the
+ * server's actual max and concatenate. */
+const MAX_PAGE_SIZE = 100;
 
 export function RecurringTemplatesPanel() {
   const queryClient = useQueryClient();
@@ -22,25 +47,52 @@ export function RecurringTemplatesPanel() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<RecurringTemplate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RecurringTemplate | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [pageIndex, setPageIndex] = useState(0);
   const pageSize = 10;
 
   const { data: page, isLoading: templatesLoading } = useQuery({
-    queryKey: billingKeys.recurringPage(pageIndex + 1, pageSize),
-    queryFn: () => recurringApi.listPage({ page: pageIndex + 1, pageSize }),
+    queryKey: billingKeys.recurringPage(1, MAX_PAGE_SIZE),
+    queryFn: async () => {
+      const first = await recurringApi.listPage({ page: 1, pageSize: MAX_PAGE_SIZE });
+      const items = [...first.items];
+      const totalPages = Math.max(1, Math.ceil(first.total / MAX_PAGE_SIZE));
+      for (let p = 2; p <= totalPages; p++) {
+        const next = await recurringApi.listPage({ page: p, pageSize: MAX_PAGE_SIZE });
+        items.push(...next.items);
+      }
+      return { ...first, items };
+    },
     placeholderData: (previous) => previous,
   });
-  const templates = page?.items ?? [];
-  const total = page?.total ?? 0;
+  const allTemplates = page?.items ?? [];
   const activeCount = page?.activeCount ?? 0;
   const next = page?.nextInvoiceDate ?? null;
-  const pageCount = Math.max(1, Math.ceil(total / pageSize));
-
-  useEffect(() => {
-    if (pageIndex > 0 && pageIndex >= pageCount) setPageIndex(pageCount - 1);
-  }, [pageIndex, pageCount]);
 
   const customerName = (id: string) => customers.find((c) => c.id === id)?.name ?? "—";
+
+  const filtered = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return allTemplates.filter((t) => {
+      if (statusFilter !== "all" && t.status !== statusFilter) return false;
+      if (!needle) return true;
+      const haystack = `${t.number} ${t.description} ${customerName(t.customerId)}`.toLowerCase();
+      return haystack.includes(needle);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allTemplates, search, statusFilter, customers]);
+
+  const total = filtered.length;
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  // Clamp for render instead of correcting via a setState-in-effect — the
+  // filtered result set can shrink (a new search term, a status filter)
+  // while `pageIndex` still points past the end; computing the safe index
+  // here means there's never an invalid state to react to; explicit user
+  // actions (search/filter changes below) reset `pageIndex` directly at
+  // the point they happen instead of a separate effect watching for it.
+  const safePageIndex = Math.min(pageIndex, pageCount - 1);
+  const templates = filtered.slice(safePageIndex * pageSize, safePageIndex * pageSize + pageSize);
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: billingKeys.recurring() });
@@ -114,7 +166,7 @@ export function RecurringTemplatesPanel() {
           <CalendarClock className="mt-0.5 size-3.5 shrink-0 text-text-4" />
           <span>
             Each cycle generates an invoice
-            {templates.some((t) => t.autoSend)
+            {allTemplates.some((t) => t.autoSend)
               ? ". Templates with auto-send on email the customer immediately."
               : " as a draft for review"}{" "}
             <Link href="/dashboard/invoices" className="underline decoration-dotted underline-offset-2">
@@ -122,6 +174,50 @@ export function RecurringTemplatesPanel() {
             </Link>
             .
           </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5 border-b border-border px-5 py-3">
+          <div className="relative min-w-[220px] flex-1">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-text-4" />
+            <Input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPageIndex(0);
+              }}
+              placeholder="Search template #, description, or customer..."
+              className="h-9 border-border pl-9 text-[12.5px]"
+            />
+          </div>
+          <Select
+            value={statusFilter}
+            onValueChange={(v) => {
+              setStatusFilter((v ?? "all") as StatusFilter);
+              setPageIndex(0);
+            }}
+          >
+            <SelectTrigger size="sm">
+              <SelectValue>{(v: StatusFilter) => STATUS_FILTER_LABELS[v] ?? "All status"}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="paused">Paused</SelectItem>
+            </SelectContent>
+          </Select>
+          {(search || statusFilter !== "all") && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("all");
+                setPageIndex(0);
+              }}
+              className="h-9 rounded-lg px-3 text-[12.5px] font-medium text-text-3 transition-colors hover:text-blue"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
 
         <div className="hidden overflow-x-auto lg:block">
@@ -216,7 +312,11 @@ export function RecurringTemplatesPanel() {
               {total === 0 && (
                 <tr>
                   <td colSpan={10} className="h-24 text-center text-[13px] text-text-4">
-                    {templatesLoading ? "Loading templates…" : "No recurring templates yet — create one to start billing on a schedule."}
+                    {templatesLoading
+                      ? "Loading templates…"
+                      : allTemplates.length === 0
+                        ? "No recurring templates yet — create one to start billing on a schedule."
+                        : "No templates match your search or filter."}
                   </td>
                 </tr>
               )}
@@ -287,7 +387,11 @@ export function RecurringTemplatesPanel() {
           })}
           {total === 0 && (
             <div className="p-8 text-center text-[13px] text-text-4">
-              {templatesLoading ? "Loading templates…" : "No recurring templates yet — create one to start billing on a schedule."}
+              {templatesLoading
+                ? "Loading templates…"
+                : allTemplates.length === 0
+                  ? "No recurring templates yet — create one to start billing on a schedule."
+                  : "No templates match your search or filter."}
             </div>
           )}
         </div>
@@ -295,17 +399,17 @@ export function RecurringTemplatesPanel() {
         {total > pageSize && (
           <div className="flex items-center justify-between border-t border-border px-5 py-2.5 text-[12.5px] text-text-3">
             <span>
-              Page {pageIndex + 1} of {pageCount}
+              Page {safePageIndex + 1} of {pageCount}
             </span>
             <div className="flex gap-2">
-              <Button variant="outline" size="xs" disabled={pageIndex === 0} onClick={() => setPageIndex((p) => p - 1)}>
+              <Button variant="outline" size="xs" disabled={safePageIndex === 0} onClick={() => setPageIndex(safePageIndex - 1)}>
                 Prev
               </Button>
               <Button
                 variant="outline"
                 size="xs"
-                disabled={pageIndex + 1 >= pageCount}
-                onClick={() => setPageIndex((p) => p + 1)}
+                disabled={safePageIndex + 1 >= pageCount}
+                onClick={() => setPageIndex(safePageIndex + 1)}
               >
                 Next
               </Button>

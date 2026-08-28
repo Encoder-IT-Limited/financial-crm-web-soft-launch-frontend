@@ -96,16 +96,16 @@ export function RefundDialog({
                   <span>{line.name}</span>
                   <span className="text-text-3">of {line.quantity}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <Input
                     type="number"
                     min={0}
                     max={line.quantity}
                     value={quantities[line.productId] ?? ""}
                     onChange={(e) => setQuantities({ ...quantities, [line.productId]: e.target.value })}
-                    className="w-24"
+                    className="w-24 shrink-0"
                   />
-                  <div className="flex gap-1.5">
+                  <div className="flex flex-wrap gap-1.5">
                     {(["sellable", "damaged"] as RefundLineCondition[]).map((c) => (
                       <Button
                         key={c}

@@ -42,7 +42,19 @@ export function InvoicesToolbar({
         onValueChange={(status) => onFiltersChange({ ...filters, status: (status ?? "all") as InvoiceFilters["status"] })}
       >
         <SelectTrigger size="sm">
-          <SelectValue />
+          <SelectValue>
+            {(v: InvoiceFilters["status"]) =>
+              ({
+                all: "All status",
+                draft: "Draft",
+                sent: "Sent",
+                "partially-paid": "Partially Paid",
+                paid: "Paid",
+                overdue: "Overdue",
+                cancelled: "Cancelled",
+              })[v] ?? "All status"
+            }
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All status</SelectItem>
@@ -59,7 +71,9 @@ export function InvoicesToolbar({
         onValueChange={(customer) => onFiltersChange({ ...filters, customer: customer ?? "all" })}
       >
         <SelectTrigger size="sm">
-          <SelectValue />
+          <SelectValue>
+            {(v: string | null) => (v === "all" || !v ? "All customers" : (customers.find((c) => c.id === v)?.name ?? "All customers"))}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All customers</SelectItem>

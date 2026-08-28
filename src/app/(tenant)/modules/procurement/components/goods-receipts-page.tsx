@@ -229,7 +229,9 @@ function RecordReceiptDialog({
           <FormField label="Purchase Order">
             <Select value={poId} onValueChange={(id) => handlePoChange(id ?? "")}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select approved PO" />
+                <SelectValue placeholder="Select approved PO">
+                  {(v: string | null) => purchaseOrders.find((po) => po.id === v)?.poNumber ?? "Select approved PO"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {purchaseOrders.map((po) => (

@@ -80,6 +80,16 @@ export type FilterableTableProps<TData> = {
   rowClassName?: string | ((row: TData) => string);
   getRowId?: (row: TData, index: number) => string;
 
+  /**
+   * Optional compact card renderer for narrow screens. When provided, the
+   * table is `hidden lg:block` and this renders each row as a stacked card
+   * `lg:hidden` instead — matching the pattern already proven in
+   * `recurring-templates-panel.tsx` — rather than forcing horizontal scroll
+   * on a 4–6 column table at 360px. When omitted, falls back to the
+   * previous scroll-only behavior so this is opt-in, not a breaking change.
+   */
+  mobileCard?: (row: TData) => ReactNode;
+
   className?: string;
   cardClassName?: string;
 };
@@ -110,6 +120,7 @@ export function FilterableTable<TData>({
   onRowClick,
   rowClassName,
   getRowId,
+  mobileCard,
   className,
   cardClassName,
 }: FilterableTableProps<TData>) {
@@ -192,7 +203,12 @@ export function FilterableTable<TData>({
           </TableToolbar>
         )}
 
-        <div className="overflow-x-auto overflow-y-hidden rounded-[10px] border border-border">
+        <div
+          className={cn(
+            "overflow-x-auto overflow-y-hidden rounded-[10px] border border-border",
+            mobileCard && "hidden lg:block"
+          )}
+        >
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -265,6 +281,43 @@ export function FilterableTable<TData>({
             </TableBody>
           </Table>
         </div>
+
+        {mobileCard && (
+          <div className="flex flex-col divide-y divide-border rounded-[10px] border border-border lg:hidden">
+            {loading &&
+              Array.from({ length: skeletonRowCount }).map((_, i) => (
+                <div key={`skeleton-card-${i}`} className="flex flex-col gap-2 p-4">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ))}
+
+            {!loading && error && (
+              <div className="p-6 text-center text-[13px] text-red">{error}</div>
+            )}
+
+            {!loading &&
+              !error &&
+              rows.map((row) => (
+                <div
+                  key={row.id}
+                  onClick={() => onRowClick?.(row.original)}
+                  className={cn(
+                    onRowClick && "cursor-pointer",
+                    typeof rowClassName === "function" ? rowClassName(row.original) : rowClassName
+                  )}
+                >
+                  {mobileCard(row.original)}
+                </div>
+              ))}
+
+            {isEmpty && (
+              <div className="p-6 text-center text-[13px] text-text-4">
+                {emptyState ?? "No results found."}
+              </div>
+            )}
+          </div>
+        )}
 
         <TablePagination table={table} totalCount={totalCount} pageSizeOptions={pageSizeOptions} />
       </Card>

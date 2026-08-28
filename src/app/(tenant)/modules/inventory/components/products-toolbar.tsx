@@ -76,7 +76,7 @@ export function ProductsToolbar({
 
       <Select value={category} onValueChange={(value) => onCategoryChange(value ?? "all")}>
         <SelectTrigger className={triggerClass} aria-label="Filter by category">
-          <SelectValue />
+          <SelectValue>{(v: string | null) => (v === "all" || !v ? "All categories" : v)}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All categories</SelectItem>
@@ -93,7 +93,11 @@ export function ProductsToolbar({
         onValueChange={(value) => onStatusChange((value ?? "all") as ProductStatus | "all")}
       >
         <SelectTrigger className={triggerClass} aria-label="Filter by status">
-          <SelectValue />
+          <SelectValue>
+            {(v: ProductStatus | "all") =>
+              ({ all: "All status", active: "Active", inactive: "Inactive" })[v] ?? "All status"
+            }
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All status</SelectItem>

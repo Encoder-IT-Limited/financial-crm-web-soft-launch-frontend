@@ -34,6 +34,13 @@ const STATUS_TONE: Record<PosSaleStatus, "green" | "amber" | "red"> = {
   refunded: "red",
 };
 
+const STATUS_FILTER_LABELS: Record<Filters["status"], string> = {
+  all: "All status",
+  completed: "Completed",
+  "partially-refunded": "Partially Refunded",
+  refunded: "Refunded",
+};
+
 export function SalesList() {
   const router = useRouter();
   const money = useFmtMoney();
@@ -105,7 +112,9 @@ export function SalesList() {
           <>
             <Select value={filters.terminalId} onValueChange={(v) => setFilters({ ...filters, terminalId: v ?? "all" })}>
               <SelectTrigger size="sm">
-                <SelectValue placeholder="Terminal" />
+                <SelectValue placeholder="Terminal">
+                  {(v: string | null) => (v === "all" || !v ? "All terminals" : (terminals.find((t) => t.id === v)?.name ?? "Terminal"))}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All terminals</SelectItem>
@@ -118,7 +127,9 @@ export function SalesList() {
             </Select>
             <Select value={filters.customerId} onValueChange={(v) => setFilters({ ...filters, customerId: v ?? "all" })}>
               <SelectTrigger size="sm">
-                <SelectValue placeholder="Customer" />
+                <SelectValue placeholder="Customer">
+                  {(v: string | null) => (v === "all" || !v ? "All customers" : (customers.find((c) => c.id === v)?.name ?? "Customer"))}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All customers</SelectItem>
@@ -145,7 +156,7 @@ export function SalesList() {
             />
             <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: (v ?? "all") as Filters["status"] })}>
               <SelectTrigger size="sm">
-                <SelectValue />
+                <SelectValue>{(v: Filters["status"]) => STATUS_FILTER_LABELS[v] ?? "All status"}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All status</SelectItem>
@@ -159,6 +170,21 @@ export function SalesList() {
         onClearFilters={() =>
           setFilters({ search: "", status: "all", terminalId: "all", customerId: "all", startDate: "", endDate: "" })
         }
+        mobileCard={(s) => (
+          <div className="flex flex-col gap-2 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="font-bold text-text">{s.number}</span>
+                <span className="text-[11px] text-text-4">{terminalName(s.terminalId)}</span>
+              </div>
+              <span className="text-[13px] font-semibold text-text">{money(s.total)}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <Badge tone={STATUS_TONE[s.status]}>{s.status.replace("-", " ")}</Badge>
+              <span className="text-[11px] text-text-4">{fmtDateTime(s.createdAt)}</span>
+            </div>
+          </div>
+        )}
       />
     </div>
   );

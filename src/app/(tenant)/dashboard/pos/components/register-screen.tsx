@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import { PageHeading } from "@/components/shared/page-heading";
 import { toast } from "@/lib/toast";
 import type { ProductLookupItem } from "../mock/product-lookup-seed";
-import { computeCartTotals, type CartLine, type PosPayment, type PosSale } from "../types";
+import {
+  computeCartTotals,
+  type CartLine,
+  type PosPayment,
+  type PosSale,
+} from "../types";
 import { posTerminalsApi } from "../api/terminals.service";
 import { posSessionsApi } from "../api/sessions.service";
 import { posSalesApi } from "../api/sales.service";
@@ -44,20 +49,26 @@ export function RegisterScreen() {
     setTerminalId(localStorage.getItem(DEVICE_TERMINAL_KEY) ?? undefined);
   }, []);
 
-  const { data: terminals = [] } = useQuery({ queryKey: ["pos-terminals"], queryFn: () => posTerminalsApi.list() });
+  const { data: terminals = [] } = useQuery({
+    queryKey: ["pos-terminals"],
+    queryFn: () => posTerminalsApi.list(),
+  });
   const terminal = terminals.find((t) => t.id === terminalId);
 
   const { data: session } = useQuery({
     queryKey: ["pos-open-session", terminalId],
     // React Query rejects `undefined` from a queryFn — "no open session" is
     // a real, cacheable result, so it's normalized to `null` here.
-    queryFn: () => posSessionsApi.getOpenForTerminal(terminalId!).then((s) => s ?? null),
+    queryFn: () =>
+      posSessionsApi.getOpenForTerminal(terminalId!).then((s) => s ?? null),
     enabled: !!terminalId,
   });
 
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartDiscount, setCartDiscount] = useState(0);
-  const [checkoutManagerPin, setCheckoutManagerPin] = useState<string | undefined>();
+  const [checkoutManagerPin, setCheckoutManagerPin] = useState<
+    string | undefined
+  >();
   const [customerId, setCustomerId] = useState<string | undefined>();
 
   const [openSessionOpen, setOpenSessionOpen] = useState(false);
@@ -73,7 +84,9 @@ export function RegisterScreen() {
     setCart((prev) => {
       const existing = prev.find((l) => l.productId === product.id);
       if (existing) {
-        return prev.map((l) => (l.productId === product.id ? { ...l, quantity: l.quantity + 1 } : l));
+        return prev.map((l) =>
+          l.productId === product.id ? { ...l, quantity: l.quantity + 1 } : l,
+        );
       }
       return [
         ...prev,
@@ -127,7 +140,15 @@ export function RegisterScreen() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] flex-col">
+    // h-full instead of a h-[calc(100vh-8rem)] guess at the header's height —
+    // the register's <main> ((tenant)/layout.tsx's posMode branch) is already
+    // a bounded flex-1 box, so filling it with h-full stays correct even when
+    // the header above wraps to two lines on a narrow screen.
+    // p-4 lg:p-6 — `main` gives posMode zero padding by design (an
+    // edge-to-edge register frame), but nothing downstream ever added its
+    // own gutter back, so the heading/cards sat flush against the viewport
+    // edge. Matches the padding every non-posMode page gets from `main`.
+    <div className="flex h-full flex-col p-4 lg:p-6">
       <PageHeading
         title="Register"
         subtitle={
@@ -137,7 +158,11 @@ export function RegisterScreen() {
         }
         actions={
           session && (
-            <Button variant="outline" size="sm" onClick={() => setCloseSessionOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCloseSessionOpen(true)}
+            >
               <LogOut /> End Shift
             </Button>
           )
@@ -145,18 +170,38 @@ export function RegisterScreen() {
       />
 
       {!session ? (
-        <SessionRequiredGate onOpenSession={() => setOpenSessionOpen(true)} />
+        // flex-1 + centering — SessionRequiredGate's Card is content-sized
+        // (py-16, no flex-1 of its own), so without this wrapper it just
+        // sits at the top and leaves the rest of the register's real
+        // available height (now correctly resolved) blank underneath it.
+        <div className="flex min-h-0 flex-1 items-center justify-center">
+          <SessionRequiredGate onOpenSession={() => setOpenSessionOpen(true)} />
+        </div>
       ) : (
         <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_320px]">
-          <ProductSearchPanel warehouseId={terminal!.warehouseId} onAdd={addToCart} />
+          <ProductSearchPanel
+            warehouseId={terminal!.warehouseId}
+            onAdd={addToCart}
+          />
 
           <div className="flex min-h-0 flex-col gap-3 rounded-xl border border-border bg-surface p-3">
-            <CustomerPickerInline customerId={customerId} onChange={setCustomerId} />
+            <CustomerPickerInline
+              customerId={customerId}
+              onChange={setCustomerId}
+            />
             <CartPanel
               lines={cart}
               totals={totals}
-              onQuantityChange={(productId, quantity) => setCart(cart.map((l) => (l.productId === productId ? { ...l, quantity } : l)))}
-              onRemove={(productId) => setCart(cart.filter((l) => l.productId !== productId))}
+              onQuantityChange={(productId, quantity) =>
+                setCart(
+                  cart.map((l) =>
+                    l.productId === productId ? { ...l, quantity } : l,
+                  ),
+                )
+              }
+              onRemove={(productId) =>
+                setCart(cart.filter((l) => l.productId !== productId))
+              }
               onDiscount={() => setDiscountOpen(true)}
               onCheckout={() => setPaymentOpen(true)}
               canCheckout={cart.length > 0}
@@ -175,7 +220,12 @@ export function RegisterScreen() {
         }}
       />
 
-      <CloseSessionDialog session={session ?? null} open={closeSessionOpen} onOpenChange={setCloseSessionOpen} onClosed={() => {}} />
+      <CloseSessionDialog
+        session={session ?? null}
+        open={closeSessionOpen}
+        onOpenChange={setCloseSessionOpen}
+        onClosed={() => {}}
+      />
 
       <DiscountDialog
         open={discountOpen}
@@ -187,9 +237,20 @@ export function RegisterScreen() {
         }}
       />
 
-      <PaymentDialog open={paymentOpen} onOpenChange={setPaymentOpen} total={totals.total} onConfirm={handleCheckout} confirming={checkingOut} />
+      <PaymentDialog
+        open={paymentOpen}
+        onOpenChange={setPaymentOpen}
+        total={totals.total}
+        onConfirm={handleCheckout}
+        confirming={checkingOut}
+      />
 
-      <ReceiptDialog sale={completedSale} open={!!completedSale} onOpenChange={(open) => !open && setCompletedSale(null)} onNewSale={() => setCompletedSale(null)} />
+      <ReceiptDialog
+        sale={completedSale}
+        open={!!completedSale}
+        onOpenChange={(open) => !open && setCompletedSale(null)}
+        onNewSale={() => setCompletedSale(null)}
+      />
     </div>
   );
 }

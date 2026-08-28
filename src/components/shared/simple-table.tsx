@@ -164,69 +164,74 @@ export function SimpleTable<TData>({
     <>
       {toolbar}
 
-      <Table>
-        <TableHeader className="bg-surface-subtle">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id} className="hover:bg-surface-subtle">
-              {headerGroup.headers.map((header) => (
-                <TableHead
-                  key={header.id}
-                  style={
-                    header.column.columnDef.size !== undefined
-                      ? { width: header.column.getSize() }
-                      : undefined
-                  }
-                  className="h-11 text-text-2"
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
-                </TableHead>
+      {/* overflow-x-auto so narrow screens scroll to reach overflowing columns
+          instead of silently clipping them (the Card's own overflow-hidden,
+          kept below for rounded corners, would otherwise hide them entirely) */}
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-surface-subtle">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="hover:bg-surface-subtle">
+                {headerGroup.headers.map((header) => (
+                  <TableHead
+                    key={header.id}
+                    style={
+                      header.column.columnDef.size !== undefined
+                        ? { width: header.column.getSize() }
+                        : undefined
+                    }
+                    className="h-11 text-text-2"
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
+                ))}
+              </TableRow>
+            ))}
+          </TableHeader>
+
+          <TableBody>
+            {loading &&
+              Array.from({ length: skeletonRowCount }).map((_, i) => (
+                <TableRow key={`skeleton-${i}`}>
+                  {columns.map((_, colIndex) => (
+                    <TableCell key={colIndex}>
+                      <Skeleton className="h-4 w-full max-w-32" />
+                    </TableCell>
+                  ))}
+                </TableRow>
               ))}
-            </TableRow>
-          ))}
-        </TableHeader>
 
-        <TableBody>
-          {loading &&
-            Array.from({ length: skeletonRowCount }).map((_, i) => (
-              <TableRow key={`skeleton-${i}`}>
-                {columns.map((_, colIndex) => (
-                  <TableCell key={colIndex}>
-                    <Skeleton className="h-4 w-full max-w-32" />
-                  </TableCell>
-                ))}
+            {!loading &&
+              rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() ? "selected" : undefined}
+                  onClick={() => onRowClick?.(row.original)}
+                  className={cn(
+                    onRowClick && "cursor-pointer",
+                    typeof rowClassName === "function" ? rowClassName(row.original) : rowClassName
+                  )}
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+
+            {isEmpty && (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-28 text-center text-[13px] text-text-4">
+                  {emptyState ?? "No results found."}
+                </TableCell>
               </TableRow>
-            ))}
-
-          {!loading &&
-            rows.map((row) => (
-              <TableRow
-                key={row.id}
-                data-state={row.getIsSelected() ? "selected" : undefined}
-                onClick={() => onRowClick?.(row.original)}
-                className={cn(
-                  onRowClick && "cursor-pointer",
-                  typeof rowClassName === "function" ? rowClassName(row.original) : rowClassName
-                )}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-
-          {isEmpty && (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="h-28 text-center text-[13px] text-text-4">
-                {emptyState ?? "No results found."}
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
       {footer?.(table)}
     </>

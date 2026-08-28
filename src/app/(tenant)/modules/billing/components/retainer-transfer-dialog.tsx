@@ -63,7 +63,12 @@ export function RetainerTransferDialog({
       <FormField label="Destination retainer" error={error}>
         <Select value={toRetainerId} onValueChange={(v) => setToRetainerId(v ?? "")}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select a retainer" />
+            <SelectValue placeholder="Select a retainer">
+              {(v: string | null) => {
+                const c = candidates.find((x) => x.id === v);
+                return c ? `${c.number} — ${fmtMoney(c.remainingBalance, c.currency)} remaining` : "Select a retainer";
+              }}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {candidates.map((c) => (

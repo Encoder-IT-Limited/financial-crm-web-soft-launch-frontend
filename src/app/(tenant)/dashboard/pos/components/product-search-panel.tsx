@@ -91,7 +91,12 @@ export function ProductSearchPanel({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 lg:grid-cols-2 min-[1440px]:grid-cols-3">
+      {/* Monotonic — density only increases with width. The previous
+          `lg:grid-cols-2` dropped from 3 columns to 2 right where the
+          register gains its widest desktop layout; removed rather than
+          tuned around, since nothing about `lg:` actually calls for fewer
+          columns here. */}
+      <div className="grid grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 min-[1440px]:grid-cols-4">
         {filtered.map((product) => (
           <ProductTile
             key={product.id}

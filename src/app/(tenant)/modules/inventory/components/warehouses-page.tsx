@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Eye, Pencil, Plus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -35,11 +36,11 @@ import {
   useProducts,
   useReceiveStock,
   useUpdateWarehouse,
-  useWarehouse,
   useWarehouses,
 } from "../hooks/use-inventory";
 
 export function WarehousesPage() {
+  const router = useRouter();
   const { data: items = [], isLoading } = useWarehouses();
   const { data: products = [] } = useProducts();
   const receiveStock = useReceiveStock();
@@ -53,7 +54,6 @@ export function WarehousesPage() {
   const [quantity, setQuantity] = useState("");
   const [unitCost, setUnitCost] = useState("");
 
-  const [detailId, setDetailId] = useState<string | null>(null);
   const [edit, setEdit] = useState<Warehouse | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Warehouse | null>(null);
   const [editName, setEditName] = useState("");
@@ -61,7 +61,6 @@ export function WarehousesPage() {
   const [editAddress, setEditAddress] = useState("");
   const [editStatus, setEditStatus] = useState<"active" | "inactive">("active");
 
-  const { data: detail, isLoading: detailLoading } = useWarehouse(detailId ?? "");
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     if (!needle) return items;
@@ -79,31 +78,8 @@ export function WarehousesPage() {
     setEdit(w);
     setEditName(w.name);
     setEditCode(w.code);
-    setEditAddress(w.address);
+    setEditAddress(w.address || "");
     setEditStatus(w.status);
-  }
-
-  async function handleReceive() {
-    const qty = Number(quantity);
-    const cost = Number(unitCost);
-    if (!warehouseId || !productId || !(qty > 0) || !(cost >= 0)) {
-      toast.error("Warehouse, product, quantity, and unit cost are required");
-      return;
-    }
-    try {
-      await receiveStock.mutateAsync({
-        productId,
-        warehouseId,
-        quantity: qty,
-        unitCost: cost,
-        movementType: "OPENING",
-      });
-      toast.success("Stock received (batch auto-created if tracked)");
-      resetReceive();
-      setReceiveOpen(false);
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Receive failed");
-    }
   }
 
   async function handleEdit() {
@@ -126,6 +102,29 @@ export function WarehousesPage() {
       setEdit(null);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Update failed");
+    }
+  }
+
+  async function handleReceive() {
+    const qty = Number(quantity);
+    const cost = Number(unitCost);
+    if (!warehouseId || !productId || !(qty > 0) || !(cost >= 0)) {
+      toast.error("Warehouse, product, quantity, and unit cost are required");
+      return;
+    }
+    try {
+      await receiveStock.mutateAsync({
+        productId,
+        warehouseId,
+        quantity: qty,
+        unitCost: cost,
+        movementType: "OPENING",
+      });
+      toast.success("Stock received (batch auto-created if tracked)");
+      resetReceive();
+      setReceiveOpen(false);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Receive failed");
     }
   }
 
@@ -175,7 +174,11 @@ export function WarehousesPage() {
               </TableHeader>
               <TableBody>
                 {filtered.map((w) => (
-                  <TableRow key={w.id}>
+                  <TableRow
+                    key={w.id}
+                    className="cursor-pointer"
+                    onClick={() => router.push(`/dashboard/warehouses/${w.id}`)}
+                  >
                     <TableCell className="font-semibold">{w.name}</TableCell>
                     <TableCell className="tabular-nums text-text-2">{w.code}</TableCell>
                     <TableCell className="text-text-3">{w.address || "—"}</TableCell>
@@ -186,15 +189,31 @@ export function WarehousesPage() {
                         {w.status === "active" ? "Active" : "Inactive"}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon-sm" aria-label="View" onClick={() => setDetailId(w.id)}>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`View ${w.name}`}
+                          render={<Link href={`/dashboard/warehouses/${w.id}`} />}
+                          nativeButton={false}
+                        >
                           <Eye />
                         </Button>
-                        <Button variant="ghost" size="icon-sm" aria-label="Edit" onClick={() => openEdit(w)}>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Edit ${w.name}`}
+                          onClick={() => openEdit(w)}
+                        >
                           <Pencil />
                         </Button>
-                        <Button variant="ghost" size="icon-sm" aria-label="Delete" onClick={() => setDeleteTarget(w)}>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Delete ${w.name}`}
+                          onClick={() => setDeleteTarget(w)}
+                        >
                           <Trash2 />
                         </Button>
                       </div>
@@ -222,7 +241,9 @@ export function WarehousesPage() {
         <FormField label="Warehouse">
           <Select value={warehouseId} onValueChange={(v) => setWarehouseId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select warehouse" />
+              <SelectValue placeholder="Select warehouse">
+                {(v: string | null) => items.find((w) => w.id === v)?.name ?? "Select warehouse"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {items.map((w) => (
@@ -243,7 +264,9 @@ export function WarehousesPage() {
             }}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select product" />
+              <SelectValue placeholder="Select product">
+                {(v: string | null) => products.find((p) => p.id === v)?.name ?? "Select product"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {products.map((p) => (
@@ -260,68 +283,6 @@ export function WarehousesPage() {
         <FormField label="Unit cost">
           <Input type="number" min={0} step="any" value={unitCost} onChange={(e) => setUnitCost(e.target.value)} className="h-9" />
         </FormField>
-      </FormDialog>
-
-      <FormDialog
-        open={!!detailId}
-        onOpenChange={(next) => {
-          if (!next) setDetailId(null);
-        }}
-        title={detail?.name ?? "Warehouse"}
-        description="Warehouse details"
-        onSubmit={() => setDetailId(null)}
-        submitLabel="Close"
-      >
-        {detailLoading && !detail ? (
-          <Skeleton className="h-32 w-full" />
-        ) : detail ? (
-          <>
-            <DetailLine label="Code" value={detail.code} />
-            <DetailLine label="Location" value={detail.address || "—"} />
-            <DetailLine label="Status" value={detail.status} />
-            <DetailLine label="Products with stock" value={String(detail.productCount)} />
-            <DetailLine label="Total on hand" value={String(detail.totalOnHand)} />
-            <DetailLine label="Damaged" value={String(detail.totalDamaged)} />
-            <DetailLine label="Reserved" value={String(detail.totalReserved)} />
-            <div className="mt-3">
-              <div className="mb-2 text-[12px] font-semibold text-text">Products in this warehouse</div>
-              {!detail.products?.length ? (
-                <p className="py-4 text-center text-[12.5px] text-text-3">No stock in this warehouse.</p>
-              ) : (
-                <div className="overflow-x-auto rounded-[10px] border border-border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-surface-subtle hover:bg-surface-subtle">
-                        <TableHead>Product</TableHead>
-                        <TableHead>SKU</TableHead>
-                        <TableHead className="text-right">Qty</TableHead>
-                        <TableHead className="text-right">Damaged</TableHead>
-                        <TableHead className="text-right">Reserved</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {detail.products.map((p) => (
-                        <TableRow key={p.productId}>
-                          <TableCell className="font-medium">{p.name}</TableCell>
-                          <TableCell className="tabular-nums text-text-2">{p.sku}</TableCell>
-                          <TableCell className="text-right tabular-nums">{p.quantity}</TableCell>
-                          <TableCell className="text-right tabular-nums">{p.damagedQuantity}</TableCell>
-                          <TableCell className="text-right tabular-nums">{p.reservedQuantity}</TableCell>
-                          <TableCell>
-                            <Badge tone={p.status === "active" ? "green" : "neutral"}>
-                              {p.status === "active" ? "Active" : "Inactive"}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </div>
-          </>
-        ) : null}
       </FormDialog>
 
       <FormDialog
@@ -370,6 +331,7 @@ export function WarehousesPage() {
           try {
             await deleteWarehouse.mutateAsync(deleteTarget.id);
             toast.success("Warehouse deleted");
+            setDeleteTarget(null);
           } catch (err) {
             if (err instanceof ApiError) {
               toast.error(err.message);
@@ -379,15 +341,6 @@ export function WarehousesPage() {
           }
         }}
       />
-    </div>
-  );
-}
-
-function DetailLine({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 border-b border-border py-2 text-[12.5px] last:border-0">
-      <span className="text-text-3">{label}</span>
-      <span className="font-medium text-text">{value}</span>
     </div>
   );
 }

@@ -26,6 +26,12 @@ type Filters = {
   endDate: string;
 };
 
+const STATUS_FILTER_LABELS: Record<Filters["status"], string> = {
+  all: "All status",
+  open: "Open",
+  closed: "Closed",
+};
+
 export function SessionsList() {
   const money = useFmtMoney();
   const [filters, setFilters] = useState<Filters>({
@@ -90,7 +96,7 @@ export function SessionsList() {
           <>
             <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: (v ?? "all") as Filters["status"] })}>
               <SelectTrigger size="sm">
-                <SelectValue />
+                <SelectValue>{(v: Filters["status"]) => STATUS_FILTER_LABELS[v] ?? "All status"}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All status</SelectItem>
@@ -100,7 +106,9 @@ export function SessionsList() {
             </Select>
             <Select value={filters.terminalId} onValueChange={(v) => setFilters({ ...filters, terminalId: v ?? "all" })}>
               <SelectTrigger size="sm">
-                <SelectValue placeholder="Terminal" />
+                <SelectValue placeholder="Terminal">
+                  {(v: string | null) => (v === "all" || !v ? "All terminals" : (terminals.find((t) => t.id === v)?.name ?? "Terminal"))}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All terminals</SelectItem>
@@ -128,6 +136,27 @@ export function SessionsList() {
           </>
         }
         onClearFilters={() => setFilters({ status: "all", terminalId: "all", startDate: "", endDate: "" })}
+        mobileCard={(s) => (
+          <div className="flex flex-col gap-2 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="font-bold text-text">{terminalName(s.terminalId)}</span>
+                <CashierCell session={s} />
+              </div>
+              <Badge tone={s.status === "open" ? "green" : "neutral"}>{s.status}</Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11.5px] text-text-4">
+              <span>Opened {fmtDateTime(s.openedAt)}</span>
+              <span>Closed {s.closedAt ? fmtDateTime(s.closedAt) : "—"}</span>
+              {s.variance !== undefined && (
+                <span className={s.variance === 0 ? "text-green" : s.variance > 0 ? "text-blue" : "text-red"}>
+                  {s.variance > 0 ? "+" : ""}
+                  {money(s.variance)} variance
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       />
 
       {detailsId && <SessionDetailsDialog sessionId={detailsId} open={!!detailsId} onOpenChange={(open) => !open && setDetailsId(null)} />}

@@ -131,7 +131,9 @@ export function RetainersList() {
         filters={
           <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: (v ?? "all") as Filters["status"] })}>
             <SelectTrigger size="sm">
-              <SelectValue />
+              <SelectValue>
+                {(v: Filters["status"]) => (v === "all" || !v ? "All status" : <RetainerStatusBadge status={v} />)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All status</SelectItem>
@@ -144,6 +146,27 @@ export function RetainersList() {
           </Select>
         }
         onClearFilters={() => setFilters({ search: "", status: "all" })}
+        mobileCard={(r) => {
+          const pct = retainerPercentUsed(r);
+          return (
+            <div className="flex flex-col gap-2 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-bold text-text">{r.number}</span>
+                  <span className="text-[12px] text-text-3">{customerName(r.customerId)}</span>
+                </div>
+                <RetainerStatusBadge status={retainerDisplayStatus(r)} />
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+                <span className="text-text-2">{fmtMoney(r.contractAmount, r.currency)} contract</span>
+                <span className={pct >= 100 ? "text-text-3" : "font-semibold text-green"}>
+                  {fmtMoney(r.remainingBalance, r.currency)} remaining
+                </span>
+                <span className="capitalize text-text-4">{r.billingPeriod}</span>
+              </div>
+            </div>
+          );
+        }}
       />
 
       <RetainerFormDialog open={createOpen} onOpenChange={setCreateOpen} />

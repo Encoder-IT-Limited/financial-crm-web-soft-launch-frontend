@@ -154,7 +154,9 @@ export function OpenSessionDialog({
               onValueChange={(v) => setTerminalId(v ?? terminalId)}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a terminal" />
+                <SelectValue placeholder="Select a terminal">
+                  {(v: string | null) => activeTerminals.find((t) => t.id === v)?.name ?? "Select a terminal"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {activeTerminals.map((t) => (
