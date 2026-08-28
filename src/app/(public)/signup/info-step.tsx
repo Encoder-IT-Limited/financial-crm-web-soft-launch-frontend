@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { z } from "zod";
 
 const infoSchema = z
@@ -29,6 +30,8 @@ type InfoStepProps = {
 export function InfoStep({ planName, defaultValues, onSubmit }: InfoStepProps) {
   const [info, setInfo] = useState<InfoValues>(defaultValues);
   const [errors, setErrors] = useState<InfoErrors>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -103,22 +106,42 @@ export function InfoStep({ planName, defaultValues, onSubmit }: InfoStepProps) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-[12px] font-semibold text-text-2">Password</label>
-            <input
-              type="password"
-              value={info.password}
-              onChange={(e) => setInfo((v) => ({ ...v, password: e.target.value }))}
-              className="w-full rounded-[7px] border border-border bg-surface px-3 py-2.5 text-[13px] text-text outline-none focus:border-blue"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={info.password}
+                onChange={(e) => setInfo((v) => ({ ...v, password: e.target.value }))}
+                className="w-full rounded-[7px] border border-border bg-surface px-3 py-2.5 pr-10 text-[13px] text-text outline-none focus:border-blue"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-text-4 hover:text-text-2"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
             {errors.password && <p className="mt-1 text-[11px] text-red">{errors.password}</p>}
           </div>
           <div>
             <label className="mb-1 block text-[12px] font-semibold text-text-2">Confirm password</label>
-            <input
-              type="password"
-              value={info.confirmPassword}
-              onChange={(e) => setInfo((v) => ({ ...v, confirmPassword: e.target.value }))}
-              className="w-full rounded-[7px] border border-border bg-surface px-3 py-2.5 text-[13px] text-text outline-none focus:border-blue"
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                value={info.confirmPassword}
+                onChange={(e) => setInfo((v) => ({ ...v, confirmPassword: e.target.value }))}
+                className="w-full rounded-[7px] border border-border bg-surface px-3 py-2.5 pr-10 text-[13px] text-text outline-none focus:border-blue"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword((v) => !v)}
+                className="absolute top-1/2 right-3 -translate-y-1/2 text-text-4 hover:text-text-2"
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+              >
+                {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            </div>
             {errors.confirmPassword && <p className="mt-1 text-[11px] text-red">{errors.confirmPassword}</p>}
           </div>
         </div>
