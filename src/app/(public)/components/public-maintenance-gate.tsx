@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import { usePublicSettings } from "../modules/settings/hooks/use-public-settings";
 
-const MAINTENANCE_EXEMPT = ["/login", "/forgot-password", "/verify-otp", "/reset-password"];
+const MAINTENANCE_EXEMPT = ["/login", "/forgot-password", "/verify-otp", "/reset-password", "/invite/accept"];
 
 export function PublicMaintenanceGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

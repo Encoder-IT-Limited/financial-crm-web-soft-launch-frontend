@@ -29,8 +29,14 @@ function mapRole(role: string): TenantUserRole {
       return "owner";
     case "ADMIN":
       return "admin";
+    case "MANAGER":
+      return "manager";
+    case "INVENTORY_MANAGER":
+      return "inventory-manager";
     case "SALES_CASHIER":
       return "pos-cashier";
+    case "ACCOUNTANT":
+      return "accountant";
     case "VIEWER":
       return "read-only-auditor";
     default:

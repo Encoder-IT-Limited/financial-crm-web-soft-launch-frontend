@@ -8,20 +8,40 @@ import type { Plan } from "@/types/plan";
 import type { TenantStatus } from "@/components/shared/status-badge";
 import { computePlanTotal } from "@/app/(public)/pricing/components/pricing-utils";
 
-export type TenantUserRole = "owner" | "admin" | "staff" | "pos-cashier" | "service-api" | "read-only-auditor";
+export type TenantUserRole =
+  | "owner"
+  | "admin"
+  | "manager"
+  | "inventory-manager"
+  | "staff"
+  | "pos-cashier"
+  | "accountant"
+  | "service-api"
+  | "read-only-auditor";
 
 export const TENANT_ROLE_LABELS: Record<TenantUserRole, string> = {
   owner: "Owner",
   admin: "Admin",
+  manager: "Manager",
+  "inventory-manager": "Inventory Manager",
   staff: "Staff",
   "pos-cashier": "POS Cashier",
+  accountant: "Accountant",
   "service-api": "Service / API",
   "read-only-auditor": "Read-only Auditor",
 };
 
 /** Which account roles count toward the plan's seat limit — service/API and
  * read-only auditor accounts don't (docs/Public-SuperAdmin-Plan.md §3.1). */
-const SEAT_COUNTING_ROLES: TenantUserRole[] = ["owner", "admin", "staff", "pos-cashier"];
+const SEAT_COUNTING_ROLES: TenantUserRole[] = [
+  "owner",
+  "admin",
+  "manager",
+  "inventory-manager",
+  "staff",
+  "pos-cashier",
+  "accountant",
+];
 
 export type TenantUser = {
   id: string;

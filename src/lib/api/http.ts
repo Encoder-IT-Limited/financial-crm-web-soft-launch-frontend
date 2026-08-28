@@ -39,6 +39,8 @@ if (typeof window !== "undefined") {
     const skipTenantHeader =
       url.startsWith("/admin") ||
       url.startsWith("/auth/signup") ||
+      url.startsWith("/auth/invite") ||
+      url.startsWith("/auth/accept-invite") ||
       url === "/plans" ||
       url.startsWith("/plans?") ||
       url === "/settings" ||

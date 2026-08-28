@@ -4,6 +4,7 @@ export type Me = {
   id: string;
   name: string;
   email: string;
+  role?: string;
   realm: Realm;
   permissions: string[];
   tenant?: {

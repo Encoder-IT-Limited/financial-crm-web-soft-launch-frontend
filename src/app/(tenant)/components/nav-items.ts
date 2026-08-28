@@ -30,9 +30,8 @@ import {
   Percent,
   Building2,
   CalendarClock,
-  Bell,
-  Sparkles,
   Settings,
+  Shield,
   Store,
   History,
   Monitor,
@@ -327,17 +326,22 @@ export const tenantNavSections: SidebarNavSection[] = [
   //     },
   //   ],
   // },
-  // {
-  //   label: "System",
-  //   items: [
-  //     { label: "Alerts", href: "/dashboard/alerts", icon: Bell },
-  //     {
-  //       label: "AI Assistant",
-  //       href: "/dashboard/ai",
-  //       icon: Sparkles,
-  //       module: "ai-assistant",
-  //     },
-  //     { label: "Settings", href: "/dashboard/settings", icon: Settings },
-  //   ],
-  // },
+  {
+    label: "System",
+    items: [
+      { label: "Settings", href: "/dashboard/settings", icon: Settings },
+      {
+        label: "Users",
+        href: "/dashboard/users",
+        icon: UserRound,
+        permission: "user.manage",
+      },
+      {
+        label: "Roles",
+        href: "/dashboard/roles",
+        icon: Shield,
+        permission: "user.manage",
+      },
+    ],
+  },
 ];
