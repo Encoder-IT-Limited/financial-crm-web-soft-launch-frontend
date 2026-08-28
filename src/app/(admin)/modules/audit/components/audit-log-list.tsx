@@ -4,7 +4,13 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PageHeading } from "@/components/shared/page-heading";
 import { FilterableTable } from "@/components/shared/filterable-table";
 import { tenantsApi } from "../../tenants/api/tenants.service";
@@ -22,7 +28,14 @@ type Filters = {
   to: string;
 };
 
-const EMPTY_FILTERS: Filters = { search: "", tenantId: "all", module: "all", action: "all", from: "", to: "" };
+const EMPTY_FILTERS: Filters = {
+  search: "",
+  tenantId: "all",
+  module: "all",
+  action: "all",
+  from: "",
+  to: "",
+};
 const AUDIT_MODULES = ["Tenants", "Plans & Pricing", "Payments", "Settings"];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,7 +45,10 @@ export function AuditLogList() {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 25 });
 
-  const { data: tenants = [] } = useQuery({ queryKey: ["tenants"], queryFn: tenantsApi.list });
+  const { data: tenants = [] } = useQuery({
+    queryKey: ["tenants"],
+    queryFn: tenantsApi.list,
+  });
   const { data, isLoading: loading } = useQuery({
     queryKey: ["audit", filters, pagination.pageIndex, pagination.pageSize],
     queryFn: () =>
@@ -71,7 +87,10 @@ export function AuditLogList() {
 
   return (
     <div>
-      <PageHeading title="Audit Log" subtitle="Review platform activity across all tenants" />
+      <PageHeading
+        title="Audit Log"
+        subtitle="Review platform activity across all tenants"
+      />
 
       <FilterableTable
         columns={columns}
@@ -79,7 +98,7 @@ export function AuditLogList() {
         loading={loading}
         getRowId={(e) => e.id}
         emptyState="No activity matches your filters."
-        cardClassName="gap-0 overflow-hidden p-0"
+        cardClassName="overflow-hidden"
         search={{
           value: filters.search,
           onChange: (search) => patchFilters({ search }),
@@ -87,7 +106,10 @@ export function AuditLogList() {
         }}
         filters={
           <>
-            <Select value={filters.tenantId} onValueChange={(v) => patchFilters({ tenantId: v ?? "all" })}>
+            <Select
+              value={filters.tenantId}
+              onValueChange={(v) => patchFilters({ tenantId: v ?? "all" })}
+            >
               <SelectTrigger size="sm">
                 <SelectValue>
                   {(v: string | null) => (v === "all" || !v ? "All tenants" : (tenants.find((t) => t.id === v)?.name ?? "All tenants"))}
@@ -102,7 +124,10 @@ export function AuditLogList() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filters.module} onValueChange={(v) => patchFilters({ module: v ?? "all" })}>
+            <Select
+              value={filters.module}
+              onValueChange={(v) => patchFilters({ module: v ?? "all" })}
+            >
               <SelectTrigger size="sm">
                 <SelectValue>{(v: string | null) => (v === "all" || !v ? "All modules" : v)}</SelectValue>
               </SelectTrigger>
@@ -117,7 +142,9 @@ export function AuditLogList() {
             </Select>
             <Select
               value={filters.action}
-              onValueChange={(v) => patchFilters({ action: (v ?? "all") as Filters["action"] })}
+              onValueChange={(v) =>
+                patchFilters({ action: (v ?? "all") as Filters["action"] })
+              }
             >
               <SelectTrigger size="sm">
                 <SelectValue>
@@ -126,11 +153,13 @@ export function AuditLogList() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All actions</SelectItem>
-                {(Object.keys(AUDIT_ACTION_LABELS) as AuditAction[]).map((action) => (
-                  <SelectItem key={action} value={action}>
-                    {AUDIT_ACTION_LABELS[action]}
-                  </SelectItem>
-                ))}
+                {(Object.keys(AUDIT_ACTION_LABELS) as AuditAction[]).map(
+                  (action) => (
+                    <SelectItem key={action} value={action}>
+                      {AUDIT_ACTION_LABELS[action]}
+                    </SelectItem>
+                  ),
+                )}
               </SelectContent>
             </Select>
             <Input

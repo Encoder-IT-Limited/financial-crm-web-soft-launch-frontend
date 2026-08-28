@@ -10,15 +10,24 @@ import { RecentActivityCard } from "../modules/dashboard/components/recent-activ
 import { RecentPaymentsCard } from "../modules/dashboard/components/recent-payments-card";
 
 export default function AdminDashboardPage() {
-  const { data, isLoading } = useQuery({ queryKey: ["admin-dashboard"], queryFn: dashboardApi.get });
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-dashboard"],
+    queryFn: dashboardApi.get,
+  });
 
   if (isLoading || !data) {
     return (
       <div>
-        <PageHeading title="Platform overview" subtitle="MRM Super Admin · all tenant accounts" />
+        <PageHeading
+          title="Platform overview"
+          subtitle="MRM Super Admin · all tenant accounts"
+        />
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-[76px] animate-pulse rounded-xl border border-border bg-surface-subtle" />
+            <div
+              key={i}
+              className="h-[76px] animate-pulse rounded-xl border border-border bg-surface-subtle"
+            />
           ))}
         </div>
       </div>
@@ -27,12 +36,18 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeading title="Platform overview" subtitle="MRM Super Admin · all tenant accounts" />
+      <PageHeading
+        title="Platform overview"
+        subtitle="MRM Super Admin · all tenant accounts"
+      />
 
       <KpiRow kpis={data.kpis} />
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.4fr]">
-        <PlanDistributionCard distribution={data.planDistribution} totalTenants={data.kpis.totalTenants} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <PlanDistributionCard
+          distribution={data.planDistribution}
+          totalTenants={data.kpis.totalTenants}
+        />
         <TrialsEndingCard items={data.trialsEndingSoon} />
       </div>
 
