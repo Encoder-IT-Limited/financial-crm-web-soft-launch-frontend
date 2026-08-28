@@ -37,7 +37,9 @@ function getColumnLabel<TData>(column: Column<TData, unknown>): string {
   const header = column.columnDef.header;
   if (typeof header === "string") return header;
 
-  return column.id.replace(/([A-Z])/g, " $1").replace(/^./, (char) => char.toUpperCase());
+  return column.id
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (char) => char.toUpperCase());
 }
 
 export type FilterableTableProps<TData> = {
@@ -160,33 +162,43 @@ export function FilterableTable<TData>({
       visible: column.getIsVisible(),
     }));
 
-  const showToolbar = Boolean(search || filters || onClearFilters || columnOptions.length > 0);
+  const showToolbar = Boolean(
+    search || filters || onClearFilters || columnOptions.length > 0,
+  );
 
   return (
-    <div className={cn("flex flex-col gap-4", className)}>
+    <div className={cn("flex flex-col gap-4 ", className)}>
       {(title || actions) && (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             {titleIcon}
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-2">
-                {title && <h3 className="text-[15px] font-bold text-text">{title}</h3>}
+                {title && (
+                  <h3 className="text-[15px] font-bold text-text">{title}</h3>
+                )}
                 {badge}
               </div>
-              {subtitle && <p className="text-[11px] text-text-4">{subtitle}</p>}
+              {subtitle && (
+                <p className="text-[11px] text-text-4">{subtitle}</p>
+              )}
             </div>
           </div>
-          {actions && <div className="flex items-center gap-2.5">{actions}</div>}
+          {actions && (
+            <div className="flex items-center gap-2.5">{actions}</div>
+          )}
         </div>
       )}
 
-      <Card className={cn("flex flex-col gap-4 p-5", cardClassName)}>
+      <Card className={cn("flex flex-col gap-4 p-3", cardClassName)}>
         {showToolbar && (
           <TableToolbar
             search={search}
             onClearFilters={onClearFilters}
             columnOptions={columnOptions}
-            onToggleColumn={(id, visible) => table.getColumn(id)?.toggleVisibility(visible)}
+            onToggleColumn={(id, visible) =>
+              table.getColumn(id)?.toggleVisibility(visible)
+            }
           >
             {filters}
           </TableToolbar>
@@ -196,7 +208,10 @@ export function FilterableTable<TData>({
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="bg-surface-subtle hover:bg-surface-subtle">
+                <TableRow
+                  key={headerGroup.id}
+                  className="bg-surface-subtle hover:bg-surface-subtle"
+                >
                   {headerGroup.headers.map((header) => (
                     <TableHead
                       key={header.id}
@@ -209,7 +224,10 @@ export function FilterableTable<TData>({
                     >
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                     </TableHead>
                   ))}
                 </TableRow>
@@ -230,7 +248,10 @@ export function FilterableTable<TData>({
 
               {!loading && error && (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-28 text-center text-[13px] text-red">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-28 text-center text-[13px] text-red"
+                  >
                     {error}
                   </TableCell>
                 </TableRow>
@@ -244,12 +265,17 @@ export function FilterableTable<TData>({
                     onClick={() => onRowClick?.(row.original)}
                     className={cn(
                       onRowClick && "cursor-pointer",
-                      typeof rowClassName === "function" ? rowClassName(row.original) : rowClassName
+                      typeof rowClassName === "function"
+                        ? rowClassName(row.original)
+                        : rowClassName,
                     )}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="px-5 py-[18px]">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -257,7 +283,10 @@ export function FilterableTable<TData>({
 
               {isEmpty && (
                 <TableRow>
-                  <TableCell colSpan={columns.length} className="h-28 text-center text-[13px] text-text-4">
+                  <TableCell
+                    colSpan={columns.length}
+                    className="h-28 text-center text-[13px] text-text-4"
+                  >
                     {emptyState ?? "No results found."}
                   </TableCell>
                 </TableRow>
@@ -266,7 +295,11 @@ export function FilterableTable<TData>({
           </Table>
         </div>
 
-        <TablePagination table={table} totalCount={totalCount} pageSizeOptions={pageSizeOptions} />
+        <TablePagination
+          table={table}
+          totalCount={totalCount}
+          pageSizeOptions={pageSizeOptions}
+        />
       </Card>
     </div>
   );
