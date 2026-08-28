@@ -129,6 +129,38 @@ export function PlansList() {
         onRowClick={(plan) => setEditId(plan.id)}
         rowClassName="cursor-pointer"
         emptyState="No plans yet — create one to get started."
+        mobileCard={(plan) => (
+          <div className="flex flex-col gap-2 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-text">{plan.name}</span>
+                {plan.popular && <Badge tone="purple">Most popular</Badge>}
+              </div>
+              <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon-sm" aria-label={`Edit ${plan.name}`} onClick={() => setEditId(plan.id)}>
+                  <PencilLine />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Delete ${plan.name}`}
+                  onClick={() => setDeleteTarget(plan)}
+                >
+                  <Trash2 className="text-red" />
+                </Button>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] text-text-2">
+              <span>{fmtMoney(plan.priceMonthly)}/mo</span>
+              <span>{fmtMoney(plan.priceYearly)}/yr</span>
+              <span>{plan.baseSeats} base seats</span>
+              <span>{plan.trialDays}d trial</span>
+            </div>
+            <p className="text-[11.5px] text-text-4">
+              {plan.modules.length} modules — {plan.modules.map((m) => MODULE_LABELS[m]).join(", ")}
+            </p>
+          </div>
+        )}
       />
 
       {createOpen && <PlanFormDialog mode="create" open={createOpen} onOpenChange={setCreateOpen} />}

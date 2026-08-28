@@ -161,7 +161,9 @@ export function TenantsList() {
           <>
             <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: (v ?? "all") as Filters["status"] })}>
               <SelectTrigger size="sm">
-                <SelectValue />
+                <SelectValue>
+                  {(v: Filters["status"]) => (v === "all" || !v ? "All status" : <StatusBadge status={v} />)}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All status</SelectItem>
@@ -174,7 +176,9 @@ export function TenantsList() {
             </Select>
             <Select value={filters.planId} onValueChange={(v) => setFilters({ ...filters, planId: v ?? "all" })}>
               <SelectTrigger size="sm">
-                <SelectValue />
+                <SelectValue>
+                  {(v: string | null) => (v === "all" || !v ? "All plans" : (plans.find((p) => p.id === v)?.name ?? "All plans"))}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All plans</SelectItem>
@@ -188,6 +192,34 @@ export function TenantsList() {
           </>
         }
         onClearFilters={() => setFilters({ search: "", status: "all", planId: "all" })}
+        mobileCard={(tenant) => {
+          const plan = plans.find((p) => p.id === tenant.planId);
+          const { used, total } = seatUsage(tenant, plan);
+          return (
+            <div className="flex flex-col gap-2 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-bold text-text">{tenant.name}</span>
+                  <span className="text-[12px] text-text-3">{planName(tenant.planId)}</span>
+                </div>
+                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon-sm" aria-label="Edit tenant" onClick={() => setEditId(tenant.id)}>
+                    <Pencil />
+                  </Button>
+                  <Button variant="ghost" size="icon-sm" aria-label="Delete tenant" onClick={() => setDeleteId(tenant.id)}>
+                    <Trash2 className="text-red" />
+                  </Button>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <StatusBadge status={tenant.status} />
+                <SeatMeter used={used} total={total} />
+                <span className="text-[13px] font-semibold text-text">{fmtMoney(tenantMrr(tenant, plan))}</span>
+                <span className="ml-auto text-[11px] text-text-4">{fmtDate(tenant.createdAt)}</span>
+              </div>
+            </div>
+          );
+        }}
       />
 
       {createOpen && <TenantCreateDialog open={createOpen} onOpenChange={setCreateOpen} />}

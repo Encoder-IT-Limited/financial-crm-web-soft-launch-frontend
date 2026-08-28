@@ -88,7 +88,126 @@ export function LineItemsEditor({
 
   return (
     <div>
-      <div className="overflow-x-auto rounded-lg border border-border">
+      {/* Below sm: (640px), a table row can't fit Qty/Unit price/VAT/Total
+          alongside the description without forcing horizontal scroll on
+          every line — the single most common task in the app. Stack each
+          line into a card instead; the sm:+ table below is unchanged. */}
+      <div className="flex flex-col gap-3 sm:hidden">
+        {lines.map((line) => {
+          const qty = Number(line.quantity) || 0;
+          const price = Number(line.unitPrice) || 0;
+          const total = qty * price;
+          const mode = line.mode ?? (line.productId ? "product" : "service");
+          return (
+            <div key={line.id} className="flex flex-col gap-2 rounded-lg border border-border p-3">
+              <div className="flex items-start justify-between gap-2">
+                <Select
+                  value={mode}
+                  onValueChange={(v) => {
+                    const next = (v ?? "service") as LineMode;
+                    update(line.id, {
+                      mode: next,
+                      productId: next === "service" ? undefined : line.productId,
+                    });
+                  }}
+                >
+                  <SelectTrigger size="sm" className="max-w-[11rem] flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="service">Service / custom</SelectItem>
+                    <SelectItem value="product">Product</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="shrink-0 text-red"
+                  onClick={() => remove(line.id)}
+                  aria-label="Remove line"
+                >
+                  <Trash2 />
+                </Button>
+              </div>
+
+              {mode === "product" && (
+                <div className="grid gap-1.5">
+                  <ProductPicker
+                    productId={line.productId}
+                    warehouseId={line.warehouseId}
+                    onPick={(product) => applyProduct(line.id, product)}
+                    invalid={!!errors?.[`${line.id}-productId`]}
+                  />
+                  <WarehousePicker
+                    value={line.warehouseId}
+                    onChange={(warehouseId) => update(line.id, { warehouseId })}
+                  />
+                </div>
+              )}
+
+              <Input
+                value={line.description}
+                onChange={(e) => update(line.id, { description: e.target.value })}
+                placeholder="Description of goods / service"
+                aria-label="Description"
+                aria-invalid={!!errors?.[`${line.id}-description`]}
+                className={cn(errors?.[`${line.id}-description`] && "border-red")}
+              />
+              {errors?.[`${line.id}-description`] && (
+                <p className="text-[10.5px] text-red">{errors[`${line.id}-description`]}</p>
+              )}
+
+              <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10.5px] font-bold text-text-4">Qty</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={line.quantity}
+                    onChange={(e) => update(line.id, { quantity: e.target.value })}
+                    aria-label="Quantity"
+                    aria-invalid={!!errors?.[`${line.id}-quantity`]}
+                    className={cn("text-right", errors?.[`${line.id}-quantity`] && "border-red")}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10.5px] font-bold text-text-4">Unit price</span>
+                  <Input
+                    type="number"
+                    min={0}
+                    step="any"
+                    value={line.unitPrice}
+                    onChange={(e) => update(line.id, { unitPrice: e.target.value })}
+                    aria-label="Unit price"
+                    aria-invalid={!!errors?.[`${line.id}-unitPrice`]}
+                    className={cn("text-right", errors?.[`${line.id}-unitPrice`] && "border-red")}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10.5px] font-bold text-text-4">VAT</span>
+                  <Select value={line.taxRate} onValueChange={(v) => update(line.id, { taxRate: v ?? line.taxRate })}>
+                    <SelectTrigger size="sm" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0%</SelectItem>
+                      <SelectItem value="5">5%</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex justify-between border-t border-border pt-2 text-[13px] font-semibold text-text">
+                <span className="text-text-3 font-normal">Line total</span>
+                {fmtMoney(total, currency)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="hidden overflow-x-auto rounded-lg border border-border sm:block">
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-surface-subtle text-left text-[10.5px] font-bold text-text-4">

@@ -216,7 +216,9 @@ export function PurchaseOrdersPage() {
         <FormField label="Supplier">
           <Select value={supplierId} onValueChange={(v) => setSupplierId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select supplier" />
+              <SelectValue placeholder="Select supplier">
+                {(v: string | null) => suppliers.find((s) => s.id === v)?.name ?? "Select supplier"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {suppliers.map((s) => (
@@ -230,7 +232,9 @@ export function PurchaseOrdersPage() {
         <FormField label="Warehouse">
           <Select value={warehouseId} onValueChange={(v) => setWarehouseId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Receive into" />
+              <SelectValue placeholder="Receive into">
+                {(v: string | null) => warehouses.find((w) => w.id === v)?.name ?? "Receive into"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {warehouses.map((w) => (
@@ -251,7 +255,12 @@ export function PurchaseOrdersPage() {
             }}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select product" />
+              <SelectValue placeholder="Select product">
+                {(v: string | null) => {
+                  const p = products.find((x) => x.id === v);
+                  return p ? `${p.name} (${p.sku})` : "Select product";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {products.map((p) => (

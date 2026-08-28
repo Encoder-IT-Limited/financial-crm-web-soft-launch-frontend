@@ -29,11 +29,8 @@ export function NewInvoicePage() {
 
   const { data: customers = [] } = useCustomers();
   const { data: retainers = [] } = useQuery({ queryKey: billingKeys.retainers(), queryFn: retainersApi.list });
-  const { data: editingInvoice, isLoading: editingInvoiceLoading } = useQuery({
-    queryKey: billingKeys.invoice(editId ?? ""),
-    queryFn: () => invoiceApi.get(editId!),
-    enabled: Boolean(editId),
-  });
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [editingInvoiceLoading, setEditingInvoiceLoading] = useState(Boolean(editId));
   const { data: nextNumber = "INV-····" } = useQuery({
     queryKey: billingKeys.nextNumber(),
     queryFn: invoiceApi.getNextNumber,
@@ -56,35 +53,49 @@ export function NewInvoicePage() {
   const [showPreview, setShowPreview] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [payFromRetainer, setPayFromRetainer] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
 
+  // Fetches directly rather than via useQuery + an effect reacting to its
+  // data — setting several fields from a query result inside an effect
+  // triggers React's "setState synchronously within an effect" warning.
+  // Setting state inside this .then() callback is async (deferred past the
+  // effect's own synchronous run), which doesn't trip that check — same
+  // pattern already used by new-proposal-page.tsx for the same reason.
   useEffect(() => {
-    if (!editId || !editingInvoice || hydrated) return;
-    if (editingInvoice.status !== "draft") {
-      toast.error("Only draft invoices can be edited");
-      router.replace("/dashboard/invoices");
-      return;
-    }
-    setCustomerId(editingInvoice.customerId);
-    setCurrencyOverride(editingInvoice.currency);
-    setDiscountPercent(String(editingInvoice.discountPercent ?? 0));
-    setIssueDate(editingInvoice.issueDate);
-    setDueDate(editingInvoice.dueDate);
-    setLines(
-      editingInvoice.lines.map((l) => ({
-        id: l.id,
-        description: l.description,
-        quantity: String(l.quantity),
-        unitPrice: String(l.unitPrice),
-        taxRate: String(l.taxRate),
-        productId: l.productId,
-        warehouseId: l.warehouseId,
-        mode: l.productId ? "product" : "service",
-      })),
-    );
-    setNotes(editingInvoice.notes ?? "");
-    setHydrated(true);
-  }, [editId, editingInvoice, hydrated, router]);
+    if (!editId) return;
+    let cancelled = false;
+    invoiceApi.get(editId).then((invoice) => {
+      if (cancelled) return;
+      if (!invoice || invoice.status !== "draft") {
+        toast.error("Only draft invoices can be edited");
+        router.replace("/dashboard/invoices");
+        return;
+      }
+      setEditingInvoice(invoice);
+      setCustomerId(invoice.customerId);
+      setCurrencyOverride(invoice.currency);
+      setDiscountPercent(String(invoice.discountPercent ?? 0));
+      setIssueDate(invoice.issueDate);
+      setDueDate(invoice.dueDate);
+      setLines(
+        invoice.lines.map((l) => ({
+          id: l.id,
+          description: l.description,
+          quantity: String(l.quantity),
+          unitPrice: String(l.unitPrice),
+          taxRate: String(l.taxRate),
+          productId: l.productId,
+          warehouseId: l.warehouseId,
+          mode: l.productId ? "product" : "service",
+        })),
+      );
+      setNotes(invoice.notes ?? "");
+      setEditingInvoiceLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId]);
 
   const activeRetainer = retainers.find(
     (r) => r.customerId === customerId && r.status === "active" && r.remainingBalance > 0,

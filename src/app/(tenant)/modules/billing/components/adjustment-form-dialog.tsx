@@ -135,7 +135,9 @@ export function AdjustmentFormDialog({
           }}
         >
           <SelectTrigger className={cn("w-full", errors.customerId && "border-red")}>
-            <SelectValue placeholder="Select customer" />
+            <SelectValue placeholder="Select customer">
+              {(v: string | null) => customers.find((c) => c.id === v)?.name ?? "Select customer"}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {customers.map((customer) => (
@@ -150,7 +152,13 @@ export function AdjustmentFormDialog({
       <FormField label="Linked invoice (optional)">
         <Select value={invoiceId} onValueChange={(v) => setInvoiceId(v ?? NO_INVOICE)} disabled={!customerId}>
           <SelectTrigger className="w-full">
-            <SelectValue placeholder={customerId ? "No linked invoice" : "Select a customer first"} />
+            <SelectValue placeholder={customerId ? "No linked invoice" : "Select a customer first"}>
+              {(v: string | null) =>
+                !v || v === NO_INVOICE
+                  ? "No linked invoice"
+                  : (customerInvoices.find((inv) => inv.id === v)?.number ?? "No linked invoice")
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={NO_INVOICE}>No linked invoice</SelectItem>
@@ -206,7 +214,9 @@ export function AdjustmentFormDialog({
               <FormField label="Return warehouse" error={errors.warehouseId}>
                 <Select value={warehouseId} onValueChange={(v) => setWarehouseId(v ?? "")}>
                   <SelectTrigger className={cn("w-full", errors.warehouseId && "border-red")}>
-                    <SelectValue placeholder="Select warehouse" />
+                    <SelectValue placeholder="Select warehouse">
+                      {(v: string | null) => warehouses.find((w) => w.id === v)?.name ?? "Select warehouse"}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {warehouses

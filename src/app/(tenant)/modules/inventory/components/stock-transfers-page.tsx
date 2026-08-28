@@ -229,7 +229,9 @@ export function StockTransfersPage() {
             }
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Source warehouse" />
+              <SelectValue placeholder="Source warehouse">
+                {(v: string | null) => (v === "__all" || !v ? "All sources" : (warehouses.find((w) => w.id === v)?.name ?? "Source warehouse"))}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all">All sources</SelectItem>
@@ -247,7 +249,9 @@ export function StockTransfersPage() {
             }
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Destination warehouse" />
+              <SelectValue placeholder="Destination warehouse">
+                {(v: string | null) => (v === "__all" || !v ? "All destinations" : (warehouses.find((w) => w.id === v)?.name ?? "Destination warehouse"))}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all">All destinations</SelectItem>
@@ -263,7 +267,9 @@ export function StockTransfersPage() {
             onValueChange={(v) => setParams({ status: !v || v === "__all" ? undefined : v }, true)}
           >
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder="Status">
+                {(v: string | null) => (v === "__all" || !v ? "All statuses" : v)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all">All statuses</SelectItem>
@@ -401,7 +407,9 @@ export function StockTransfersPage() {
         <FormField label="From warehouse" error={errors.fromWarehouseId}>
           <Select value={fromWarehouseId} onValueChange={(v) => setFromWarehouseId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Source" />
+              <SelectValue placeholder="Source">
+                {(v: string | null) => warehouses.find((w) => w.id === v)?.name ?? "Source"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {warehouses.map((w) => (
@@ -415,7 +423,9 @@ export function StockTransfersPage() {
         <FormField label="To warehouse" error={errors.toWarehouseId}>
           <Select value={toWarehouseId} onValueChange={(v) => setToWarehouseId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Destination" />
+              <SelectValue placeholder="Destination">
+                {(v: string | null) => warehouses.find((w) => w.id === v)?.name ?? "Destination"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {warehouses.map((w) => (
@@ -429,7 +439,12 @@ export function StockTransfersPage() {
         <FormField label="Product" error={errors.productId}>
           <Select value={productId} onValueChange={(v) => setProductId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Product" />
+              <SelectValue placeholder="Product">
+                {(v: string | null) => {
+                  const p = products.find((x) => x.id === v);
+                  return p ? `${p.name} (${p.sku})` : "Product";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {products.map((p) => (

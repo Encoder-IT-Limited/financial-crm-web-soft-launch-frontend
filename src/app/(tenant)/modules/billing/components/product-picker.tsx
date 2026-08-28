@@ -2,9 +2,19 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { productLookupApi, stockAt, type ProductLookupItem } from "@/app/(tenant)/dashboard/invoices/api/product-lookup.service";
+import {
+  productLookupApi,
+  stockAt,
+  type ProductLookupItem,
+} from "@/app/(tenant)/dashboard/invoices/api/product-lookup.service";
 
 const CUSTOM = "custom";
 
@@ -25,7 +35,10 @@ export function ProductPicker({
     staleTime: 30_000,
   });
 
-  const selected = useMemo(() => products.find((p) => p.id === productId), [products, productId]);
+  const selected = useMemo(
+    () => products.find((p) => p.id === productId),
+    [products, productId],
+  );
   const onHand = selected ? stockAt(selected, warehouseId) : null;
 
   return (
@@ -41,12 +54,17 @@ export function ProductPicker({
           onPick(product ?? null);
         }}
       >
-        <SelectTrigger size="sm" className={cn("w-full", invalid && "border-red")}>
+        <SelectTrigger
+          size="sm"
+          className={cn("w-full", invalid && "border-red")}
+        >
           <SelectValue placeholder="Pick a product">
             {(value: string) => {
               if (!value || value === CUSTOM) return "Custom / service line";
               const product = products.find((p) => p.id === value);
-              return product ? `${product.sku} — ${product.name}` : "Pick a product";
+              return product
+                ? `${product.name} — ${product.sku} `
+                : "Pick a product";
             }}
           </SelectValue>
         </SelectTrigger>
@@ -54,13 +72,18 @@ export function ProductPicker({
           <SelectItem value={CUSTOM}>Custom / service line</SelectItem>
           {products.map((product) => (
             <SelectItem key={product.id} value={product.id}>
-              {product.sku} — {product.name}
+              {product.name} — {product.sku}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       {selected && warehouseId && (
-        <p className={cn("text-[10.5px]", onHand === 0 ? "text-amber" : "text-text-4")}>
+        <p
+          className={cn(
+            "text-[10.5px]",
+            onHand === 0 ? "text-amber" : "text-text-4",
+          )}
+        >
           {onHand} in stock at selected warehouse
         </p>
       )}
@@ -85,7 +108,9 @@ export function WarehousePicker({
     <Select value={value || ""} onValueChange={(v) => onChange(v ?? "")}>
       <SelectTrigger size="sm" className="w-full">
         <SelectValue placeholder="Warehouse">
-          {(v: string) => warehouses.find((wh) => wh.id === v)?.name ?? "Warehouse"}
+          {(v: string) =>
+            warehouses.find((wh) => wh.id === v)?.name ?? "Warehouse"
+          }
         </SelectValue>
       </SelectTrigger>
       <SelectContent>

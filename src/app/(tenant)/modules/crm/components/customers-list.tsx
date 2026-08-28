@@ -157,7 +157,9 @@ export function CustomersList() {
         filters={
           <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: (v ?? "all") as Filters["status"] })}>
             <SelectTrigger size="sm">
-              <SelectValue />
+              <SelectValue>
+                {(v: Filters["status"]) => (v === "all" || !v ? "All status" : <CustomerStatusBadge status={v} />)}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All status</SelectItem>
@@ -170,6 +172,34 @@ export function CustomersList() {
           </Select>
         }
         onClearFilters={() => setFilters({ search: "", status: "all" })}
+        mobileCard={(customer) => {
+          const balance = outstandingByCustomer.get(customer.id) ?? 0;
+          return (
+            <div className="flex flex-col gap-2 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-0.5">
+                  <span className="font-bold text-text">{customer.name}</span>
+                  <span className="text-[11px] text-text-4">{customer.customerCode}</span>
+                </div>
+                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon-sm" aria-label="Edit customer" onClick={() => setEditId(customer.id)}>
+                    <Pencil />
+                  </Button>
+                  <Button variant="ghost" size="icon-sm" aria-label="Delete customer" onClick={() => setDeleteId(customer.id)}>
+                    <Trash2 className="text-red" />
+                  </Button>
+                </div>
+              </div>
+              <div className="text-[12px] text-text-2">{customer.email}</div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <CustomerStatusBadge status={customer.status} />
+                <span className={balance > 0 ? "text-[12px] font-semibold text-amber" : "text-[12px] text-text-3"}>
+                  {fmtMoney(balance, customer.currency)} outstanding
+                </span>
+              </div>
+            </div>
+          );
+        }}
       />
 
       <AddCustomerDialog open={addOpen} onOpenChange={setAddOpen} onCreated={() => {}} />

@@ -89,7 +89,9 @@ export function AuditLogList() {
           <>
             <Select value={filters.tenantId} onValueChange={(v) => patchFilters({ tenantId: v ?? "all" })}>
               <SelectTrigger size="sm">
-                <SelectValue />
+                <SelectValue>
+                  {(v: string | null) => (v === "all" || !v ? "All tenants" : (tenants.find((t) => t.id === v)?.name ?? "All tenants"))}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All tenants</SelectItem>
@@ -102,7 +104,7 @@ export function AuditLogList() {
             </Select>
             <Select value={filters.module} onValueChange={(v) => patchFilters({ module: v ?? "all" })}>
               <SelectTrigger size="sm">
-                <SelectValue />
+                <SelectValue>{(v: string | null) => (v === "all" || !v ? "All modules" : v)}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All modules</SelectItem>
@@ -118,7 +120,9 @@ export function AuditLogList() {
               onValueChange={(v) => patchFilters({ action: (v ?? "all") as Filters["action"] })}
             >
               <SelectTrigger size="sm">
-                <SelectValue />
+                <SelectValue>
+                  {(v: Filters["action"]) => (v === "all" || !v ? "All actions" : (AUDIT_ACTION_LABELS[v] ?? "All actions"))}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All actions</SelectItem>

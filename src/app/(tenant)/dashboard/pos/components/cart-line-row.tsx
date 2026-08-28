@@ -41,7 +41,9 @@ export function CartLineRow({
         </Button>
       </div>
 
-      <span className="w-16 shrink-0 text-right text-[12.5px] font-bold text-text">{money(lineTotal)}</span>
+      {/* w-20, not w-16 — a preventive widen so a 4-digit total with a
+          currency symbol doesn't get clipped */}
+      <span className="w-20 shrink-0 text-right text-[12.5px] font-bold text-text">{money(lineTotal)}</span>
 
       <Button variant="ghost" size="icon-sm" onClick={onRemove} aria-label="Remove line" className="shrink-0 text-red">
         <X />

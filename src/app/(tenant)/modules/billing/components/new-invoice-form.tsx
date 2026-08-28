@@ -62,7 +62,13 @@ export function NewInvoiceForm({
                 onValueChange={(v) => onCustomerIdChange(v ?? "")}
               >
                 <SelectTrigger className={cn("w-full flex-1", errors.customerId && "border-red")}>
-                  <SelectValue placeholder="Select customer" />
+                  {/* Base UI's Select.Value doesn't auto-derive the label from the
+                      matching Select.Item like Radix does — without this render
+                      function it prints the raw value (the customer's id) instead
+                      of the name. */}
+                  <SelectValue placeholder="Select customer">
+                    {(value: string | null) => customers.find((c) => c.id === value)?.name ?? "Select customer"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {customers.map((customer) => (

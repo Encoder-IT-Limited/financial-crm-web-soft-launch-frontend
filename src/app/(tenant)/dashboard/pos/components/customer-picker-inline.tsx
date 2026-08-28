@@ -26,7 +26,9 @@ export function CustomerPickerInline({
     <div className="flex items-center gap-2">
       <Select value={customerId ?? "none"} onValueChange={(v) => onChange(v === "none" ? undefined : (v ?? undefined))}>
         <SelectTrigger size="sm" className="flex-1">
-          <SelectValue placeholder="Walk-in customer" />
+          <SelectValue placeholder="Walk-in customer">
+            {(v: string | null) => (v === "none" || !v ? "Walk-in customer" : (customers.find((c) => c.id === v)?.name ?? "Walk-in customer"))}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="none">Walk-in customer</SelectItem>

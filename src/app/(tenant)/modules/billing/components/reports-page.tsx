@@ -190,7 +190,19 @@ function InvoiceReport() {
       filters={
         <Select value={status} onValueChange={(v) => setStatus((v ?? "all") as typeof status)}>
           <SelectTrigger size="sm">
-            <SelectValue />
+            <SelectValue>
+              {(v: typeof status) =>
+                ({
+                  all: "All status",
+                  draft: "Draft",
+                  sent: "Sent",
+                  "partially-paid": "Partially Paid",
+                  paid: "Paid",
+                  overdue: "Overdue",
+                  cancelled: "Cancelled",
+                })[v] ?? "All status"
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All status</SelectItem>
@@ -204,6 +216,28 @@ function InvoiceReport() {
         </Select>
       }
       onClearFilters={() => setStatus("all")}
+      mobileCard={(inv) => {
+        const balance = invoiceBalance(inv);
+        return (
+          <div className="flex flex-col gap-2 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="font-bold text-text">{inv.number}</span>
+                <span className="text-[12px] text-text-3">{customerName(inv.customerId)}</span>
+              </div>
+              <InvoiceStatusBadge status={invoiceDisplayStatus(inv)} />
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-text-2">
+              <span>{fmtMoney(inv.total, inv.currency)} total</span>
+              <span>{fmtMoney(inv.paidAmount, inv.currency)} paid</span>
+              <span className={cn(balance > 0 && "font-semibold text-amber")}>
+                {fmtMoney(balance, inv.currency)} balance
+              </span>
+              <span className="ml-auto text-[11px] text-text-4">{fmtDate(inv.issueDate)}</span>
+            </div>
+          </div>
+        );
+      }}
     />
   );
 }
@@ -238,7 +272,9 @@ function CustomerStatement() {
           <div className="w-full max-w-xs">
             <Select value={customerId} onValueChange={(v) => setCustomerId(v ?? "")}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a customer" />
+                <SelectValue placeholder="Select a customer">
+                  {(v: string | null) => customers.find((c) => c.id === v)?.name ?? "Select a customer"}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {customers.map((c) => (

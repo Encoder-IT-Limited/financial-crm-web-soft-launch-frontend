@@ -22,6 +22,12 @@ import { ManagerPinSettingsDialog } from "./manager-pin-settings-dialog";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyColumnDef<TData> = ColumnDef<TData, any>;
 
+const STATUS_FILTER_LABELS: Record<"all" | "active" | "inactive", string> = {
+  all: "All terminals",
+  active: "Active",
+  inactive: "Inactive",
+};
+
 export function TerminalsList() {
   const queryClient = useQueryClient();
   const { data: me } = useMe();
@@ -136,7 +142,7 @@ export function TerminalsList() {
         filters={
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter((v ?? "all") as typeof statusFilter)}>
             <SelectTrigger size="sm">
-              <SelectValue />
+              <SelectValue>{(v: typeof statusFilter) => STATUS_FILTER_LABELS[v] ?? "All terminals"}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All terminals</SelectItem>
@@ -146,6 +152,25 @@ export function TerminalsList() {
           </Select>
         }
         onClearFilters={() => setStatusFilter("all")}
+        mobileCard={(terminal) => (
+          <div className="flex flex-col gap-2 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-0.5">
+                <span className="font-bold text-text">{terminal.name}</span>
+                <span className="text-[11px] text-text-4">{terminal.code} · {warehouseName(terminal.warehouseId)}</span>
+              </div>
+              <Badge tone={terminal.status === "active" ? "green" : "neutral"}>{terminal.status}</Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setEditing(terminal)}>
+                Edit
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => toggleStatus(terminal)}>
+                {terminal.status === "active" ? "Deactivate" : "Activate"}
+              </Button>
+            </div>
+          </div>
+        )}
       />
 
       <TerminalFormDialog key={createOpen ? "create-open" : "create-closed"} terminal={null} open={createOpen} onOpenChange={setCreateOpen} />

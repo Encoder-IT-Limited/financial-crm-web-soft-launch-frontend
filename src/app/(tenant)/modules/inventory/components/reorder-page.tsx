@@ -140,7 +140,12 @@ export function ReorderPage() {
         <FormField label="Supplier">
           <Select value={supplierId} onValueChange={(v) => setSupplierId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select supplier" />
+              <SelectValue placeholder="Select supplier">
+                {(v: string | null) => {
+                  const s = suppliers.find((x) => x.id === v);
+                  return s ? `${s.name} (${s.supplierCode})` : "Select supplier";
+                }}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {suppliers.map((s) => (
@@ -154,7 +159,9 @@ export function ReorderPage() {
         <FormField label="Warehouse">
           <Select value={warehouseId} onValueChange={(v) => setWarehouseId(v ?? "")}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Receive into" />
+              <SelectValue placeholder="Receive into">
+                {(v: string | null) => warehouses.find((w) => w.id === v)?.name ?? "Receive into"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {warehouses.map((w) => (

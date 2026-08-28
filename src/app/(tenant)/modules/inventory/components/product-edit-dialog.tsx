@@ -156,7 +156,9 @@ export function ProductEditDialog({
           onValueChange={(v) => setCategoryId(v === "__none" ? "" : (v ?? ""))}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select category" />
+            <SelectValue placeholder="Select category">
+              {(v: string | null) => (!v || v === "__none" ? "None" : (categories.find((c) => c.id === v)?.name ?? "Select category"))}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__none">None</SelectItem>
@@ -174,7 +176,13 @@ export function ProductEditDialog({
           onValueChange={(v) => setUnitId(v === "__none" ? "" : (v ?? ""))}
         >
           <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select unit" />
+            <SelectValue placeholder="Select unit">
+              {(v: string | null) => {
+                if (!v || v === "__none") return "None";
+                const u = units.find((x) => x.id === v);
+                return u ? `${u.name} (${u.symbol})` : "Select unit";
+              }}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__none">None</SelectItem>

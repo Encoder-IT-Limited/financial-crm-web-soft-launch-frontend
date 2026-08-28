@@ -160,33 +160,35 @@ export function InventoryDashboardPage() {
               {recent.length === 0 ? (
                 <p className="py-8 text-center text-[13px] text-text-3">No movements yet.</p>
               ) : (
-                <Table className="text-[12.5px]">
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className={headClass}>Date</TableHead>
-                      <TableHead className={headClass}>Type</TableHead>
-                      <TableHead className={headClass}>Product</TableHead>
-                      <TableHead className={`text-right ${headClass}`}>Qty</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recent.map((m) => (
-                      <TableRow key={m.id}>
-                        <TableCell className="whitespace-nowrap text-text-2">
-                          {new Date(m.movementDate).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          <Badge tone={m.quantity >= 0 ? "green" : "red"}>{m.movementType}</Badge>
-                        </TableCell>
-                        <TableCell>{m.productName ?? m.productId.slice(0, 8)}</TableCell>
-                        <TableCell className="text-right tabular-nums font-semibold">
-                          {m.quantity >= 0 ? "+" : ""}
-                          {m.quantity}
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table className="text-[12.5px]">
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className={headClass}>Date</TableHead>
+                        <TableHead className={headClass}>Type</TableHead>
+                        <TableHead className={headClass}>Product</TableHead>
+                        <TableHead className={`text-right ${headClass}`}>Qty</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {recent.map((m) => (
+                        <TableRow key={m.id}>
+                          <TableCell className="whitespace-nowrap text-text-2">
+                            {new Date(m.movementDate).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge tone={m.quantity >= 0 ? "green" : "red"}>{m.movementType}</Badge>
+                          </TableCell>
+                          <TableCell>{m.productName ?? m.productId.slice(0, 8)}</TableCell>
+                          <TableCell className="text-right tabular-nums font-semibold">
+                            {m.quantity >= 0 ? "+" : ""}
+                            {m.quantity}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               )}
             </Card>
           </div>
@@ -201,28 +203,30 @@ export function InventoryDashboardPage() {
             {lowStock.length === 0 ? (
               <p className="py-8 text-center text-[13px] text-text-3">No products at or below reorder level.</p>
             ) : (
-              <Table className="text-[12.5px]">
-                <TableHeader>
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className={headClass}>Product</TableHead>
-                    <TableHead className={headClass}>SKU</TableHead>
-                    <TableHead className={`text-right ${headClass}`}>On hand</TableHead>
-                    <TableHead className={`text-right ${headClass}`}>Reorder</TableHead>
-                    <TableHead className={`text-right ${headClass}`}>Min</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lowStock.map((p) => (
-                    <TableRow key={p.productId}>
-                      <TableCell className="font-medium">{p.name}</TableCell>
-                      <TableCell className="tabular-nums text-text-3">{p.sku}</TableCell>
-                      <TableCell className="text-right font-semibold tabular-nums text-red">{p.stock}</TableCell>
-                      <TableCell className="text-right tabular-nums">{p.reorderLevel}</TableCell>
-                      <TableCell className="text-right tabular-nums">{p.minimumStock}</TableCell>
+              <div className="overflow-x-auto">
+                <Table className="text-[12.5px]">
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className={headClass}>Product</TableHead>
+                      <TableHead className={headClass}>SKU</TableHead>
+                      <TableHead className={`text-right ${headClass}`}>On hand</TableHead>
+                      <TableHead className={`text-right ${headClass}`}>Reorder</TableHead>
+                      <TableHead className={`text-right ${headClass}`}>Min</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {lowStock.map((p) => (
+                      <TableRow key={p.productId}>
+                        <TableCell className="font-medium">{p.name}</TableCell>
+                        <TableCell className="tabular-nums text-text-3">{p.sku}</TableCell>
+                        <TableCell className="text-right font-semibold tabular-nums text-red">{p.stock}</TableCell>
+                        <TableCell className="text-right tabular-nums">{p.reorderLevel}</TableCell>
+                        <TableCell className="text-right tabular-nums">{p.minimumStock}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </Card>
 
